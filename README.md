@@ -5,7 +5,7 @@
 ## Installing
 
 ```bash
-go install github.com/mpyw/sql-http-proxy/cmd/sql-http-proxy@latest
+go install github.com/mpyw/sql-http-proxy/cmd/sql-http-proxy@0.0.1
 ```
 
 ## Usage
