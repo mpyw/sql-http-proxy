@@ -156,11 +156,11 @@ func (e *QueryExecutor) processOneResult(ctx, originalParams map[string]any, out
 
 	var result any = entry
 	if e.transforms.PostAll != nil {
-		var err error
-		result, err = e.transforms.PostAll.Apply(ctx, originalParams, entry)
+		postResult, err := e.transforms.PostAll.ApplyPost(ctx, originalParams, entry)
 		if err != nil {
 			return nil, WrapPostError(err)
 		}
+		result = postResult.Output
 	}
 	return result, nil
 }
@@ -188,13 +188,15 @@ func (e *QueryExecutor) processManyResult(ctx, originalParams map[string]any, ou
 
 	var result any = entries
 	currentEntries := entries
+	currentCtx := ctx
 
 	if e.transforms.PostEach != nil {
-		eachResult, err := e.transforms.PostEach.ApplyToEachRow(ctx, originalParams, currentEntries)
+		eachResult, newCtx, err := e.transforms.PostEach.ApplyPostToEachRow(currentCtx, originalParams, currentEntries)
 		if err != nil {
 			return nil, WrapPostError(err)
 		}
 		result = eachResult
+		currentCtx = newCtx
 
 		currentEntries = make([]map[string]any, len(eachResult))
 		for i, r := range eachResult {
@@ -207,11 +209,11 @@ func (e *QueryExecutor) processManyResult(ctx, originalParams map[string]any, ou
 	}
 
 	if e.transforms.PostAll != nil {
-		var err error
-		result, err = e.transforms.PostAll.ApplyToAllRows(ctx, originalParams, currentEntries)
+		postResult, err := e.transforms.PostAll.ApplyPostToAllRows(currentCtx, originalParams, currentEntries)
 		if err != nil {
 			return nil, WrapPostError(err)
 		}
+		result = postResult.Output
 	}
 
 	return result, nil

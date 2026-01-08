@@ -42,6 +42,21 @@ func CompilePre(code string) (*Transformer, error) {
 	return &Transformer{program: program}, nil
 }
 
+// CompilePost creates a post-transform with free variable (ctx) and parameters (input, output).
+// Free variable ctx can be read/modified in the function body.
+func CompilePost(code string) (*Transformer, error) {
+	// Wrap code in a function that takes input and output as parameters
+	// ctx is set as a global variable before execution
+	wrapped := fmt.Sprintf(`(function(input, output) { %s })`, code)
+
+	program, err := goja.Compile("transform", wrapped, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile post-transform: %w", err)
+	}
+
+	return &Transformer{program: program}, nil
+}
+
 // Apply applies the transformation with the given arguments.
 // If the JS code throws an error, it returns a TransformError with status and message.
 func (t *Transformer) Apply(args ...any) (any, error) {

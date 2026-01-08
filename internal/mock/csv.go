@@ -31,6 +31,8 @@ func ParseCSVFile(path string) (*CSVSource, error) {
 
 func parseCSVReader(r io.Reader) (*CSVSource, error) {
 	reader := csv.NewReader(r)
+	// Allow variable number of fields per record
+	reader.FieldsPerRecord = -1
 
 	// Read header row
 	headers, err := reader.Read()

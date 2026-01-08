@@ -227,10 +227,13 @@ function(input) {
 **Post-transform for `one` queries** - Transform the single result row:
 
 ```javascript
-function(ctx, input, output) {
-  // ctx: Context object (shared with pre-transform)
-  // input: Original query parameters
-  // output: Single row object (or null if handle_not_found: true)
+function(input, output) {
+  // Free variables (mutable):
+  //   ctx: Context object (shared with pre-transform)
+  // Parameters:
+  //   input: Original query parameters
+  //   output: Single row object (or null if handle_not_found: true)
+
   /* your code goes here */
   return output // Must return the transformed row object
 }
@@ -239,10 +242,13 @@ function(ctx, input, output) {
 **Post-transform for `many` queries** - Transform the entire result array (default):
 
 ```javascript
-function(ctx, input, output) {
-  // ctx: Context object (shared with pre-transform)
-  // input: Original query parameters
-  // output: Array of row objects
+function(input, output) {
+  // Free variables (mutable):
+  //   ctx: Context object (shared with pre-transform)
+  // Parameters:
+  //   input: Original query parameters
+  //   output: Array of row objects
+
   /* your code goes here */
   return output // Must return the transformed array
 }

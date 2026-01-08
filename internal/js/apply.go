@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/dop251/goja"
-	"github.com/samber/lo"
 )
 
 // PreTransformResult holds the result of a pre-transform execution.
@@ -121,22 +120,70 @@ func (t *Transformer) ApplyMock(ctx map[string]any, sql string, input map[string
 	}, nil
 }
 
-// ApplyToEachRow applies the transformation to each row individually.
-// For post-transform with "each" mode: ctx, input (original params), output (each row)
-func (t *Transformer) ApplyToEachRow(ctx map[string]any, input map[string]any, rows []map[string]any) ([]any, error) {
-	results := make([]any, 0, len(rows))
-	for _, row := range rows {
-		result, err := t.Apply(ctx, input, row)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, result)
-	}
-	return results, nil
+// PostTransformResult holds the result of a post-transform execution.
+type PostTransformResult struct {
+	Output any            // Transformed output
+	Ctx    map[string]any // Modified context
 }
 
-// ApplyToAllRows applies the transformation to the entire result array.
-// For post-transform with "all" mode: ctx, input (original params), output (entire array)
-func (t *Transformer) ApplyToAllRows(ctx map[string]any, input map[string]any, rows []map[string]any) (any, error) {
-	return t.Apply(ctx, input, lo.ToAnySlice(rows))
+// ApplyPost applies post-transform with free variable ctx.
+// Returns the transformed output and updated context.
+func (t *Transformer) ApplyPost(ctx map[string]any, input map[string]any, output any) (*PostTransformResult, error) {
+	vm := goja.New()
+
+	// Set free variable on globalThis
+	globalThis := vm.GlobalObject()
+	if err := globalThis.Set("ctx", ctx); err != nil {
+		return nil, fmt.Errorf("failed to set ctx: %w", err)
+	}
+
+	fn, err := vm.RunProgram(t.program)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load post-transform function: %w", err)
+	}
+
+	callable, ok := goja.AssertFunction(fn)
+	if !ok {
+		return nil, fmt.Errorf("post-transform is not a function")
+	}
+
+	result, err := callable(goja.Undefined(), vm.ToValue(input), vm.ToValue(output))
+	if err != nil {
+		return nil, parseJSError(err)
+	}
+
+	// Read back ctx from globalThis
+	newCtx := ctx
+	if ctxVal := globalThis.Get("ctx"); ctxVal != nil && !goja.IsUndefined(ctxVal) {
+		if c, ok := ctxVal.Export().(map[string]any); ok {
+			newCtx = c
+		}
+	}
+
+	return &PostTransformResult{
+		Output: result.Export(),
+		Ctx:    newCtx,
+	}, nil
+}
+
+// ApplyPostToEachRow applies post-transform to each row individually.
+// For post-transform with "each" mode: ctx as free variable, input and output (each row) as parameters.
+func (t *Transformer) ApplyPostToEachRow(ctx map[string]any, input map[string]any, rows []map[string]any) ([]any, map[string]any, error) {
+	results := make([]any, 0, len(rows))
+	currentCtx := ctx
+	for _, row := range rows {
+		result, err := t.ApplyPost(currentCtx, input, row)
+		if err != nil {
+			return nil, nil, err
+		}
+		results = append(results, result.Output)
+		currentCtx = result.Ctx
+	}
+	return results, currentCtx, nil
+}
+
+// ApplyPostToAllRows applies post-transform to the entire result array.
+// For post-transform with "all" mode: ctx as free variable, input and output (entire array) as parameters.
+func (t *Transformer) ApplyPostToAllRows(ctx map[string]any, input map[string]any, rows any) (*PostTransformResult, error) {
+	return t.ApplyPost(ctx, input, rows)
 }

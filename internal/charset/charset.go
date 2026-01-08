@@ -21,10 +21,11 @@ func ToUTF8(data []byte, charsetName string) ([]byte, error) {
 
 	enc, err := ianaindex.IANA.Encoding(charsetName)
 	if err != nil {
-		return nil, fmt.Errorf("unknown charset: %s", charsetName)
+		return nil, fmt.Errorf("unsupported charset: %s", charsetName)
 	}
 	if enc == nil {
-		return nil, fmt.Errorf("unsupported charset: %s", charsetName)
+		// Some charsets like "us-ascii" return nil encoding (treated as UTF-8 compatible)
+		return data, nil
 	}
 
 	reader := transform.NewReader(bytes.NewReader(data), enc.NewDecoder())

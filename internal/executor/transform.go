@@ -79,5 +79,5 @@ func CompileTransforms(t *config.Transform, configDir string) (*Transforms, erro
 }
 
 func compilePost(code string) (*js.Transformer, error) {
-	return js.Compile(code, []string{"ctx", "input", "output"})
+	return js.CompilePost(code)
 }

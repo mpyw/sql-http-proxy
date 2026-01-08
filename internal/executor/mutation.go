@@ -169,14 +169,14 @@ func (e *MutationExecutor) processOneResult(ctx, originalParams map[string]any, 
 	}
 
 	if e.transforms.PostAll != nil {
-		result, err := e.transforms.PostAll.Apply(ctx, originalParams, entry)
+		postResult, err := e.transforms.PostAll.ApplyPost(ctx, originalParams, entry)
 		if err != nil {
 			return nil, WrapPostError(err)
 		}
-		if result == nil {
+		if postResult.Output == nil {
 			return &MutationResult{NoContent: true}, nil
 		}
-		return &MutationResult{Data: result}, nil
+		return &MutationResult{Data: postResult.Output}, nil
 	}
 
 	if entry == nil {
@@ -208,13 +208,15 @@ func (e *MutationExecutor) processManyResult(ctx, originalParams map[string]any,
 
 	var result any = entries
 	currentEntries := entries
+	currentCtx := ctx
 
 	if e.transforms.PostEach != nil {
-		eachResult, err := e.transforms.PostEach.ApplyToEachRow(ctx, originalParams, currentEntries)
+		eachResult, newCtx, err := e.transforms.PostEach.ApplyPostToEachRow(currentCtx, originalParams, currentEntries)
 		if err != nil {
 			return nil, WrapPostError(err)
 		}
 		result = eachResult
+		currentCtx = newCtx
 
 		currentEntries = make([]map[string]any, len(eachResult))
 		for i, r := range eachResult {
@@ -227,11 +229,11 @@ func (e *MutationExecutor) processManyResult(ctx, originalParams map[string]any,
 	}
 
 	if e.transforms.PostAll != nil {
-		var err error
-		result, err = e.transforms.PostAll.ApplyToAllRows(ctx, originalParams, currentEntries)
+		postResult, err := e.transforms.PostAll.ApplyPostToAllRows(currentCtx, originalParams, currentEntries)
 		if err != nil {
 			return nil, WrapPostError(err)
 		}
+		result = postResult.Output
 	}
 
 	return &MutationResult{Data: result}, nil
