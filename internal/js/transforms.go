@@ -32,8 +32,8 @@ func CompileTransforms(pre, mock, postEach, postAll string) (*Transforms, error)
 	}{
 		{"pre-transform", pre, &transforms.Pre, CompilePre},
 		{"mock", mock, &transforms.Mock, CompilePre},
-		{"post.each", postEach, &transforms.PostEach, compilePost},
-		{"post.all", postAll, &transforms.PostAll, compilePost},
+		{"post.each", postEach, &transforms.PostEach, CompilePost},
+		{"post.all", postAll, &transforms.PostAll, CompilePost},
 	}
 
 	for _, c := range compilers {
@@ -52,8 +52,4 @@ func CompileTransforms(pre, mock, postEach, postAll string) (*Transforms, error)
 		return nil, errors.Join(errs...)
 	}
 	return transforms, nil
-}
-
-func compilePost(code string) (*Transformer, error) {
-	return Compile(code, []string{"ctx", "input", "output"})
 }

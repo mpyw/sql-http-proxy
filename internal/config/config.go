@@ -95,13 +95,13 @@ func (cfg *Config) ValidateTransforms() error {
 		}
 		// Validate post.each JS
 		if t.Post.Each != "" {
-			if _, err := js.Compile(t.Post.Each, []string{"ctx", "input", "output"}); err != nil {
+			if _, err := js.CompilePost(t.Post.Each); err != nil {
 				errs = append(errs, fmt.Errorf("%s post.each: %w", location, err))
 			}
 		}
 		// Validate post.all JS
 		if t.Post.All != "" {
-			if _, err := js.Compile(t.Post.All, []string{"ctx", "input", "output"}); err != nil {
+			if _, err := js.CompilePost(t.Post.All); err != nil {
 				errs = append(errs, fmt.Errorf("%s post.all: %w", location, err))
 			}
 		}
