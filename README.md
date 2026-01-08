@@ -5,10 +5,10 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/mpyw/sql-http-proxy)](https://goreportcard.com/report/github.com/mpyw/sql-http-proxy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+A YAML-driven HTTP server that maps endpoints to SQL queries. Define your API in YAML, run the server, and get a working REST API.
+
 > [!NOTE]
 > This project was written by AI (Claude Code).
-
-**[Experimental]** sql-http-proxy is a YAML configuration-based HTTP to SQL proxy server.
 
 ## Installation
 
@@ -16,12 +16,32 @@
 go install github.com/mpyw/sql-http-proxy/cmd/sql-http-proxy@latest
 ```
 
-## Usage
+### Build Tags
 
-Create the following `.sql-http-proxy.yaml`:
+By default, all database drivers are included. Use build tags for smaller binaries:
+
+```bash
+# PostgreSQL only
+go build -tags postgres ./cmd/sql-http-proxy
+
+# SQLite only
+go build -tags sqlite ./cmd/sql-http-proxy
+
+# Multiple drivers
+go build -tags postgres,mysql ./cmd/sql-http-proxy
+
+# Mock only (no database)
+go build -tags mock ./cmd/sql-http-proxy
+```
+
+## Quick Start
+
+### 1. Create Configuration
+
+Create `.sql-http-proxy.yaml`:
 
 ```yaml
-dsn: postgres://postgres:example@localhost:5432/postgres?sslmode=disable
+dsn: postgres://user:pass@localhost:5432/mydb?sslmode=disable
 
 queries:
   - type: many
@@ -30,449 +50,328 @@ queries:
 
   - type: one
     path: /user
-    sql: SELECT * FROM users WHERE id = :id LIMIT 1
+    sql: SELECT * FROM users WHERE id = :id
 ```
 
-Launch your server:
+### 2. Start Server
 
 ```bash
 sql-http-proxy -l :8080
 ```
 
-Now it accepts HTTP requests to return query results:
+### 3. Make Requests
 
 ```bash
-curl 'http://localhost:8080/users' | jq
-curl 'http://localhost:8080/user?id=123' | jq
+# List all users
+curl http://localhost:8080/users
+
+# Get single user (404 if not found)
+curl http://localhost:8080/user?id=1
 ```
 
-## Supported Dialects
+### Mock Mode (No Database)
 
-| Database   | DSN Example                                              | Build Tag    |
-|------------|----------------------------------------------------------|--------------|
-| PostgreSQL | `postgres://user:pass@localhost:5432/db?sslmode=disable` | `"postgres"` |
-| MySQL      | `mysql://user:pass@tcp(localhost:3306)/db`               | `"mysql"`    |
-| SQLite     | `file:./data.db` or `sqlite:./data.db`                   | `"sqlite"`   |
-| SQL Server | `sqlserver://user:pass@localhost:1433?database=db`       | `"mssql"`    |
-| (None)     | (Not required when all queries use `transform.mock`)     | `"mock"`     |
+Run without a database using mock data:
 
-### Building with Specific Drivers
-
-By default, all drivers are included. Use build tags to include only specific drivers:
-
-```bash
-# All drivers (default)
-go build ./cmd/sql-http-proxy
-
-# PostgreSQL only
-go build -tags postgres ./cmd/sql-http-proxy
-
-# PostgreSQL + MySQL
-go build -tags postgres,mysql ./cmd/sql-http-proxy
-
-# SQLite only
-go build -tags sqlite ./cmd/sql-http-proxy
-
-# No drivers (mock-only mode)
-go build -tags mock ./cmd/sql-http-proxy
+```yaml
+queries:
+  - type: many
+    path: /users
+    sql: SELECT * FROM users  # ignored
+    transform:
+      mock:
+        json:
+          - { id: 1, name: Alice }
+          - { id: 2, name: Bob }
 ```
 
-## Configuration
+---
 
-### DSN
+## Configuration Reference
 
-The database connection string can be specified in two ways:
+See [sql-http-proxy.example.yaml](sql-http-proxy.example.yaml) for a comprehensive example.
 
-1. In the YAML config file: `dsn: postgres://...`
-2. Via environment variable: `SQL_PROXY_DSN`
+### Top-Level Options
 
-### Query Types
+| Option | Type | Description |
+|--------|------|-------------|
+| `dsn` | string | Database connection string (or use `SQL_PROXY_DSN` env var) |
+| `global_helpers` | object/string | JavaScript helpers available in all transforms |
+| `csv` | object | CSV parsing options |
+| `queries` | array | Query endpoints (SELECT) |
+| `mutations` | array | Mutation endpoints (INSERT/UPDATE/DELETE) |
 
-- `one`: Returns a single row (404 if not found)
-- `many`: Returns an array of rows
+#### DSN Examples
 
-### Mutation Types
+| Database | DSN |
+|----------|-----|
+| PostgreSQL | `postgres://user:pass@localhost:5432/db?sslmode=disable` |
+| MySQL | `mysql://user:pass@tcp(localhost:3306)/db` |
+| SQLite | `file:./data.db` or `sqlite:./data.db` |
+| SQL Server | `sqlserver://user:pass@localhost:1433?database=db` |
 
-Mutations are used for INSERT, UPDATE, DELETE operations. They accept JSON request body instead of URL query parameters.
+#### Global Helpers
 
-- `one`: Returns a single row (via RETURNING clause)
-- `many`: Returns an array of rows (via RETURNING clause)
-- `none`: Returns 204 No Content (no RETURNING)
+Define JavaScript functions available in all `pre`, `mock`, `post` transforms and `csv.value_parser`:
+
+```yaml
+# Shorthand (inline JS only)
+global_helpers: |
+  function validate(x) { ... }
+
+# Full form
+global_helpers:
+  js: |
+    function validate(x) { ... }
+  js_files:
+    - ./helpers/utils.js
+```
+
+#### CSV Value Parser
+
+Custom parsing for CSV mock data:
+
+```yaml
+csv:
+  value_parser: |
+    # Parse numbers, booleans, dates
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    if (/^\d+$/.test(value)) return parseInt(value);
+    return value;
+```
+
+---
+
+### Queries
+
+Query endpoints handle SELECT operations.
+
+```yaml
+queries:
+  - type: one|many      # Required
+    path: /endpoint     # Required
+    sql: SELECT ...     # Required
+    method: GET         # Optional (default: GET)
+    accepts: json       # Optional (default: [json, form])
+    handle_not_found: true  # Optional, type: one only
+    transform: { ... }  # Optional
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | `one` \| `many` | `one`: single row (404 if not found), `many`: array |
+| `path` | string | HTTP endpoint path (must start with `/`) |
+| `sql` | string | SQL query with `:name` placeholders |
+| `method` | string | HTTP method (GET, POST, PUT, PATCH, DELETE) |
+| `accepts` | string/array | Accepted Content-Types: `json`, `form`, or both |
+| `handle_not_found` | boolean | Pass `null` to post-transform instead of 404 |
+| `transform` | object | Pre/mock/post transforms |
+
+---
+
+### Mutations
+
+Mutation endpoints handle INSERT/UPDATE/DELETE operations.
 
 ```yaml
 mutations:
-  # INSERT with RETURNING - returns created row
-  - type: one
-    method: POST
-    path: /user
-    sql: INSERT INTO users (name, email) VALUES (:name, :email) RETURNING *
-
-  # UPDATE with RETURNING - returns updated row
-  - type: one
-    method: PUT
-    path: /user
-    sql: UPDATE users SET name = :name WHERE id = :id RETURNING *
-
-  # DELETE without RETURNING - returns 204 No Content
-  - type: none
-    method: DELETE
-    path: /user
-    sql: DELETE FROM users WHERE id = :id
-
-  # Bulk operation with RETURNING - returns multiple rows
-  - type: many
-    method: POST
-    path: /users/bulk-update
-    sql: UPDATE users SET status = :status WHERE dept = :dept RETURNING *
+  - type: one|many|none # Required
+    method: POST        # Optional (default: POST)
+    path: /endpoint     # Required
+    sql: INSERT ...     # Required
+    accepts: json       # Optional (default: [json, form])
+    transform: { ... }  # Optional
 ```
 
-**HTTP Methods:** `POST` (default), `PUT`, `PATCH`, `DELETE`
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | `one` \| `many` \| `none` | Return type (`none` = 204 No Content) |
+| `method` | string | HTTP method (POST, PUT, PATCH, DELETE) |
+| `path` | string | HTTP endpoint path |
+| `sql` | string | SQL with `:name` placeholders (use `RETURNING *` for `one`/`many`) |
+| `accepts` | string/array | Accepted Content-Types |
+| `transform` | object | Pre/mock/post transforms |
 
-**Request Body:** JSON object with named parameters
+---
 
-```bash
-curl -X POST http://localhost:8080/user \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Alice", "email": "alice@example.com"}'
-```
+### Transform
 
-#### Handling Not Found (type: one)
-
-By default, `type: one` returns 404 when no row is found. Use `handle_not_found: true` to pass `null` to post-transform instead:
+Transforms allow JavaScript processing at different stages.
 
 ```yaml
-queries:
-  - type: one
-    path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    handle_not_found: true
-    transform:
-      post: |
-        if (output === null) {
-          return { found: false, default: "guest" };
-        }
-        return { found: true, ...output };
+transform:
+  pre: |          # Before SQL execution
+    ...
+  mock: { ... }   # Replace SQL with mock data
+  post: |         # After SQL execution
+    ...
 ```
 
-### Named Placeholders
+#### Pre-Transform
 
-Use named placeholders (`:name`) in SQL queries. Parameters are passed via URL query parameters:
+Validate and transform input parameters before SQL execution.
+
+**Available variables:**
+- `input` (parameter): Request parameters
+- `ctx` (free variable): Shared state object (persists to post-transform)
+- `sql` (free variable): SQL string (can be modified)
+
+**Must return:** Object with parameters for SQL
 
 ```yaml
-queries:
-  - type: one
-    path: /user
-    sql: SELECT * FROM users WHERE id = :id AND status = :status
+transform:
+  pre: |
+    // Validate
+    if (!input.email.includes('@')) {
+      throw { status: 400, body: { error: 'invalid email' } };
+    }
+
+    // Store state for post-transform
+    ctx.requestTime = Date.now();
+
+    // Modify SQL dynamically
+    if (input.active) {
+      sql += ' AND active = true';
+    }
+
+    // Return parameters for SQL
+    return { email: input.email.toLowerCase() };
 ```
 
-```bash
-curl 'http://localhost:8080/user?id=123&status=active'
-```
+#### Mock
 
-Named placeholders are automatically converted to the appropriate format for each database driver.
-
-### Transform (JavaScript)
-
-Use JavaScript to transform query parameters (pre) and results (post):
+Return mock data without database execution. Only one source type can be specified.
 
 ```yaml
-queries:
-  # For "one" queries: output is a single row object
-  - type: one
-    path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      post: |
-        return {
-          id: output.id,
-          fullName: output.first_name + ' ' + output.last_name
-        }
+# JavaScript (inline)
+mock: |
+  return { id: 1, name: 'Mock' };
 
-  # For "many" queries: output is the entire array (default)
-  - type: many
-    path: /users
-    sql: SELECT * FROM users LIMIT :limit
-    transform:
-      pre: |
-        return { ...input, limit: input.limit || 10 }
-      post: |
-        return output.map(row => ({
-          id: row.id,
-          name: row.name.toUpperCase()
-        }))
+# JavaScript (file)
+mock:
+  js_file: ./mocks/data.js
+
+# CSV (inline)
+mock:
+  csv: |
+    id,name,active
+    1,Alice,true
+    2,Bob,false
+
+# CSV (file)
+mock:
+  csv_file: ./data.csv
+
+# JSON (inline)
+mock:
+  json:
+    - { id: 1, name: Alice }
+    - { id: 2, name: Bob }
+
+# JSON (file)
+mock:
+  json_file: ./data.json
+
+# JSONL (inline)
+mock:
+  jsonl: |
+    {"id": 1, "name": "Alice"}
+    {"id": 2, "name": "Bob"}
+
+# JSONL (file)
+mock:
+  jsonl_file: ./data.jsonl
 ```
 
-#### Function Signatures
+**Mock JS variables:**
+- `input` (parameter): Request parameters (after pre-transform)
+- `ctx` (free variable): Shared state
+- `sql` (free variable): SQL string (read-only in mock)
 
-**Pre-transform** - Transform query parameters and optionally modify SQL before execution:
+#### Post-Transform
 
-```javascript
-function(input) {
-  // Free variables (mutable):
-  //   ctx: Context object (shared with post-transform)
-  //   sql: SQL query string (can be modified for dynamic queries)
-  // Parameter:
-  //   input: Query parameters object
+Transform the result after SQL/mock execution.
 
-  // Optionally modify SQL dynamically
-  sql = sql + ' WHERE status = :status';
+**Available variables:**
+- `input` (parameter): Original request parameters
+- `output` (parameter): Query result (row or array)
+- `ctx` (free variable): Shared state from pre-transform
 
-  // Store state for post-transform
-  ctx.startTime = Date.now();
-
-  return input // Must return the transformed parameters object
-}
-```
-
-**Post-transform for `one` queries** - Transform the single result row:
-
-```javascript
-function(input, output) {
-  // Free variables (mutable):
-  //   ctx: Context object (shared with pre-transform)
-  // Parameters:
-  //   input: Original query parameters
-  //   output: Single row object (or null if handle_not_found: true)
-
-  /* your code goes here */
-  return output // Must return the transformed row object
-}
-```
-
-**Post-transform for `many` queries** - Transform the entire result array (default):
-
-```javascript
-function(input, output) {
-  // Free variables (mutable):
-  //   ctx: Context object (shared with pre-transform)
-  // Parameters:
-  //   input: Original query parameters
-  //   output: Array of row objects
-
-  /* your code goes here */
-  return output // Must return the transformed array
-}
-```
-
-#### Each vs All Mode (for `many` queries)
-
-By default, `post` receives the entire result array. Use `post.each` to transform each row individually:
+**For `type: one`:**
 
 ```yaml
-queries:
-  # Default: "all" mode - receives entire array
-  - type: many
-    path: /users
-    sql: SELECT * FROM users
-    transform:
-      post: |
-        return output.map(row => ({ ...row, processed: true }))
-
-  # Explicit "each" mode - receives each row
-  - type: many
-    path: /users-each
-    sql: SELECT * FROM users
-    transform:
-      post:
-        each: |
-          return { ...output, processed: true }
-
-  # Both modes can be combined (each is applied first, then all)
-  - type: many
-    path: /users-combined
-    sql: SELECT * FROM users
-    transform:
-      post:
-        each: |
-          return { ...output, normalized: true }
-        all: |
-          return { total: output.length, items: output }
+transform:
+  post: |
+    return {
+      ...output,
+      fullName: output.first_name + ' ' + output.last_name
+    };
 ```
 
-#### Sharing State Between Pre and Post
-
-The `ctx` object can be used to share state between pre and post transforms:
+**For `type: many`:**
 
 ```yaml
-queries:
-  - type: one
-    path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      pre: |
-        ctx.requestTime = Date.now()
-        return input
-      post: |
-        return { ...output, requestTime: ctx.requestTime }
+# Transform each row
+transform:
+  post:
+    each: |
+      return { ...output, processed: true };
+
+# Transform entire array
+transform:
+  post:
+    all: |
+      return { data: output, count: output.length };
+
+# Both (each runs first)
+transform:
+  post:
+    each: |
+      return { ...output, processed: true };
+    all: |
+      return { items: output, total: output.length };
 ```
 
 #### Error Handling
 
-Use `throw` with Lambda-style format `{ status, body }` to return custom error responses:
+Throw an object with `status` and `body` to return a custom HTTP error:
 
 ```yaml
-queries:
-  - type: one
-    path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      pre: |
-        if (!input.id) {
-          throw { status: 400, body: { message: "id is required" } };
-        }
-        return input
-      post: |
-        if (output.role === "admin") {
-          throw { status: 403, body: { message: "access denied" } };
-        }
-        return output
+transform:
+  pre: |
+    if (!input.token) {
+      throw { status: 401, body: { error: 'unauthorized' } };
+    }
+    return input;
 ```
 
-**Throw Format:**
+| Phase | Default Status |
+|-------|---------------|
+| `pre` | 400 Bad Request |
+| `mock` | 500 Internal Server Error |
+| `post` | 500 Internal Server Error |
 
-```javascript
-// Object body (JSON response)
-throw { status: 400, body: { message: "error", code: "INVALID_INPUT" } };
-// Response: {"message":"error","code":"INVALID_INPUT"}
+---
 
-// Array body (JSON response)
-throw { status: 422, body: [{ field: "id", message: "required" }] };
-// Response: [{"field":"id","message":"required"}]
+### Named Placeholders
 
-// String body (JSON string response)
-throw { status: 400, body: "simple error message" };
-// Response: "simple error message"
-
-// Primitive values (null, number, boolean)
-throw { status: 204, body: null };
-// Response: null
-```
-
-**Default Status Codes:**
-
-When `status` is omitted, default status codes are used:
-- Pre-transform errors: `400 Bad Request`
-- Post-transform errors: `500 Internal Server Error`
-
-```javascript
-// In pre-transform: defaults to 400
-throw { body: { message: "validation error" } };
-
-// In post-transform: defaults to 500
-throw { body: { message: "processing error" } };
-```
-
-**Native Error Objects:**
-
-Native JavaScript `Error` objects (and any thrown object without `status` or `body` properties) always return `500 Internal Server Error`:
-
-```javascript
-// Always returns 500, regardless of pre/post context
-throw new Error("something went wrong");
-
-// Objects without status/body are treated as native errors (500)
-throw { message: "error", code: "ERR_001" };
-```
-
-Supported JavaScript features include ES6 arrow functions, destructuring, spread operator, `Object.entries/keys/values`, and array methods.
-
-### Mock (Database-less Mode)
-
-Use `transform.mock` to return mock data without querying the database. This is useful for testing, development, or creating API stubs:
+Use `:name` syntax for SQL parameters:
 
 ```yaml
-queries:
-  - type: one
-    path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      mock: |
-        return { id: parseInt(input.id), name: "Mock User", email: "mock@example.com" };
+sql: SELECT * FROM users WHERE id = :id AND status = :status
 ```
 
-**Mock Function Signature:**
+Parameters come from:
+- **GET requests:** Query string (`?id=1&status=active`)
+- **POST/PUT/PATCH/DELETE:** Request body (JSON or form)
 
-```javascript
-function(input) {
-  // Free variables (mutable):
-  //   ctx: Context object (shared with post-transform)
-  //   sql: SQL query string (read-only for reference)
-  // Parameter:
-  //   input: Query parameters object
-
-  return data // Must return mock data (object for "one", array for "many")
-}
-```
-
-**Mock for `one` queries** - Return an object or `null`:
-
-```yaml
-queries:
-  - type: one
-    path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      mock: |
-        if (input.id === "999") {
-          return null;  // Returns 404 (or passes null to post if handle_not_found: true)
-        }
-        return { id: parseInt(input.id), name: "User " + input.id };
-```
-
-**Mock for `many` queries** - Return an array:
-
-```yaml
-queries:
-  - type: many
-    path: /users
-    sql: SELECT * FROM users
-    transform:
-      mock: |
-        return [
-          { id: 1, name: "User 1" },
-          { id: 2, name: "User 2" }
-        ];
-```
-
-**Mock with Pre/Post Transform:**
-
-Mock can be combined with pre and post transforms. The `ctx` object is shared across all transforms:
-
-```yaml
-queries:
-  - type: one
-    path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      pre: |
-        ctx.requestedId = input.id;
-        return input;
-      mock: |
-        ctx.mockTime = Date.now();
-        return { id: parseInt(input.id), name: "Mock User" };
-      post: |
-        return { ...output, requestedId: ctx.requestedId, timestamp: ctx.mockTime };
-```
-
-**Running Without Database:**
-
-When all queries use mock, the database connection is not required. You can omit `dsn` or set it to `null`:
-
-```yaml
-# No dsn needed when all queries use mock
-dsn: null  # or simply omit this line
-
-queries:
-  - type: one
-    path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      mock: |
-        return { id: parseInt(input.id), name: "Mock User" };
-```
-
-The server will log "All endpoints use mock - skipping database connection" and run without connecting to any database.
+---
 
 ## Full Example
 
-See [sql-http-proxy.example.yaml](sql-http-proxy.example.yaml) for a comprehensive example showcasing all features.
+See [sql-http-proxy.example.yaml](sql-http-proxy.example.yaml) for a comprehensive example demonstrating all features.
+
+## License
+
+MIT

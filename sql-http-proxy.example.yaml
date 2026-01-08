@@ -1,52 +1,254 @@
+# =============================================================================
+# sql-http-proxy Configuration Example
+# =============================================================================
+# This file demonstrates all available configuration options.
+# See: https://github.com/mpyw/sql-http-proxy
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Global Helpers
+# -----------------------------------------------------------------------------
+# JavaScript functions available in all JS contexts (pre, mock, post, csv.value_parser)
+# Can use shorthand: `global_helpers: |` for inline JS only
+
+global_helpers:
+  js: |
+    // Validation helpers
+    function requireString(value, name) {
+      if (typeof value !== 'string' || value.trim() === '') {
+        throw { status: 400, body: { error: name + ' is required' } };
+      }
+      return value.trim();
+    }
+
+    function requireEmail(value) {
+      const email = requireString(value, 'email');
+      if (!email.includes('@')) {
+        throw { status: 400, body: { error: 'invalid email format' } };
+      }
+      return email.toLowerCase();
+    }
+
+    function requireInt(value, name, min, max) {
+      const n = parseInt(value);
+      if (isNaN(n)) {
+        throw { status: 400, body: { error: name + ' must be an integer' } };
+      }
+      if (min !== undefined && n < min) {
+        throw { status: 400, body: { error: name + ' must be >= ' + min } };
+      }
+      if (max !== undefined && n > max) {
+        throw { status: 400, body: { error: name + ' must be <= ' + max } };
+      }
+      return n;
+    }
+
+    // SQL helpers
+    function escapeLike(s) {
+      return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+    }
+
+    // Date helpers
+    function parseDate(s) {
+      const d = new Date(s);
+      if (isNaN(d.getTime())) return null;
+      return d.toISOString();
+    }
+
+  # js_files:
+  #   - ./helpers/validation.js
+  #   - ./helpers/auth.js
+
+# -----------------------------------------------------------------------------
+# CSV Value Parser
+# -----------------------------------------------------------------------------
+# Custom parsing for CSV cell values (used in mock.csv and mock.csv_file)
+# Can use shorthand: `value_parser: |` for inline JS only
+# Has access to global_helpers functions
+
+csv:
+  value_parser:
+    js: |
+      // Auto-parse dates, numbers, booleans, and null
+      if (value === '' || value === 'null' || value === 'NULL') return null;
+      if (value === 'true') return true;
+      if (value === 'false') return false;
+      if (/^-?\d+$/.test(value)) return parseInt(value, 10);
+      if (/^-?\d+\.\d+$/.test(value)) return parseFloat(value);
+      // Use global helper for date parsing
+      const date = parseDate(value);
+      if (date) return date;
+      return value;
+
+# -----------------------------------------------------------------------------
+# Database Connection
+# -----------------------------------------------------------------------------
+# Can also be set via SQL_PROXY_DSN environment variable
+# Not required if all endpoints use mock
+
 dsn: postgres://user:pass@localhost:5432/mydb?sslmode=disable
 
+# =============================================================================
+# QUERIES (SELECT operations)
+# =============================================================================
+
 queries:
-  # Simple query - returns single row or 404
+  # ---------------------------------------------------------------------------
+  # Basic Queries
+  # ---------------------------------------------------------------------------
+
+  # Simple query - returns array of rows
+  - type: many
+    path: /users
+    sql: SELECT * FROM users ORDER BY id
+
+  # Single row query - returns object or 404
   - type: one
     path: /user
     sql: SELECT * FROM users WHERE id = :id
 
-  # With handle_not_found - returns default value instead of 404
+  # ---------------------------------------------------------------------------
+  # Query with Custom HTTP Method
+  # ---------------------------------------------------------------------------
+  # Queries default to GET, but can use POST/PUT/PATCH/DELETE for complex params
+
+  - type: many
+    method: POST  # Accept JSON body instead of query params
+    path: /users/search
+    sql: SELECT * FROM users WHERE department = :department
+    accepts: json  # Only accept application/json
+
+  # ---------------------------------------------------------------------------
+  # Accepts Option
+  # ---------------------------------------------------------------------------
+  # Control which Content-Types are accepted for request body
+  # Default: [json, form] (both application/json and application/x-www-form-urlencoded)
+
+  - type: many
+    method: POST
+    path: /users/filter
+    sql: SELECT * FROM users WHERE status = :status
+    accepts: [json, form]  # Explicit: both JSON and form data
+
+  - type: many
+    method: POST
+    path: /users/json-only
+    sql: SELECT * FROM users WHERE role = :role
+    accepts: json  # Only JSON (returns 415 for form data)
+
+  # ---------------------------------------------------------------------------
+  # Handle Not Found (type: one only)
+  # ---------------------------------------------------------------------------
+  # By default, type: one returns 404 when no row found
+  # With handle_not_found: true, passes null to post-transform instead
+
   - type: one
-    path: /user-safe
+    path: /user-or-default
     sql: SELECT * FROM users WHERE id = :id
     handle_not_found: true
     transform:
       post: |
         if (output === null) {
-          return { found: false, id: input.id, name: "Unknown" };
+          return { found: false, id: input.id, message: 'User not found' };
         }
         return { found: true, ...output };
 
-  # Pre-transform with validation and default values
+  # ---------------------------------------------------------------------------
+  # Pre-Transform
+  # ---------------------------------------------------------------------------
+  # Validate/transform input parameters before SQL execution
+  # Free variables: ctx (shared state), sql (modifiable)
+  # Parameter: input (request params)
+  # Must return: object (new params for SQL)
+
   - type: many
-    path: /users
+    path: /users/paginated
     sql: SELECT * FROM users ORDER BY id LIMIT :limit OFFSET :offset
     transform:
       pre: |
-        const limit = parseInt(input.limit) || 10;
-        const offset = parseInt(input.offset) || 0;
-        if (limit > 100) {
-          throw { status: 400, body: { message: "limit must be <= 100" } };
-        }
+        // Uses global helper functions
+        const limit = requireInt(input.limit || '10', 'limit', 1, 100);
+        const offset = requireInt(input.offset || '0', 'offset', 0);
+
+        // Store in ctx for post-transform
+        ctx.pagination = { limit, offset };
+
         return { limit, offset };
 
-  # Post-transform with each mode - transform each row
+  # ---------------------------------------------------------------------------
+  # Dynamic SQL Modification
+  # ---------------------------------------------------------------------------
+  # The `sql` free variable can be modified in pre-transform
+
   - type: many
-    path: /users-formatted
+    path: /users/dynamic-search
+    sql: SELECT * FROM users WHERE 1=1
+    transform:
+      pre: |
+        const params = {};
+
+        if (input.name) {
+          sql += ' AND name LIKE :name';
+          params.name = '%' + escapeLike(input.name) + '%';
+        }
+
+        if (input.status) {
+          sql += ' AND status = :status';
+          params.status = input.status;
+        }
+
+        if (input.sort === 'name') {
+          sql += ' ORDER BY name';
+        } else {
+          sql += ' ORDER BY id';
+        }
+
+        return params;
+
+  # ---------------------------------------------------------------------------
+  # Post-Transform (type: one)
+  # ---------------------------------------------------------------------------
+  # Transform the result after SQL execution
+  # Free variable: ctx
+  # Parameters: input (original params), output (query result)
+
+  - type: one
+    path: /user/formatted
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      post: |
+        return {
+          id: output.id,
+          displayName: output.first_name + ' ' + output.last_name,
+          email: output.email,
+          isAdmin: output.role === 'admin'
+        };
+
+  # ---------------------------------------------------------------------------
+  # Post-Transform (type: many) - Each Mode
+  # ---------------------------------------------------------------------------
+  # Transform each row individually
+
+  - type: many
+    path: /users/each-transform
     sql: SELECT * FROM users
     transform:
       post:
         each: |
           return {
             id: output.id,
-            fullName: output.first_name + " " + output.last_name,
+            fullName: output.first_name + ' ' + output.last_name,
             email: output.email.toLowerCase()
           };
 
-  # Post-transform with all mode - wrap results
+  # ---------------------------------------------------------------------------
+  # Post-Transform (type: many) - All Mode
+  # ---------------------------------------------------------------------------
+  # Transform the entire result array
+  # Shorthand: `post: |` is equivalent to `post: { all: | }`
+
   - type: many
-    path: /users-paginated
+    path: /users/wrapped
     sql: SELECT * FROM users LIMIT :limit OFFSET :offset
     transform:
       pre: |
@@ -64,96 +266,259 @@ queries:
             }
           };
 
-  # Combined each + all - normalize then wrap
+  # ---------------------------------------------------------------------------
+  # Post-Transform (type: many) - Each + All Combined
+  # ---------------------------------------------------------------------------
+  # First transform each row, then transform the entire array
+
   - type: many
-    path: /users-full
+    path: /users/full-transform
     sql: SELECT * FROM users LIMIT :limit
     transform:
       pre: |
-        return { limit: parseInt(input.limit) || 10 };
+        ctx.requestedLimit = parseInt(input.limit) || 10;
+        return { limit: ctx.requestedLimit };
       post:
         each: |
+          // Runs for each row
           return {
             ...output,
             email: output.email.toUpperCase()
           };
         all: |
+          // Runs once on the array of transformed rows
           return {
-            total: output.length,
+            meta: { count: output.length, limit: ctx.requestedLimit },
             items: output
           };
 
-  # Access control with error handling
+  # ---------------------------------------------------------------------------
+  # Error Handling in Transforms
+  # ---------------------------------------------------------------------------
+  # Throw an object with status and body to return custom HTTP error
+
   - type: one
     path: /admin/user
     sql: SELECT * FROM users WHERE id = :id
     transform:
       pre: |
         if (!input.token) {
-          throw { status: 401, body: { message: "unauthorized" } };
+          throw { status: 401, body: { error: 'unauthorized' } };
         }
-        ctx.isAdmin = input.token === "admin-secret";
+        ctx.isAdmin = input.token === 'admin-secret';
         return { id: input.id };
       post: |
-        if (!ctx.isAdmin && output.role === "admin") {
-          throw { status: 403, body: { message: "access denied" } };
+        if (!ctx.isAdmin && output.role === 'admin') {
+          throw { status: 403, body: { error: 'access denied' } };
         }
         return output;
 
-  # Dynamic SQL - keyword search with LIKE
-  - type: many
-    path: /search
-    sql: SELECT * FROM users WHERE 1=1
-    transform:
-      pre: |
-        // Helper: escape LIKE special characters (_, %, \)
-        function escapeLike(s) {
-          return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
-        }
+  # ===========================================================================
+  # MOCK DATA SOURCES
+  # ===========================================================================
+  # Mock allows returning data without database connection
+  # Useful for testing, prototyping, or static data endpoints
 
-        // Split keywords by whitespace
-        const keywords = (input.q || '').trim().split(/\s+/).filter(k => k);
-        const params = {};
+  # ---------------------------------------------------------------------------
+  # Mock: JavaScript (inline)
+  # ---------------------------------------------------------------------------
+  # Shorthand: `mock: |` is equivalent to `mock: { js: | }`
 
-        // Build dynamic WHERE clause
-        keywords.forEach((kw, i) => {
-          const paramName = 'kw' + i;
-          sql = sql + ' AND (first_name LIKE :' + paramName + ' OR last_name LIKE :' + paramName + ' OR email LIKE :' + paramName + ')';
-          params[paramName] = '%' + escapeLike(kw) + '%';
-        });
-
-        ctx.keywordCount = keywords.length;
-        return params;
-
-  # Mock - return mock data without database
   - type: one
     path: /mock/user
     sql: SELECT * FROM users WHERE id = :id
     transform:
       mock: |
-        if (input.id === "404") {
-          return null;
+        if (input.id === '404') {
+          return null;  // Returns 404 for type: one
         }
         return {
           id: parseInt(input.id),
-          name: "Mock User " + input.id,
-          email: "user" + input.id + "@mock.example.com"
+          name: 'Mock User ' + input.id,
+          email: 'user' + input.id + '@example.com',
+          created_at: new Date().toISOString()
         };
-      post: |
-        return { ...output, isMock: true };
+
+  - type: many
+    path: /mock/users
+    sql: SELECT * FROM users
+    transform:
+      mock:
+        js: |
+          const count = parseInt(input.count) || 3;
+          const users = [];
+          for (let i = 1; i <= count; i++) {
+            users.push({
+              id: i,
+              name: 'User ' + i,
+              email: 'user' + i + '@example.com'
+            });
+          }
+          return users;
+
+  # ---------------------------------------------------------------------------
+  # Mock: JavaScript (file)
+  # ---------------------------------------------------------------------------
+
+  # - type: many
+  #   path: /mock/users-from-file
+  #   sql: SELECT * FROM users
+  #   transform:
+  #     mock:
+  #       js_file: ./mocks/users.js
+
+  # ---------------------------------------------------------------------------
+  # Mock: CSV (inline)
+  # ---------------------------------------------------------------------------
+  # CSV is parsed using csv.value_parser if configured
+
+  - type: many
+    path: /mock/products
+    sql: SELECT * FROM products
+    transform:
+      mock:
+        csv: |
+          id,name,price,in_stock,created_at
+          1,Widget,19.99,true,2024-01-15
+          2,Gadget,29.99,true,2024-02-20
+          3,Gizmo,9.99,false,2024-03-10
+
+  # ---------------------------------------------------------------------------
+  # Mock: CSV (file)
+  # ---------------------------------------------------------------------------
+
+  # - type: many
+  #   path: /mock/products-from-file
+  #   sql: SELECT * FROM products
+  #   transform:
+  #     mock:
+  #       csv_file: ./mocks/products.csv
+
+  # ---------------------------------------------------------------------------
+  # Mock: JSON (inline)
+  # ---------------------------------------------------------------------------
+
+  - type: many
+    path: /mock/categories
+    sql: SELECT * FROM categories
+    transform:
+      mock:
+        json:
+          - id: 1
+            name: Electronics
+            description: Electronic devices and accessories
+          - id: 2
+            name: Clothing
+            description: Apparel and fashion items
+          - id: 3
+            name: Books
+            description: Physical and digital books
+
+  - type: one
+    path: /mock/config
+    sql: SELECT * FROM config WHERE key = :key
+    transform:
+      mock:
+        json:
+          key: app_settings
+          value: { theme: dark, language: en }
+          updated_at: "2024-01-01T00:00:00Z"
+
+  # ---------------------------------------------------------------------------
+  # Mock: JSON (file)
+  # ---------------------------------------------------------------------------
+
+  # - type: many
+  #   path: /mock/categories-from-file
+  #   sql: SELECT * FROM categories
+  #   transform:
+  #     mock:
+  #       json_file: ./mocks/categories.json
+
+  # ---------------------------------------------------------------------------
+  # Mock: JSONL (inline)
+  # ---------------------------------------------------------------------------
+  # JSON Lines format - one JSON object per line
+
+  - type: many
+    path: /mock/logs
+    sql: SELECT * FROM logs
+    transform:
+      mock:
+        jsonl: |
+          {"id": 1, "level": "info", "message": "Server started"}
+          {"id": 2, "level": "warn", "message": "High memory usage"}
+          {"id": 3, "level": "error", "message": "Connection timeout"}
+
+  # ---------------------------------------------------------------------------
+  # Mock: JSONL (file)
+  # ---------------------------------------------------------------------------
+
+  # - type: many
+  #   path: /mock/logs-from-file
+  #   sql: SELECT * FROM logs
+  #   transform:
+  #     mock:
+  #       jsonl_file: ./mocks/logs.jsonl
+
+  # ---------------------------------------------------------------------------
+  # Mock with Post-Transform
+  # ---------------------------------------------------------------------------
+  # Mock output can be further transformed with post
+
+  - type: many
+    path: /mock/users-transformed
+    sql: SELECT * FROM users
+    transform:
+      mock:
+        csv: |
+          id,first_name,last_name,email
+          1,John,Doe,john@example.com
+          2,Jane,Smith,jane@example.com
+      post:
+        each: |
+          return {
+            id: output.id,
+            fullName: output.first_name + ' ' + output.last_name,
+            email: output.email,
+            isMock: true
+          };
+
+# =============================================================================
+# MUTATIONS (INSERT/UPDATE/DELETE operations)
+# =============================================================================
 
 mutations:
-  # Simple INSERT with RETURNING - returns created row
+  # ---------------------------------------------------------------------------
+  # Basic Mutations
+  # ---------------------------------------------------------------------------
+
+  # INSERT with RETURNING - returns created row
   - type: one
     method: POST
     path: /user
-    sql: INSERT INTO users (first_name, last_name, email) VALUES (:first_name, :last_name, :email) RETURNING *
+    sql: |
+      INSERT INTO users (first_name, last_name, email)
+      VALUES (:first_name, :last_name, :email)
+      RETURNING *
 
   # UPDATE with RETURNING - returns updated row
   - type: one
     method: PUT
     path: /user
-    sql: UPDATE users SET first_name = :first_name, last_name = :last_name, email = :email WHERE id = :id RETURNING *
+    sql: |
+      UPDATE users
+      SET first_name = :first_name, last_name = :last_name, email = :email
+      WHERE id = :id
+      RETURNING *
+
+  # PATCH - partial update
+  - type: one
+    method: PATCH
+    path: /user
+    sql: |
+      UPDATE users SET email = :email WHERE id = :id
+      RETURNING *
 
   # DELETE without RETURNING - returns 204 No Content
   - type: none
@@ -161,40 +526,82 @@ mutations:
     path: /user
     sql: DELETE FROM users WHERE id = :id
 
-  # Bulk operation with RETURNING - returns multiple rows
+  # ---------------------------------------------------------------------------
+  # Bulk Operations (type: many)
+  # ---------------------------------------------------------------------------
+
   - type: many
     method: POST
-    path: /users/bulk-update
-    sql: UPDATE users SET status = :status WHERE department = :department RETURNING *
+    path: /users/bulk-status
+    sql: |
+      UPDATE users SET status = :status
+      WHERE department = :department
+      RETURNING *
 
-  # Mutation with pre-transform for validation
+  # ---------------------------------------------------------------------------
+  # Mutation with Validation
+  # ---------------------------------------------------------------------------
+
   - type: one
     method: POST
-    path: /user-validated
-    sql: INSERT INTO users (first_name, last_name, email) VALUES (:first_name, :last_name, :email) RETURNING *
+    path: /user/validated
+    sql: |
+      INSERT INTO users (first_name, last_name, email)
+      VALUES (:first_name, :last_name, :email)
+      RETURNING *
     transform:
       pre: |
-        if (!input.email || !input.email.includes('@')) {
-          throw { status: 400, body: { message: "invalid email" } };
-        }
-        if (!input.first_name || input.first_name.length < 2) {
-          throw { status: 400, body: { message: "first_name must be at least 2 characters" } };
-        }
-        return input;
+        // Uses global helper functions
+        const email = requireEmail(input.email);
+        const firstName = requireString(input.first_name, 'first_name');
+        const lastName = requireString(input.last_name, 'last_name');
+
+        return {
+          first_name: firstName,
+          last_name: lastName,
+          email: email
+        };
       post: |
         return { ...output, created: true };
 
-  # Mock mutation - return mock data without database
+  # ---------------------------------------------------------------------------
+  # Mutation with Accepts Option
+  # ---------------------------------------------------------------------------
+
+  - type: one
+    method: POST
+    path: /user/form
+    sql: |
+      INSERT INTO users (name, email) VALUES (:name, :email)
+      RETURNING *
+    accepts: form  # Only accept application/x-www-form-urlencoded
+
+  # ---------------------------------------------------------------------------
+  # Mock Mutation
+  # ---------------------------------------------------------------------------
+
   - type: one
     method: POST
     path: /mock/user
-    sql: INSERT INTO users (first_name, last_name, email) VALUES (:first_name, :last_name, :email) RETURNING *
+    sql: INSERT INTO users (name, email) VALUES (:name, :email) RETURNING *
     transform:
       mock: |
         return {
-          id: 999,
-          first_name: input.first_name,
-          last_name: input.last_name,
+          id: Math.floor(Math.random() * 10000),
+          name: input.name,
           email: input.email,
           created_at: new Date().toISOString()
         };
+
+  - type: none
+    method: DELETE
+    path: /mock/user
+    sql: DELETE FROM users WHERE id = :id
+    transform:
+      mock: |
+        // type: none ignores return value
+        // Just validate the request
+        if (!input.id) {
+          throw { status: 400, body: { error: 'id is required' } };
+        }
+        return null;
