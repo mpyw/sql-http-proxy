@@ -34,3 +34,4 @@ Thumbs.db
 .mcp.json
 .kiri/
 coverage.html
+out/
