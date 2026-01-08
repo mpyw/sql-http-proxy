@@ -105,12 +105,8 @@ func (t *Transformer) runCallable(vm *goja.Runtime, fnName string, args ...goja.
 	result, err := callable(goja.Undefined(), args...)
 	if err != nil {
 		// Check if error was due to timeout interrupt
-		if errors.Is(err, ErrJSTimeout) {
-			return nil, ErrJSTimeout
-		}
-		var interrupted *goja.InterruptedError
-		if errors.As(err, &interrupted) {
-			if errors.Is(interrupted.Value().(error), ErrJSTimeout) {
+		if interrupted := (*goja.InterruptedError)(nil); errors.As(err, &interrupted) {
+			if timeoutErr, ok := interrupted.Value().(error); ok && errors.Is(timeoutErr, ErrJSTimeout) {
 				return nil, ErrJSTimeout
 			}
 		}

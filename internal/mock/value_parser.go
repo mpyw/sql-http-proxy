@@ -97,8 +97,7 @@ func (p *ValueParser) Parse(value string) (any, error) {
 	result, err := cached.callable(goja.Undefined(), cached.vm.ToValue(value))
 	if err != nil {
 		// Check if error was due to timeout interrupt
-		var interrupted *goja.InterruptedError
-		if errors.As(err, &interrupted) {
+		if interrupted := (*goja.InterruptedError)(nil); errors.As(err, &interrupted) {
 			if timeoutErr, ok := interrupted.Value().(error); ok && errors.Is(timeoutErr, js.ErrJSTimeout) {
 				return nil, js.ErrJSTimeout
 			}
