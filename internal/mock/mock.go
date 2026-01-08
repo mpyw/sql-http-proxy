@@ -54,14 +54,6 @@ func Compile(mt *config.MockTransform, opts CompileOptions) (Source, error) {
 		src.SetHelpers(opts.Helpers)
 		return src, nil
 
-	case mt.JSFile != "":
-		src, err := CompileJSFile(resolvePath(mt.JSFile))
-		if err != nil {
-			return nil, err
-		}
-		src.SetHelpers(opts.Helpers)
-		return src, nil
-
 	case mt.CSV != "":
 		return ParseCSVWithOptions(mt.CSV, csvOpts)
 

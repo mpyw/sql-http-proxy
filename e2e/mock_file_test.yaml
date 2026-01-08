@@ -1,12 +1,4 @@
 queries:
-  # JS file
-  - type: many
-    path: /js
-    sql: SELECT 1
-    transform:
-      mock:
-        js_file: testdata/users.js
-
   # CSV file
   - type: many
     path: /csv

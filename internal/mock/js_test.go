@@ -1,8 +1,6 @@
 package mock
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -80,38 +78,3 @@ func TestCompileJS(t *testing.T) {
 	})
 }
 
-func TestCompileJSFile(t *testing.T) {
-	t.Run("valid JS file", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "mock.js")
-		content := `return { id: 1, name: "File Mock" }`
-		err := os.WriteFile(path, []byte(content), 0644)
-		require.NoError(t, err)
-
-		source, err := CompileJSFile(path)
-		require.NoError(t, err)
-
-		result, _, err := source.Data(nil, "", nil)
-		require.NoError(t, err)
-
-		resultMap := result.(map[string]any)
-		assert.Equal(t, int64(1), resultMap["id"])
-		assert.Equal(t, "File Mock", resultMap["name"])
-	})
-
-	t.Run("file not found", func(t *testing.T) {
-		_, err := CompileJSFile("/nonexistent/file.js")
-		require.Error(t, err)
-	})
-
-	t.Run("invalid JS in file", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "invalid.js")
-		content := `return { invalid syntax`
-		err := os.WriteFile(path, []byte(content), 0644)
-		require.NoError(t, err)
-
-		_, err = CompileJSFile(path)
-		require.Error(t, err)
-	})
-}

@@ -18,8 +18,7 @@ func TestExampleFileValidation(t *testing.T) {
 	require.NotEmpty(t, cfg.GlobalHelpers.JS)
 
 	require.NotNil(t, cfg.CSV)
-	require.NotNil(t, cfg.CSV.ValueParser)
-	require.NotEmpty(t, cfg.CSV.ValueParser.JS)
+	require.NotEmpty(t, cfg.CSV.ValueParser)
 
 	require.NotEmpty(t, cfg.Queries)
 	require.NotEmpty(t, cfg.Mutations)

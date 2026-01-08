@@ -118,16 +118,34 @@ func (e *MutationExecutor) executeDB(reqCtx context.Context, ctx map[string]any,
 		})
 	}
 
+	// For MySQL, use Exec to get lastInsertId/rowsAffected
+	// For other drivers, use Query to get RETURNING results
+	isMySQL := e.db.DriverName() == "mysql"
+
 	switch e.mutation.Type {
 	case config.MutationTypeNone:
 		slog.Debug("Executing mutation", "type", "none", "sql", boundSQL, "args", args)
-		if err := db.Exec(reqCtx, e.db, boundSQL, args...); err != nil {
+		_, err := db.Exec(reqCtx, e.db, boundSQL, args...)
+		if err != nil {
 			return nil, err
 		}
 		return &MutationResult{NoContent: true}, nil
 
 	case config.MutationTypeOne:
 		slog.Debug("Executing mutation", "type", "one", "sql", boundSQL, "args", args)
+		if isMySQL {
+			execResult, err := db.Exec(reqCtx, e.db, boundSQL, args...)
+			if err != nil {
+				return nil, err
+			}
+			// Set rowsAffected in ctx (always available)
+			ctx["rowsAffected"] = execResult.RowsAffected
+			// Set lastInsertId in ctx (MySQL only)
+			if execResult.LastInsertId != nil {
+				ctx["lastInsertId"] = *execResult.LastInsertId
+			}
+			return e.processOneResult(ctx, originalParams, nil)
+		}
 		result, err := db.QueryOne(reqCtx, e.db, boundSQL, args...)
 		if err != nil {
 			return nil, err
@@ -141,6 +159,19 @@ func (e *MutationExecutor) executeDB(reqCtx context.Context, ctx map[string]any,
 
 	case config.MutationTypeMany:
 		slog.Debug("Executing mutation", "type", "many", "sql", boundSQL, "args", args)
+		if isMySQL {
+			execResult, err := db.Exec(reqCtx, e.db, boundSQL, args...)
+			if err != nil {
+				return nil, err
+			}
+			// Set rowsAffected in ctx (always available)
+			ctx["rowsAffected"] = execResult.RowsAffected
+			// Set lastInsertId in ctx (MySQL only)
+			if execResult.LastInsertId != nil {
+				ctx["lastInsertId"] = *execResult.LastInsertId
+			}
+			return e.processManyResult(ctx, originalParams, nil)
+		}
 		results, err := db.QueryMany(reqCtx, e.db, boundSQL, args...)
 		if err != nil {
 			return nil, err

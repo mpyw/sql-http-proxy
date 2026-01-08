@@ -20,19 +20,6 @@ func TestMockFile(t *testing.T) {
 	mux, err := server.NewServeMux(nil, cfg, ".")
 	require.NoError(t, err)
 
-	t.Run("js_file", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/js", nil)
-		w := httptest.NewRecorder()
-		mux.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var result []map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
-		assert.Len(t, result, 2)
-		assert.Equal(t, "JS User 1", result[0]["name"])
-	})
-
 	t.Run("csv_file", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/csv", nil)
 		w := httptest.NewRecorder()

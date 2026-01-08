@@ -63,30 +63,28 @@ global_helpers:
 # CSV Value Parser
 # -----------------------------------------------------------------------------
 # Custom parsing for CSV cell values (used in mock.csv and mock.csv_file)
-# Can use shorthand: `value_parser: |` for inline JS only
 # Has access to global_helpers functions
 
 csv:
-  value_parser:
-    js: |
-      // Auto-parse dates, numbers, booleans, and null
-      if (value === '' || value === 'null' || value === 'NULL') return null;
-      if (value === 'true') return true;
-      if (value === 'false') return false;
-      if (/^-?\d+$/.test(value)) return parseInt(value, 10);
-      if (/^-?\d+\.\d+$/.test(value)) return parseFloat(value);
-      // Use global helper for date parsing
-      const date = parseDate(value);
-      if (date) return date;
-      return value;
+  value_parser: |
+    // Auto-parse dates, numbers, booleans, and null
+    if (value === '' || value === 'null' || value === 'NULL') return null;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    if (/^-?\d+$/.test(value)) return parseInt(value, 10);
+    if (/^-?\d+\.\d+$/.test(value)) return parseFloat(value);
+    // Use global helper for date parsing
+    const date = parseDate(value);
+    if (date) return date;
+    return value;
 
 # -----------------------------------------------------------------------------
 # Database Connection
 # -----------------------------------------------------------------------------
-# Supports ${VAR} or $VAR environment variable expansion
+# Supports ${VAR}, $VAR, and ${VAR:-default} environment variable expansion
 # Not required if all endpoints use mock
 
-dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/mydb?sslmode=disable
+dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/mydb?sslmode=disable
 
 # =============================================================================
 # QUERIES (SELECT operations)
@@ -355,17 +353,6 @@ queries:
             });
           }
           return users;
-
-  # ---------------------------------------------------------------------------
-  # Mock: JavaScript (file)
-  # ---------------------------------------------------------------------------
-
-  # - type: many
-  #   path: /mock/users-from-file
-  #   sql: SELECT * FROM users
-  #   transform:
-  #     mock:
-  #       js_file: ./mocks/users.js
 
   # ---------------------------------------------------------------------------
   # Mock: CSV (inline)

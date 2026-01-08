@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/a8m/envsubst"
 	"github.com/samber/lo"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
@@ -74,16 +75,9 @@ func (cfg *Config) validate() error {
 	}
 
 	// Validate csv.value_parser
-	if cfg.CSV != nil && cfg.CSV.ValueParser != nil {
-		vp := cfg.CSV.ValueParser
-		if err := vp.Validate(); err != nil {
+	if cfg.CSV != nil && cfg.CSV.ValueParser != "" {
+		if _, err := js.CompilePre(cfg.CSV.ValueParser); err != nil {
 			errs = append(errs, fmt.Errorf("csv.value_parser: %w", err))
-		}
-		// Validate JS compilation
-		if vp.JS != "" {
-			if _, err := js.CompilePre(vp.JS); err != nil {
-				errs = append(errs, fmt.Errorf("csv.value_parser.js: %w", err))
-			}
 		}
 	}
 
@@ -164,12 +158,18 @@ func Parse(data []byte) (Config, error) {
 		return Config{}, err
 	}
 
-	// Expand environment variables in DSN (e.g., ${DB_PASSWORD}, $DB_HOST)
-	cfg.DSN = os.ExpandEnv(cfg.DSN)
+	// Expand environment variables in DSN (e.g., ${DB_PASSWORD}, $DB_HOST, ${DB_PORT:-5432})
+	if cfg.DSN != "" {
+		expanded, err := envsubst.String(cfg.DSN)
+		if err != nil {
+			return Config{}, fmt.Errorf("failed to expand DSN: %w", err)
+		}
+		cfg.DSN = expanded
+	}
 
 	// DSN is required only if any query needs a database connection
 	if cfg.DSN == "" && cfg.RequiresDB() {
-		return Config{}, errors.New("missing dsn: set dsn in YAML config (supports ${VAR} env expansion)")
+		return Config{}, errors.New("missing dsn: set dsn in YAML config (supports ${VAR} and ${VAR:-default} env expansion)")
 	}
 	return cfg, nil
 }

@@ -2,8 +2,6 @@ package mock
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/dop251/goja"
 
@@ -16,29 +14,14 @@ type ValueParser struct {
 	helpers *js.CompiledHelpers
 }
 
-// CompileValueParser compiles a custom value parser.
-// jsCode is inline JS, jsFile is path to JS file (relative to configDir).
-// One of jsCode or jsFile must be non-empty.
-func CompileValueParser(jsCode, jsFile, configDir string, helpers *js.CompiledHelpers) (*ValueParser, error) {
-	code := jsCode
-	if jsFile != "" {
-		path := jsFile
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(configDir, path)
-		}
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read value_parser file %s: %w", jsFile, err)
-		}
-		code = string(content)
-	}
-
-	if code == "" {
+// CompileValueParser compiles a custom value parser from inline JavaScript code.
+func CompileValueParser(jsCode string, helpers *js.CompiledHelpers) (*ValueParser, error) {
+	if jsCode == "" {
 		return nil, fmt.Errorf("value_parser: no code provided")
 	}
 
 	// Wrap in function that takes value parameter
-	wrapped := fmt.Sprintf(`(function(value) { %s })`, code)
+	wrapped := fmt.Sprintf(`(function(value) { %s })`, jsCode)
 	program, err := goja.Compile("value_parser", wrapped, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile value_parser: %w", err)

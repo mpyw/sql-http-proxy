@@ -40,30 +40,9 @@
       "type": "object",
       "properties": {
         "value_parser": {
-          "oneOf": [
-            {
-              "type": "string",
-              "minLength": 1,
-              "description": "Inline JavaScript (shorthand for value_parser.js)"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "js": { "type": "string", "minLength": 1 }
-              },
-              "required": ["js"],
-              "additionalProperties": false
-            },
-            {
-              "type": "object",
-              "properties": {
-                "js_file": { "type": "string", "minLength": 1 }
-              },
-              "required": ["js_file"],
-              "additionalProperties": false
-            }
-          ],
-          "description": "Custom JavaScript to parse CSV cell values. Signature: function(value) { return parsed }"
+          "type": "string",
+          "minLength": 1,
+          "description": "JavaScript code to parse CSV cell values. Signature: function(value) { return parsed }"
         }
       },
       "additionalProperties": false,
@@ -71,7 +50,7 @@
     },
     "dsn": {
       "type": ["string", "null"],
-      "description": "Database connection string. Supports ${VAR} or $VAR environment variable expansion. Required unless all operations use mock"
+      "description": "Database connection string. Supports ${VAR}, $VAR, ${VAR:-default} environment variable expansion. Required unless all operations use mock"
     },
     "queries": {
       "type": "array",
@@ -159,13 +138,6 @@
         },
         {
           "type": "object",
-          "properties": { "js_file": { "type": "string" } },
-          "required": ["js_file"],
-          "additionalProperties": false,
-          "description": "Path to JavaScript file (relative to config file)"
-        },
-        {
-          "type": "object",
           "properties": { "json": {} },
           "required": ["json"],
           "additionalProperties": false,
@@ -183,7 +155,6 @@
           "not": {
             "anyOf": [
               { "required": ["js"] },
-              { "required": ["js_file"] },
               { "required": ["json"] },
               { "required": ["json_file"] },
               { "required": ["csv"] },
@@ -209,13 +180,6 @@
           "required": ["js"],
           "additionalProperties": false,
           "description": "JavaScript code. Free vars: ctx, sql. Param: input"
-        },
-        {
-          "type": "object",
-          "properties": { "js_file": { "type": "string" } },
-          "required": ["js_file"],
-          "additionalProperties": false,
-          "description": "Path to JavaScript file (relative to config file)"
         },
         {
           "type": "object",
@@ -268,7 +232,6 @@
           "not": {
             "anyOf": [
               { "required": ["js"] },
-              { "required": ["js_file"] },
               { "required": ["csv"] },
               { "required": ["csv_file"] },
               { "required": ["json"] },

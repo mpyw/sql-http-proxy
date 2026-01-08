@@ -27,10 +27,9 @@ func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (*http.ServeM
 
 	// Compile CSV value parser once at startup
 	var valueParser *mock.ValueParser
-	if cfg.CSV != nil && cfg.CSV.ValueParser != nil {
-		vp := cfg.CSV.ValueParser
+	if cfg.CSV != nil && cfg.CSV.ValueParser != "" {
 		var err error
-		valueParser, err = mock.CompileValueParser(vp.JS, vp.JSFile, configDir, helpers)
+		valueParser, err = mock.CompileValueParser(cfg.CSV.ValueParser, helpers)
 		if err != nil {
 			return nil, fmt.Errorf("csv.value_parser: %w", err)
 		}

@@ -6,7 +6,7 @@ This document describes all configuration options for sql-http-proxy. For usage 
 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
-| `dsn` | string | No* | Database connection string. Supports `${VAR}` env expansion |
+| `dsn` | string | No* | Database connection string. Supports `${VAR}`, `${VAR:-default}` env expansion |
 | `global_helpers` | object/string | No | JavaScript helpers for all transforms |
 | `csv` | object | No | CSV parsing options |
 | `queries` | array | No | Query endpoints (SELECT) |
@@ -16,10 +16,10 @@ This document describes all configuration options for sql-http-proxy. For usage 
 
 ## DSN
 
-Database connection string with `${VAR}` or `$VAR` environment variable expansion.
+Database connection string with `${VAR}`, `$VAR`, or `${VAR:-default}` environment variable expansion.
 
 ```yaml
-dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/mydb
+dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/mydb
 ```
 
 ### Driver Examples
@@ -68,7 +68,7 @@ csv:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `value_parser` | string/object | JavaScript for parsing CSV cell values |
+| `value_parser` | string | JavaScript code for parsing CSV cell values |
 
 The `value_parser` function receives `value` (string) and should return the parsed value.
 
@@ -135,6 +135,27 @@ mutations:
 | `many` | Returns array of rows |
 | `none` | Returns 204 No Content |
 
+### MySQL-Specific Behavior
+
+For MySQL, mutations use `Exec` instead of `Query` since MySQL does not support `RETURNING` clause. This makes `ctx.lastInsertId` and `ctx.rowsAffected` available in post-transform:
+
+```yaml
+mutations:
+  - type: one
+    path: /users
+    sql: INSERT INTO users (name) VALUES (:name)
+    transform:
+      post: |
+        return { id: ctx.lastInsertId, name: input.name }
+```
+
+| Variable | MySQL | Other Drivers |
+|----------|-------|---------------|
+| `ctx.lastInsertId` | Auto-increment ID from INSERT | `undefined` |
+| `ctx.rowsAffected` | Number of affected rows | `undefined` |
+
+> For PostgreSQL, SQLite, and SQL Server, use `RETURNING *` clause instead to get inserted data directly.
+
 ## Transform
 
 JavaScript processing at different stages.
@@ -174,7 +195,6 @@ Returns mock data without database. **Only one format can be specified.**
 | Format | type: one | type: many | Description |
 |--------|-----------|------------|-------------|
 | `js` | Yes | Yes | Inline JavaScript |
-| `js_file` | Yes | Yes | JavaScript file |
 | `json` | Yes | Yes | YAML/JSON object or array |
 | `json_file` | Yes | Yes | JSON file |
 | `csv` | No | Yes | Inline CSV |
@@ -216,6 +236,8 @@ Transforms the result after SQL/mock execution.
 - `input` (parameter): Original request parameters
 - `output` (parameter): Query result
 - `ctx` (free variable): Shared state from pre
+  - `ctx.lastInsertId`: Auto-increment ID (MySQL mutations only)
+  - `ctx.rowsAffected`: Number of affected rows (MySQL mutations only)
 
 **For type: one:**
 

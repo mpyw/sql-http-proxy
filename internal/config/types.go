@@ -125,7 +125,6 @@ type Transform struct {
 // Only one field should be set (mutually exclusive).
 type MockTransform struct {
 	JS        string `yaml:"js,omitempty"`
-	JSFile    string `yaml:"js_file,omitempty"`
 	CSV       string `yaml:"csv,omitempty"`
 	CSVFile   string `yaml:"csv_file,omitempty"`
 	JSON      any    `yaml:"json,omitempty"`
@@ -171,7 +170,7 @@ func (m *MockTransform) UnmarshalYAML(value *yaml.Node) error {
 		}
 
 		// If any known field is set, use the decoded result
-		if raw.JS != "" || raw.JSFile != "" ||
+		if raw.JS != "" ||
 			raw.CSV != "" || raw.CSVFile != "" ||
 			raw.JSON != nil || raw.JSONFile != "" ||
 			raw.JSONL != "" || raw.JSONLFile != "" {
@@ -193,7 +192,7 @@ func (m *MockTransform) UnmarshalYAML(value *yaml.Node) error {
 
 // IsEmpty returns true if no mock source is configured.
 func (m *MockTransform) IsEmpty() bool {
-	return m.JS == "" && m.JSFile == "" &&
+	return m.JS == "" &&
 		m.CSV == "" && m.CSVFile == "" &&
 		m.JSON == nil && m.JSONFile == "" &&
 		m.JSONL == "" && m.JSONLFile == ""
@@ -203,9 +202,6 @@ func (m *MockTransform) IsEmpty() bool {
 func (m *MockTransform) Validate() error {
 	count := 0
 	if m.JS != "" {
-		count++
-	}
-	if m.JSFile != "" {
 		count++
 	}
 	if m.CSV != "" {
@@ -227,7 +223,7 @@ func (m *MockTransform) Validate() error {
 		count++
 	}
 	if count > 1 {
-		return errors.New("mock: only one source type can be specified (js, js_file, csv, csv_file, json, json_file, jsonl, jsonl_file)")
+		return errors.New("mock: only one source type can be specified (js, csv, csv_file, json, json_file, jsonl, jsonl_file)")
 	}
 	return nil
 }
@@ -294,47 +290,5 @@ func (g *GlobalHelpers) UnmarshalYAML(value *yaml.Node) error {
 
 // CSVConfig defines global CSV parsing options.
 type CSVConfig struct {
-	ValueParser *JSCode `yaml:"value_parser,omitempty"`
-}
-
-// JSCode represents JavaScript code from inline or file.
-// Only one of JS or JSFile should be set.
-// Can be unmarshaled from a string (shorthand for js:) or an object.
-type JSCode struct {
-	JS     string `yaml:"js,omitempty"`
-	JSFile string `yaml:"js_file,omitempty"`
-}
-
-// UnmarshalYAML implements custom YAML unmarshaling for JSCode.
-// Accepts either a string (shorthand for js:) or an object.
-func (j *JSCode) UnmarshalYAML(value *yaml.Node) error {
-	// Try as string first (shorthand: string → js)
-	if value.Kind == yaml.ScalarNode {
-		var s string
-		if err := value.Decode(&s); err != nil {
-			return err
-		}
-		j.JS = s
-		return nil
-	}
-
-	// Try as object
-	type jsCodeRaw JSCode
-	var raw jsCodeRaw
-	if err := value.Decode(&raw); err != nil {
-		return err
-	}
-	*j = JSCode(raw)
-	return nil
-}
-
-// Validate checks that only one of js or js_file is specified.
-func (j *JSCode) Validate() error {
-	if j.JS != "" && j.JSFile != "" {
-		return errors.New("only one of 'js' or 'js_file' can be specified")
-	}
-	if j.JS == "" && j.JSFile == "" {
-		return errors.New("one of 'js' or 'js_file' must be specified")
-	}
-	return nil
+	ValueParser string `yaml:"value_parser,omitempty"`
 }

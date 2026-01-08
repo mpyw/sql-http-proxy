@@ -1,9 +1,8 @@
 dsn: postgres://localhost/test
 
 csv:
-  value_parser:
-    js: |
-      return { invalid syntax
+  value_parser: |
+    return { invalid syntax
 
 queries:
   - type: one

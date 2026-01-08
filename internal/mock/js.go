@@ -1,8 +1,6 @@
 package mock
 
 import (
-	"os"
-
 	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
@@ -23,15 +21,6 @@ func CompileJS(code string) (*JSSource, error) {
 		return nil, err
 	}
 	return &JSSource{transformer: t}, nil
-}
-
-// CompileJSFile reads and compiles a JavaScript file.
-func CompileJSFile(path string) (*JSSource, error) {
-	code, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return CompileJS(string(code))
 }
 
 // Data executes the JavaScript function and returns the mock data.
