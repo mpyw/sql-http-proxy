@@ -77,4 +77,3 @@ func TestCompileJS(t *testing.T) {
 		require.Error(t, err)
 	})
 }
-

@@ -67,7 +67,7 @@ type Query struct {
 	Method         string      `yaml:"method,omitempty"` // HTTP method (default: GET)
 	Path           string      `yaml:"path"`
 	SQL            string      `yaml:"sql,omitempty"`
-	Mock           *Mock       `yaml:"mock,omitempty"` // Mock data source (alternative to SQL)
+	Mock           *Mock       `yaml:"mock,omitempty"`             // Mock data source (alternative to SQL)
 	Accepts        AcceptTypes `yaml:"accepts,omitempty"`          // Accepted content types for body (default: [json, form])
 	HandleNotFound bool        `yaml:"handle_not_found,omitempty"` // Pass null to post-transform instead of 404 (type: one only)
 	Transform      *Transform  `yaml:"transform,omitempty"`
@@ -100,7 +100,7 @@ type Mutation struct {
 	Method    string       `yaml:"method,omitempty"` // HTTP method (default: POST)
 	Path      string       `yaml:"path"`
 	SQL       string       `yaml:"sql,omitempty"`
-	Mock      *Mock        `yaml:"mock,omitempty"` // Mock data source (alternative to SQL)
+	Mock      *Mock        `yaml:"mock,omitempty"`    // Mock data source (alternative to SQL)
 	Accepts   AcceptTypes  `yaml:"accepts,omitempty"` // Accepted content types for body (default: [json, form])
 	Transform *Transform   `yaml:"transform,omitempty"`
 }

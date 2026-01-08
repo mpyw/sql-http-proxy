@@ -2,8 +2,9 @@ package mock
 
 import (
 	"github.com/dop251/goja"
-	"github.com/mpyw/sql-http-proxy/internal/js"
 	"github.com/samber/lo"
+
+	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
 // JSFilteredSource wraps a Source and filters data using JavaScript.
