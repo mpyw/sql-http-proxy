@@ -1,0 +1,10 @@
+dsn: "sqlite::memory:"
+
+mutations:
+  - type: none
+    path: /user
+    method: DELETE
+    sql: DELETE FROM users WHERE id = :id
+    transform:
+      mock: |
+        return null

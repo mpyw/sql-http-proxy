@@ -1,4 +1,4 @@
-//go:build !postgres && !mysql && !sqlite && !mssql
+//go:build !postgres && !mysql && !sqlite && !mssql && !mock
 
 package commands
 

@@ -1,7 +1,7 @@
 # sql-http-proxy
 
 [![CI](https://github.com/mpyw/sql-http-proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/mpyw/sql-http-proxy/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/mpyw/sql-http-proxy/badge.svg?branch=main)](https://coveralls.io/github/mpyw/sql-http-proxy?branch=main)
+[![codecov](https://codecov.io/gh/mpyw/sql-http-proxy/graph/badge.svg)](https://codecov.io/gh/mpyw/sql-http-proxy)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mpyw/sql-http-proxy)](https://goreportcard.com/report/github.com/mpyw/sql-http-proxy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -54,7 +54,7 @@ curl 'http://localhost:8080/user?id=123' | jq
 | MySQL      | `mysql://user:pass@tcp(localhost:3306)/db`               | `"mysql"`    |
 | SQLite     | `file:./data.db` or `sqlite:./data.db`                   | `"sqlite"`   |
 | SQL Server | `sqlserver://user:pass@localhost:1433?database=db`       | `"mssql"`    |
-| (None)     | (Not required when all queries use `transform.mock`)     | -            |
+| (None)     | (Not required when all queries use `transform.mock`)     | `"mock"`     |
 
 ### Building with Specific Drivers
 
@@ -72,6 +72,9 @@ go build -tags postgres,mysql ./cmd/sql-http-proxy
 
 # SQLite only
 go build -tags sqlite ./cmd/sql-http-proxy
+
+# No drivers (mock-only mode)
+go build -tags mock ./cmd/sql-http-proxy
 ```
 
 ## Configuration

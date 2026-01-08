@@ -1,0 +1,24 @@
+dsn: "sqlite::memory:"
+
+mutations:
+  - type: one
+    path: /user
+    method: PATCH
+    sql: UPDATE users SET id = id
+    transform:
+      pre: |
+        const params = { id: input.id };
+        if (input.first_name !== undefined) {
+          sql = sql + ', first_name = :first_name';
+          params.first_name = input.first_name;
+        }
+        if (input.last_name !== undefined) {
+          sql = sql + ', last_name = :last_name';
+          params.last_name = input.last_name;
+        }
+        if (input.email !== undefined) {
+          sql = sql + ', email = :email';
+          params.email = input.email;
+        }
+        sql = sql + ' WHERE id = :id RETURNING *';
+        return params;

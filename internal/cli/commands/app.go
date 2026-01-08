@@ -4,8 +4,9 @@ package commands
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"path/filepath"
 
 	"github.com/urfave/cli/v3"
 
@@ -50,23 +51,23 @@ func action(ctx context.Context, cmd *cli.Command) error {
 	listen := cmd.String("listen")
 	validateOnly := cmd.Bool("validate")
 
-	log.Println("Parsing configuration")
+	slog.Info("Parsing configuration")
 	cfg, err := config.ParseFile(filename)
 	if err != nil {
 		return err
 	}
 
-	log.Println("Validating transforms")
+	slog.Info("Validating transforms")
 	if err := cfg.ValidateTransforms(); err != nil {
 		return err
 	}
 
 	if validateOnly {
-		log.Println("Validation successful")
+		slog.Info("Validation successful")
 		return nil
 	}
 
-	log.Println("Connecting to database")
+	slog.Info("Connecting to database")
 	conn, err := db.Connect(cfg)
 	if err != nil {
 		return err
@@ -76,16 +77,17 @@ func action(ctx context.Context, cmd *cli.Command) error {
 			_ = conn.Close()
 		}()
 	} else {
-		log.Println("All endpoints use mock - skipping database connection")
+		slog.Info("All endpoints use mock - skipping database connection")
 	}
 
-	log.Println("Creating HTTP handlers")
-	mux, err := server.NewServeMux(conn, cfg)
+	slog.Info("Creating HTTP handlers")
+	configDir := filepath.Dir(filename)
+	mux, err := server.NewServeMux(conn, cfg, configDir)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Launching HTTP server on %s\n", listen)
+	slog.Info("Launching HTTP server", "address", listen)
 	if err := http.ListenAndServe(listen, mux); err != nil {
 		return fmt.Errorf("server error: %w", err)
 	}

@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/mpyw/sql-http-proxy/internal/cli/commands"
@@ -10,6 +10,7 @@ import (
 
 func main() {
 	if err := commands.App.Run(context.Background(), os.Args); err != nil {
-		log.Fatalln(err)
+		slog.Error("Application error", "error", err)
+		os.Exit(1)
 	}
 }

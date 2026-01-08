@@ -11,11 +11,13 @@ import (
 
 // NewServeMux creates a new HTTP ServeMux with all configured handlers.
 // db can be nil if all endpoints use mock.
-func NewServeMux(db *sqlx.DB, cfg config.Config) (*http.ServeMux, error) {
+// configDir is the directory of the config file for resolving relative paths.
+func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (*http.ServeMux, error) {
 	mux := http.NewServeMux()
+	opts := HandlerOptions{ConfigDir: configDir}
 
 	for _, query := range cfg.Queries {
-		handler, err := CreateHandler(db, query)
+		handler, err := NewQueryHandlerWithOptions(db, query, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create handler for %s: %w", query.Path, err)
 		}
@@ -23,7 +25,7 @@ func NewServeMux(db *sqlx.DB, cfg config.Config) (*http.ServeMux, error) {
 	}
 
 	for _, mutation := range cfg.Mutations {
-		handler, err := CreateMutationHandler(db, mutation)
+		handler, err := NewMutationHandlerWithOptions(db, mutation, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create handler for %s: %w", mutation.Path, err)
 		}

@@ -4,8 +4,6 @@ package server
 import (
 	"errors"
 	"net/http"
-
-	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
 // QueryRecord represents an executed query record.
@@ -22,21 +20,8 @@ type QueryRecorder func(record QueryRecord)
 
 // HandlerOptions contains optional settings for CreateHandler.
 type HandlerOptions struct {
-	Recorder QueryRecorder
-}
-
-// handleTransformError handles errors from transform, using status from TransformError if available.
-func handleTransformError(res *responder, err error, defaultStatus int) {
-	var transformErr *js.TransformError
-	if errors.As(err, &transformErr) {
-		status := transformErr.Status
-		if status == 0 {
-			status = defaultStatus
-		}
-		res.RespondBody(status, transformErr.Body)
-		return
-	}
-	res.Error(defaultStatus, err)
+	Recorder  QueryRecorder
+	ConfigDir string // Directory of config file for resolving relative paths
 }
 
 // CreateNotFoundHandler creates a 404 handler.

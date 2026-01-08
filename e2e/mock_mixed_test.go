@@ -18,7 +18,7 @@ func TestMockMixed(t *testing.T) {
 	cfg := loadConfig(t, "mock_mixed_test.yaml")
 
 	t.Run("real database query", func(t *testing.T) {
-		handler, err := server.CreateHandler(db, cfg.Queries[0])
+		handler, err := server.NewQueryHandler(db, cfg.Queries[0])
 		require.NoError(t, err)
 
 		req := httptest.NewRequest("GET", "/user?id=1", nil)
@@ -35,7 +35,7 @@ func TestMockMixed(t *testing.T) {
 	})
 
 	t.Run("mock query", func(t *testing.T) {
-		handler, err := server.CreateHandler(db, cfg.Queries[1])
+		handler, err := server.NewQueryHandler(db, cfg.Queries[1])
 		require.NoError(t, err)
 
 		req := httptest.NewRequest("GET", "/mock/user?id=1", nil)

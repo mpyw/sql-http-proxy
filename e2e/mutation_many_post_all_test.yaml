@@ -1,0 +1,10 @@
+dsn: "sqlite::memory:"
+
+mutations:
+  - type: many
+    path: /users
+    method: POST
+    sql: UPDATE users SET email = UPPER(email) WHERE id <= :max_id RETURNING *
+    transform:
+      post: |
+        return output.map(row => ({ id: row.id, email: row.email.toLowerCase() }))

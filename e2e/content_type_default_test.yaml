@@ -1,0 +1,10 @@
+dsn: "sqlite::memory:"
+
+mutations:
+  - type: one
+    path: /user
+    method: POST
+    sql: SELECT :name as name
+    transform:
+      mock: |
+        return input

@@ -54,13 +54,96 @@
       "enum": ["POST", "PUT", "PATCH", "DELETE"],
       "description": "HTTP method for mutation (default: POST)"
     },
+    "queryMethod": {
+      "type": "string",
+      "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      "description": "HTTP method for query (default: GET)"
+    },
+    "accepts": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["json", "form"]
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["json", "form"]
+          },
+          "minItems": 1
+        }
+      ],
+      "description": "Accepted Content-Types for request body (default: [json, form])"
+    },
     "preTransform": {
       "type": "string",
       "description": "JavaScript to transform parameters. Free vars: ctx, sql. Param: input"
     },
     "mockTransform": {
-      "type": "string",
-      "description": "JavaScript to mock database response. Free vars: ctx, sql. Param: input. Returns mock data instead of executing SQL"
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "JavaScript code (shorthand for mock.js)"
+        },
+        {
+          "type": "object",
+          "properties": { "js": { "type": "string" } },
+          "required": ["js"],
+          "additionalProperties": false,
+          "description": "JavaScript code. Free vars: ctx, sql. Param: input"
+        },
+        {
+          "type": "object",
+          "properties": { "js_file": { "type": "string" } },
+          "required": ["js_file"],
+          "additionalProperties": false,
+          "description": "Path to JavaScript file (relative to config file)"
+        },
+        {
+          "type": "object",
+          "properties": { "csv": { "type": "string" } },
+          "required": ["csv"],
+          "additionalProperties": false,
+          "description": "Inline CSV data with header row"
+        },
+        {
+          "type": "object",
+          "properties": { "csv_file": { "type": "string" } },
+          "required": ["csv_file"],
+          "additionalProperties": false,
+          "description": "Path to CSV file (relative to config file)"
+        },
+        {
+          "type": "object",
+          "properties": { "json": {} },
+          "required": ["json"],
+          "additionalProperties": false,
+          "description": "Inline JSON data (array or object)"
+        },
+        {
+          "type": "object",
+          "properties": { "json_file": { "type": "string" } },
+          "required": ["json_file"],
+          "additionalProperties": false,
+          "description": "Path to JSON file (relative to config file)"
+        },
+        {
+          "type": "object",
+          "properties": { "jsonl": { "type": "string" } },
+          "required": ["jsonl"],
+          "additionalProperties": false,
+          "description": "Inline JSONL data (one JSON object per line)"
+        },
+        {
+          "type": "object",
+          "properties": { "jsonl_file": { "type": "string" } },
+          "required": ["jsonl_file"],
+          "additionalProperties": false,
+          "description": "Path to JSONL file (relative to config file)"
+        }
+      ],
+      "description": "Mock data source (only one type can be specified)"
     },
     "postTransformAll": {
       "type": "string",
@@ -73,8 +156,10 @@
           "const": "one",
           "description": "Single row query (404 if not found)"
         },
+        "method": { "$ref": "#/$defs/queryMethod" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
+        "accepts": { "$ref": "#/$defs/accepts" },
         "handle_not_found": {
           "type": "boolean",
           "description": "Pass null to post-transform instead of returning 404"
@@ -93,8 +178,10 @@
           "const": "many",
           "description": "Multiple rows query (returns array)"
         },
+        "method": { "$ref": "#/$defs/queryMethod" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
+        "accepts": { "$ref": "#/$defs/accepts" },
         "transform": {
           "$ref": "#/$defs/transformMany"
         }
@@ -112,6 +199,7 @@
         "method": { "$ref": "#/$defs/method" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
+        "accepts": { "$ref": "#/$defs/accepts" },
         "transform": {
           "$ref": "#/$defs/transformOne"
         }
@@ -129,6 +217,7 @@
         "method": { "$ref": "#/$defs/method" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
+        "accepts": { "$ref": "#/$defs/accepts" },
         "transform": {
           "$ref": "#/$defs/transformMany"
         }
@@ -146,6 +235,7 @@
         "method": { "$ref": "#/$defs/method" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
+        "accepts": { "$ref": "#/$defs/accepts" },
         "transform": {
           "$ref": "#/$defs/transformNone"
         }

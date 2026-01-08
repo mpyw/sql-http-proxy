@@ -1,0 +1,11 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /user
+    method: POST
+    accepts: json
+    sql: SELECT :id as id, :name as name
+    transform:
+      mock: |
+        return input

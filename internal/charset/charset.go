@@ -1,0 +1,32 @@
+// Package charset provides character encoding conversion utilities.
+package charset
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"strings"
+
+	"golang.org/x/text/encoding/ianaindex"
+	"golang.org/x/text/transform"
+)
+
+// ToUTF8 converts data from the given charset to UTF-8.
+// Returns the original data unchanged if charset is already UTF-8.
+func ToUTF8(data []byte, charsetName string) ([]byte, error) {
+	charsetName = strings.ToLower(charsetName)
+	if charsetName == "utf-8" || charsetName == "utf8" {
+		return data, nil
+	}
+
+	enc, err := ianaindex.IANA.Encoding(charsetName)
+	if err != nil {
+		return nil, fmt.Errorf("unknown charset: %s", charsetName)
+	}
+	if enc == nil {
+		return nil, fmt.Errorf("unsupported charset: %s", charsetName)
+	}
+
+	reader := transform.NewReader(bytes.NewReader(data), enc.NewDecoder())
+	return io.ReadAll(reader)
+}

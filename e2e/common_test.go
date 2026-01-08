@@ -54,7 +54,7 @@ func createHandler(t *testing.T, db *sqlx.DB, cfg config.Config) http.Handler {
 
 	require.NotEmpty(t, cfg.Queries)
 
-	handler, err := server.CreateHandler(db, cfg.Queries[0])
+	handler, err := server.NewQueryHandler(db, cfg.Queries[0])
 	require.NoError(t, err)
 	return handler
 }
@@ -64,7 +64,7 @@ func createMutationHandler(t *testing.T, db *sqlx.DB, cfg config.Config) http.Ha
 
 	require.NotEmpty(t, cfg.Mutations)
 
-	handler, err := server.CreateMutationHandler(db, cfg.Mutations[0])
+	handler, err := server.NewMutationHandler(db, cfg.Mutations[0])
 	require.NoError(t, err)
 	return handler
 }

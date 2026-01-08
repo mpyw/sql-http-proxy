@@ -1,0 +1,7 @@
+dsn: "sqlite::memory:"
+
+mutations:
+  - type: one
+    path: /user
+    method: DELETE
+    sql: DELETE FROM users WHERE id = :id RETURNING *

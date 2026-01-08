@@ -26,101 +26,11 @@ var configSchema = func() *jsonschema.Schema {
 	return lo.Must(compiler.Compile("schema.json"))
 }()
 
-// QueryType represents the type of query result.
-type QueryType string
-
-const (
-	// QueryTypeOne returns a single row.
-	QueryTypeOne QueryType = "one"
-	// QueryTypeMany returns multiple rows.
-	QueryTypeMany QueryType = "many"
-)
-
-// MutationType represents the type of mutation result.
-type MutationType string
-
-const (
-	// MutationTypeOne returns a single row (via RETURNING).
-	MutationTypeOne MutationType = "one"
-	// MutationTypeMany returns multiple rows (via RETURNING).
-	MutationTypeMany MutationType = "many"
-	// MutationTypeNone returns no content (204).
-	MutationTypeNone MutationType = "none"
-)
-
 // Config represents the application configuration.
 type Config struct {
 	DSN       string     `yaml:"dsn"`
 	Queries   []Query    `yaml:"queries"`
 	Mutations []Mutation `yaml:"mutations"`
-}
-
-// Query represents a single query configuration.
-type Query struct {
-	Type           QueryType  `yaml:"type"`
-	Path           string     `yaml:"path"`
-	SQL            string     `yaml:"sql"`
-	HandleNotFound bool       `yaml:"handle_not_found,omitempty"` // Pass null to post-transform instead of 404 (type: one only)
-	Transform      *Transform `yaml:"transform,omitempty"`
-}
-
-// Mutation represents a single mutation configuration.
-type Mutation struct {
-	Type      MutationType `yaml:"type"`
-	Method    string       `yaml:"method,omitempty"` // HTTP method (default: POST)
-	Path      string       `yaml:"path"`
-	SQL       string       `yaml:"sql"`
-	Transform *Transform   `yaml:"transform,omitempty"`
-}
-
-// GetMethod returns the HTTP method for the mutation (default: POST).
-func (m Mutation) GetMethod() string {
-	if m.Method == "" {
-		return "POST"
-	}
-	return m.Method
-}
-
-// Transform defines pre/post JavaScript transformations.
-type Transform struct {
-	Pre  string        `yaml:"pre,omitempty"`
-	Mock string        `yaml:"mock,omitempty"` // Mock DB response (replaces actual query)
-	Post PostTransform `yaml:"post,omitempty"`
-}
-
-// PostTransform represents post-transform configuration.
-// Can be a simple string or an object with each/all.
-type PostTransform struct {
-	Each string `yaml:"each,omitempty"` // Transform each row individually
-	All  string `yaml:"all,omitempty"`  // Transform entire result array (default for many)
-}
-
-// IsEmpty returns true if no post-transform is configured.
-func (p PostTransform) IsEmpty() bool {
-	return p.Each == "" && p.All == ""
-}
-
-// UnmarshalYAML implements custom YAML unmarshaling for PostTransform.
-// Accepts either a string (defaults to All) or an object with each/all.
-func (p *PostTransform) UnmarshalYAML(value *yaml.Node) error {
-	// Try as string first
-	if value.Kind == yaml.ScalarNode {
-		var s string
-		if err := value.Decode(&s); err != nil {
-			return err
-		}
-		p.All = s
-		return nil
-	}
-
-	// Try as object
-	type postTransformRaw PostTransform
-	var raw postTransformRaw
-	if err := value.Decode(&raw); err != nil {
-		return err
-	}
-	*p = PostTransform(raw)
-	return nil
 }
 
 // Driver returns the database driver name from the DSN.
@@ -137,6 +47,73 @@ func (cfg *Config) Driver() (string, error) {
 	default:
 		return u.Scheme, nil
 	}
+}
+
+// RequiresDB returns true if any query or mutation requires a database connection.
+func (cfg *Config) RequiresDB() bool {
+	return lo.SomeBy(cfg.Queries, func(q Query) bool {
+		return q.Transform == nil || q.Transform.Mock == nil || q.Transform.Mock.IsEmpty()
+	}) || lo.SomeBy(cfg.Mutations, func(m Mutation) bool {
+		return m.Transform == nil || m.Transform.Mock == nil || m.Transform.Mock.IsEmpty()
+	})
+}
+
+// validate checks semantic constraints that JSON Schema cannot express.
+// Note: type-specific constraints (each for many, handle_not_found for one)
+// are now enforced by JSON Schema via separate queryOne/queryMany definitions.
+func (cfg *Config) validate() error {
+	// Reserved for future semantic validations
+	return nil
+}
+
+// ValidateTransforms validates all transforms are valid.
+// Returns all errors joined, not just the first one.
+func (cfg *Config) ValidateTransforms() error {
+	var errs []error
+
+	validateTransform := func(t *Transform, location string) {
+		if t == nil {
+			return
+		}
+		// Validate pre-transform JS
+		if t.Pre != "" {
+			if _, err := js.CompilePre(t.Pre); err != nil {
+				errs = append(errs, fmt.Errorf("%s pre: %w", location, err))
+			}
+		}
+		// Validate mock mutual exclusivity and JS compilation
+		if t.Mock != nil {
+			if err := t.Mock.Validate(); err != nil {
+				errs = append(errs, fmt.Errorf("%s %w", location, err))
+			}
+			// Compile JS mock if specified
+			if t.Mock.JS != "" {
+				if _, err := js.CompilePre(t.Mock.JS); err != nil {
+					errs = append(errs, fmt.Errorf("%s mock.js: %w", location, err))
+				}
+			}
+		}
+		// Validate post.each JS
+		if t.Post.Each != "" {
+			if _, err := js.Compile(t.Post.Each, []string{"ctx", "input", "output"}); err != nil {
+				errs = append(errs, fmt.Errorf("%s post.each: %w", location, err))
+			}
+		}
+		// Validate post.all JS
+		if t.Post.All != "" {
+			if _, err := js.Compile(t.Post.All, []string{"ctx", "input", "output"}); err != nil {
+				errs = append(errs, fmt.Errorf("%s post.all: %w", location, err))
+			}
+		}
+	}
+
+	for i, q := range cfg.Queries {
+		validateTransform(q.Transform, fmt.Sprintf("queries[%d] (%s)", i, q.Path))
+	}
+	for i, m := range cfg.Mutations {
+		validateTransform(m.Transform, fmt.Sprintf("mutations[%d] (%s)", i, m.Path))
+	}
+	return errors.Join(errs...)
 }
 
 // Getenv is a variable for testing purposes.
@@ -177,29 +154,6 @@ func Parse(data []byte) (Config, error) {
 	return cfg, nil
 }
 
-// validate checks semantic constraints that JSON Schema cannot express.
-// Note: type-specific constraints (each for many, handle_not_found for one)
-// are now enforced by JSON Schema via separate queryOne/queryMany definitions.
-func (cfg *Config) validate() error {
-	// Reserved for future semantic validations
-	return nil
-}
-
-// RequiresDB returns true if any query or mutation requires a database connection.
-func (cfg *Config) RequiresDB() bool {
-	for _, q := range cfg.Queries {
-		if q.Transform == nil || q.Transform.Mock == "" {
-			return true
-		}
-	}
-	for _, m := range cfg.Mutations {
-		if m.Transform == nil || m.Transform.Mock == "" {
-			return true
-		}
-	}
-	return false
-}
-
 // ParseFile parses configuration from a YAML file.
 func ParseFile(filename string) (Config, error) {
 	data, err := os.ReadFile(filename)
@@ -207,60 +161,4 @@ func ParseFile(filename string) (Config, error) {
 		return Config{}, fmt.Errorf("failed to open file: %w", err)
 	}
 	return Parse(data)
-}
-
-// ValidateTransforms validates all JavaScript transforms compile correctly.
-func (cfg *Config) ValidateTransforms() error {
-	for i, q := range cfg.Queries {
-		if q.Transform == nil {
-			continue
-		}
-		if q.Transform.Pre != "" {
-			if _, err := js.CompilePre(q.Transform.Pre); err != nil {
-				return fmt.Errorf("queries[%d] (%s): pre-transform: %w", i, q.Path, err)
-			}
-		}
-		if q.Transform.Mock != "" {
-			if _, err := js.CompilePre(q.Transform.Mock); err != nil {
-				return fmt.Errorf("queries[%d] (%s): mock: %w", i, q.Path, err)
-			}
-		}
-		if q.Transform.Post.Each != "" {
-			if _, err := js.Compile(q.Transform.Post.Each, []string{"ctx", "input", "output"}); err != nil {
-				return fmt.Errorf("queries[%d] (%s): post.each: %w", i, q.Path, err)
-			}
-		}
-		if q.Transform.Post.All != "" {
-			if _, err := js.Compile(q.Transform.Post.All, []string{"ctx", "input", "output"}); err != nil {
-				return fmt.Errorf("queries[%d] (%s): post.all: %w", i, q.Path, err)
-			}
-		}
-	}
-
-	for i, m := range cfg.Mutations {
-		if m.Transform == nil {
-			continue
-		}
-		if m.Transform.Pre != "" {
-			if _, err := js.CompilePre(m.Transform.Pre); err != nil {
-				return fmt.Errorf("mutations[%d] (%s): pre-transform: %w", i, m.Path, err)
-			}
-		}
-		if m.Transform.Mock != "" {
-			if _, err := js.CompilePre(m.Transform.Mock); err != nil {
-				return fmt.Errorf("mutations[%d] (%s): mock: %w", i, m.Path, err)
-			}
-		}
-		if m.Transform.Post.Each != "" {
-			if _, err := js.Compile(m.Transform.Post.Each, []string{"ctx", "input", "output"}); err != nil {
-				return fmt.Errorf("mutations[%d] (%s): post.each: %w", i, m.Path, err)
-			}
-		}
-		if m.Transform.Post.All != "" {
-			if _, err := js.Compile(m.Transform.Post.All, []string{"ctx", "input", "output"}); err != nil {
-				return fmt.Errorf("mutations[%d] (%s): post.all: %w", i, m.Path, err)
-			}
-		}
-	}
-	return nil
 }

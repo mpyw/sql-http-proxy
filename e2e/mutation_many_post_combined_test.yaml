@@ -1,0 +1,13 @@
+dsn: "sqlite::memory:"
+
+mutations:
+  - type: many
+    path: /users
+    method: POST
+    sql: UPDATE users SET email = UPPER(email) WHERE id <= :max_id RETURNING *
+    transform:
+      post:
+        each: |
+          return { id: output.id, email: output.email.toLowerCase() }
+        all: |
+          return { total: output.length, items: output }
