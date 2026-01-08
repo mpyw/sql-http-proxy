@@ -12,5 +12,6 @@ import (
 func TestInvalidMissingSql(t *testing.T) {
 	_, err := config.ParseFile("invalid_missing_sql_test.yaml")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "missing property 'sql'")
+	// Improved error message for sql/mock exclusivity
+	assert.Contains(t, err.Error(), "must have either 'sql' or 'mock'")
 }
