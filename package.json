@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "schema:generate:docs": "rm -rf docs/SCHEMA_GENERATED.md schema.md schema-*.md && npx @adobe/jsonschema2md -d internal/config -o docs && mv docs/README.md docs/SCHEMA_GENERATED.md"
+  }
+}
