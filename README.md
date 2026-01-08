@@ -81,10 +81,10 @@ queries:
           { id: 1, name: 'Alice' },
           { id: 2, name: 'Bob' },
         ];
-        return users.find(u => u.id === parseInt(input.id)) || null;
+        return users.find(u => u.id === parseInt(input.id));
 ```
 
-> Returning `null` from mock results in 404 Not Found for `type: one`.
+> Returning `null` or `undefined` from mock results in 404 Not Found for `type: one`.
 
 # Configuration Overview
 
