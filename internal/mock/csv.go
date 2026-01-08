@@ -12,33 +12,33 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
-// CSVSource holds pre-parsed CSV data.
-type CSVSource struct {
+// csvSource holds pre-parsed CSV data.
+type csvSource struct {
 	rows []map[string]any
 }
 
-// ParseCSVOptions contains options for CSV parsing.
-type ParseCSVOptions struct {
+// parseCSVOptions contains options for CSV parsing.
+type parseCSVOptions struct {
 	ValueParser *ValueParser
 }
 
-// ParseCSV parses inline CSV data into a CSVSource.
-func ParseCSV(data string) (*CSVSource, error) {
-	return ParseCSVWithOptions(data, ParseCSVOptions{})
+// parseCSV parses inline CSV data into a csvSource.
+func parseCSV(data string) (*csvSource, error) {
+	return parseCSVWithOptions(data, parseCSVOptions{})
 }
 
-// ParseCSVWithOptions parses inline CSV data with custom options.
-func ParseCSVWithOptions(data string, opts ParseCSVOptions) (*CSVSource, error) {
+// parseCSVWithOptions parses inline CSV data with custom options.
+func parseCSVWithOptions(data string, opts parseCSVOptions) (*csvSource, error) {
 	return parseCSVReaderWithOptions(strings.NewReader(data), opts)
 }
 
-// ParseCSVFile parses a CSV file into a CSVSource.
-func ParseCSVFile(path string) (*CSVSource, error) {
-	return ParseCSVFileWithOptions(path, ParseCSVOptions{})
+// parseCSVFile parses a CSV file into a csvSource.
+func parseCSVFile(path string) (*csvSource, error) {
+	return parseCSVFileWithOptions(path, parseCSVOptions{})
 }
 
-// ParseCSVFileWithOptions parses a CSV file with custom options.
-func ParseCSVFileWithOptions(path string, opts ParseCSVOptions) (*CSVSource, error) {
+// parseCSVFileWithOptions parses a CSV file with custom options.
+func parseCSVFileWithOptions(path string, opts parseCSVOptions) (*csvSource, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func ParseCSVFileWithOptions(path string, opts ParseCSVOptions) (*CSVSource, err
 	return parseCSVReaderWithOptions(f, opts)
 }
 
-func parseCSVReaderWithOptions(r io.Reader, opts ParseCSVOptions) (*CSVSource, error) {
+func parseCSVReaderWithOptions(r io.Reader, opts parseCSVOptions) (*csvSource, error) {
 	reader := csv.NewReader(r)
 	// Allow variable number of fields per record
 	reader.FieldsPerRecord = -1
@@ -125,12 +125,12 @@ func parseCSVReaderWithOptions(r io.Reader, opts ParseCSVOptions) (*CSVSource, e
 		rows = append(rows, row)
 	}
 
-	return &CSVSource{rows: rows}, nil
+	return &csvSource{rows: rows}, nil
 }
 
 // Data returns the parsed CSV rows.
 // ctx, sql, and tc are ignored for static data sources.
-func (s *CSVSource) Data(_ map[string]any, _ string, _ map[string]any, _ *js.TransformContext) (any, map[string]any, error) {
+func (s *csvSource) Data(_ map[string]any, _ string, _ map[string]any, _ *js.TransformContext) (any, map[string]any, error) {
 	// Return a copy to prevent mutation
 	result := make([]map[string]any, len(s.rows))
 	for i, row := range s.rows {

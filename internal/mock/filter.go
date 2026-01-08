@@ -11,8 +11,8 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
-// JSFilteredSource wraps a Source and filters data using JavaScript.
-type JSFilteredSource struct {
+// jsFilteredSource wraps a Source and filters data using JavaScript.
+type jsFilteredSource struct {
 	source  Source
 	program *goja.Program
 	helpers *js.CompiledHelpers
@@ -25,10 +25,10 @@ type filterVM struct {
 	callable goja.Callable
 }
 
-// NewJSFilteredSource creates a JSFilteredSource that filters by JavaScript code.
+// newJSFilteredSource creates a jsFilteredSource that filters by JavaScript code.
 // The filter JS receives: row (param), input (param), ctx (free var).
 // It should return a boolean (true to include the row).
-func NewJSFilteredSource(source Source, filterJS string, helpers *js.CompiledHelpers) (*JSFilteredSource, error) {
+func newJSFilteredSource(source Source, filterJS string, helpers *js.CompiledHelpers) (*jsFilteredSource, error) {
 	// Compile filter as a function that takes row and input as parameters
 	wrapped := "(function(row, input) { " + filterJS + " })"
 	program, err := goja.Compile("filter", wrapped, true)
@@ -36,7 +36,7 @@ func NewJSFilteredSource(source Source, filterJS string, helpers *js.CompiledHel
 		return nil, err
 	}
 
-	f := &JSFilteredSource{
+	f := &jsFilteredSource{
 		source:  source,
 		program: program,
 		helpers: helpers,
@@ -52,7 +52,7 @@ func NewJSFilteredSource(source Source, filterJS string, helpers *js.CompiledHel
 }
 
 // createVM creates a new VM with helpers and callable.
-func (f *JSFilteredSource) createVM() (*goja.Runtime, goja.Callable, error) {
+func (f *jsFilteredSource) createVM() (*goja.Runtime, goja.Callable, error) {
 	vm := goja.New()
 
 	if f.helpers != nil {
@@ -75,7 +75,7 @@ func (f *JSFilteredSource) createVM() (*goja.Runtime, goja.Callable, error) {
 }
 
 // Data returns filtered data based on JavaScript filter function.
-func (f *JSFilteredSource) Data(ctx map[string]any, sql string, input map[string]any, tc *js.TransformContext) (any, map[string]any, error) {
+func (f *jsFilteredSource) Data(ctx map[string]any, sql string, input map[string]any, tc *js.TransformContext) (any, map[string]any, error) {
 	data, newCtx, err := f.source.Data(ctx, sql, input, tc)
 	if err != nil {
 		return nil, nil, err
@@ -95,7 +95,7 @@ func (f *JSFilteredSource) Data(ctx map[string]any, sql string, input map[string
 }
 
 // filterData filters the data using the JavaScript filter function.
-func (f *JSFilteredSource) filterData(data any, input map[string]any, ctx map[string]any) (any, error) {
+func (f *jsFilteredSource) filterData(data any, input map[string]any, ctx map[string]any) (any, error) {
 	if data == nil {
 		return data, nil
 	}
@@ -112,7 +112,7 @@ func (f *JSFilteredSource) filterData(data any, input map[string]any, ctx map[st
 }
 
 // filterArray filters an array of objects using the JavaScript filter function.
-func (f *JSFilteredSource) filterArray(arr []any, input map[string]any, ctx map[string]any) ([]any, error) {
+func (f *jsFilteredSource) filterArray(arr []any, input map[string]any, ctx map[string]any) ([]any, error) {
 	result := make([]any, 0)
 
 	for _, item := range arr {
@@ -130,7 +130,7 @@ func (f *JSFilteredSource) filterArray(arr []any, input map[string]any, ctx map[
 
 // evaluateFilter evaluates the filter function for a single row.
 // Execution is limited to JSTimeout to prevent infinite loops.
-func (f *JSFilteredSource) evaluateFilter(row any, input map[string]any, ctx map[string]any) (bool, error) {
+func (f *jsFilteredSource) evaluateFilter(row any, input map[string]any, ctx map[string]any) (bool, error) {
 	// Get or create a VM from pool
 	fvm := f.pool.Get()
 	if fvm == nil {

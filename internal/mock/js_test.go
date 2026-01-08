@@ -10,7 +10,7 @@ import (
 func TestCompileJS(t *testing.T) {
 	t.Run("valid JS returning object", func(t *testing.T) {
 		code := `return { id: parseInt(input.id), name: "Mock User" }`
-		source, err := CompileJS(code)
+		source, err := compileJS(code)
 		require.NoError(t, err)
 
 		result, ctx, err := source.Data(
@@ -29,7 +29,7 @@ func TestCompileJS(t *testing.T) {
 
 	t.Run("valid JS returning array", func(t *testing.T) {
 		code := `return [{ id: 1 }, { id: 2 }]`
-		source, err := CompileJS(code)
+		source, err := compileJS(code)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -41,7 +41,7 @@ func TestCompileJS(t *testing.T) {
 
 	t.Run("JS with ctx modification", func(t *testing.T) {
 		code := `ctx.mockTime = Date.now(); return { id: 1 }`
-		source, err := CompileJS(code)
+		source, err := compileJS(code)
 		require.NoError(t, err)
 
 		ctx := map[string]any{}
@@ -53,7 +53,7 @@ func TestCompileJS(t *testing.T) {
 
 	t.Run("JS with sql access", func(t *testing.T) {
 		code := `return { sql: sql }`
-		source, err := CompileJS(code)
+		source, err := compileJS(code)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "SELECT * FROM users", nil, nil)
@@ -65,13 +65,13 @@ func TestCompileJS(t *testing.T) {
 
 	t.Run("invalid JS syntax", func(t *testing.T) {
 		code := `return { invalid syntax`
-		_, err := CompileJS(code)
+		_, err := compileJS(code)
 		require.Error(t, err)
 	})
 
 	t.Run("JS throwing error", func(t *testing.T) {
 		code := `throw { status: 400, body: { message: "error" } }`
-		source, err := CompileJS(code)
+		source, err := compileJS(code)
 		require.NoError(t, err)
 
 		_, _, err = source.Data(nil, "", nil, nil)

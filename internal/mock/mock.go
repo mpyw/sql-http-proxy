@@ -56,13 +56,13 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 	// Helper to wrap with delay if needed
 	wrapWithDelay := func(source Source) Source {
 		if delay > 0 {
-			return NewDelayedSource(source, delay)
+			return newDelayedSource(source, delay)
 		}
 		return source
 	}
 
 	// CSV parsing options
-	csvOpts := ParseCSVOptions{ValueParser: opts.ValueParser}
+	csvOpts := parseCSVOptions{ValueParser: opts.ValueParser}
 
 	var source Source
 	var err error
@@ -71,16 +71,16 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 	switch {
 	// Object sources (type: one only)
 	case m.Object != nil:
-		source, err = NewJSON(m.Object)
+		source, err = newJSON(m.Object)
 
 	case m.ObjectJSON != "":
-		source, err = ParseJSONString(m.ObjectJSON)
+		source, err = parseJSONString(m.ObjectJSON)
 
 	case m.ObjectJSONFile != "":
-		source, err = ParseJSONFile(resolvePath(m.ObjectJSONFile))
+		source, err = parseJSONFile(resolvePath(m.ObjectJSONFile))
 
 	case m.ObjectJS != "":
-		src, err := CompileJS(m.ObjectJS)
+		src, err := compileJS(m.ObjectJS)
 		if err != nil {
 			return nil, err
 		}
@@ -89,26 +89,26 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 
 	// Array sources
 	case m.Array != nil:
-		source, err = NewJSON(m.Array)
+		source, err = newJSON(m.Array)
 		filterJS = m.Filter
 
 	case m.ArrayJSON != "":
-		source, err = ParseJSONString(m.ArrayJSON)
+		source, err = parseJSONString(m.ArrayJSON)
 		filterJS = m.Filter
 
 	case m.ArrayJSONFile != "":
-		source, err = ParseJSONFile(resolvePath(m.ArrayJSONFile))
+		source, err = parseJSONFile(resolvePath(m.ArrayJSONFile))
 		filterJS = m.Filter
 
 	case m.ArrayJS != "":
-		src, err := CompileJS(m.ArrayJS)
+		src, err := compileJS(m.ArrayJS)
 		if err != nil {
 			return nil, err
 		}
 		src.SetHelpers(opts.Helpers)
-		// For array_js with filter, wrap with JSFilteredSource
+		// For array_js with filter, wrap with jsFilteredSource
 		if m.Filter != "" {
-			filtered, err := NewJSFilteredSource(src, m.Filter, opts.Helpers)
+			filtered, err := newJSFilteredSource(src, m.Filter, opts.Helpers)
 			if err != nil {
 				return nil, err
 			}
@@ -117,19 +117,19 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 		return wrapWithDelay(src), nil
 
 	case m.CSV != "":
-		source, err = ParseCSVWithOptions(m.CSV, csvOpts)
+		source, err = parseCSVWithOptions(m.CSV, csvOpts)
 		filterJS = m.Filter
 
 	case m.CSVFile != "":
-		source, err = ParseCSVFileWithOptions(resolvePath(m.CSVFile), csvOpts)
+		source, err = parseCSVFileWithOptions(resolvePath(m.CSVFile), csvOpts)
 		filterJS = m.Filter
 
 	case m.JSONL != "":
-		source, err = ParseJSONL(m.JSONL)
+		source, err = parseJSONL(m.JSONL)
 		filterJS = m.Filter
 
 	case m.JSONLFile != "":
-		source, err = ParseJSONLFile(resolvePath(m.JSONLFile))
+		source, err = parseJSONLFile(resolvePath(m.JSONLFile))
 		filterJS = m.Filter
 
 	default:
@@ -140,9 +140,9 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 		return nil, err
 	}
 
-	// Wrap with JSFilteredSource if filter is specified
+	// Wrap with jsFilteredSource if filter is specified
 	if filterJS != "" {
-		filtered, err := NewJSFilteredSource(source, filterJS, opts.Helpers)
+		filtered, err := newJSFilteredSource(source, filterJS, opts.Helpers)
 		if err != nil {
 			return nil, err
 		}

@@ -12,7 +12,7 @@ import (
 )
 
 // QueryHandler handles HTTP requests for queries.
-type QueryHandler = BaseHandler[executor.ExecuteResult]
+type QueryHandler = baseHandler[executor.ExecuteResult]
 
 // queryResultProcessor implements ResultProcessor for ExecuteResult.
 type queryResultProcessor struct{}
@@ -25,12 +25,12 @@ func (p *queryResultProcessor) BuildResponse(result *executor.ExecuteResult) (in
 // NewQueryHandler creates a new QueryHandler.
 // db can be nil if mock is configured.
 func NewQueryHandler(db *sqlx.DB, query config.Query) (*QueryHandler, error) {
-	return NewQueryHandlerWithOptions(db, query, HandlerOptions{})
+	return newQueryHandlerWithOptions(db, query, handlerOptions{})
 }
 
-// NewQueryHandlerWithOptions creates a new QueryHandler with options.
+// newQueryHandlerWithOptions creates a new QueryHandler with options.
 // db can be nil if mock is configured.
-func NewQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts HandlerOptions) (*QueryHandler, error) {
+func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOptions) (*QueryHandler, error) {
 	execOpts := executor.CompileTransformOptions{
 		ConfigDir:   opts.ConfigDir,
 		Helpers:     opts.Helpers,

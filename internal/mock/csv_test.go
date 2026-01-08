@@ -17,7 +17,7 @@ func TestParseCSV(t *testing.T) {
 		data := `id,name,active
 42,Alice,true
 100,Bob,false`
-		source, err := ParseCSV(data)
+		source, err := parseCSV(data)
 		require.NoError(t, err)
 
 		rows, ctx, err := source.Data(nil, "", nil, nil)
@@ -40,7 +40,7 @@ func TestParseCSV(t *testing.T) {
 		data := `string,number,bool,null
 hello,42,yes,null
 world,-3.14,off,NULL`
-		source, err := ParseCSV(data)
+		source, err := parseCSV(data)
 		require.NoError(t, err)
 
 		rows, _, err := source.Data(nil, "", nil, nil)
@@ -63,14 +63,14 @@ world,-3.14,off,NULL`
 	})
 
 	t.Run("empty data", func(t *testing.T) {
-		_, err := ParseCSV("")
+		_, err := parseCSV("")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "empty data")
 	})
 
 	t.Run("header only", func(t *testing.T) {
 		data := "id,name,active"
-		source, err := ParseCSV(data)
+		source, err := parseCSV(data)
 		require.NoError(t, err)
 
 		rows, _, err := source.Data(nil, "", nil, nil)
@@ -83,7 +83,7 @@ world,-3.14,off,NULL`
 	t.Run("fewer columns than header", func(t *testing.T) {
 		data := `id,name,active
 42,Alice`
-		source, err := ParseCSV(data)
+		source, err := parseCSV(data)
 		require.NoError(t, err)
 
 		rows, _, err := source.Data(nil, "", nil, nil)
@@ -100,7 +100,7 @@ world,-3.14,off,NULL`
 	t.Run("more columns than header", func(t *testing.T) {
 		data := `id,name
 42,Alice,extra,ignored`
-		source, err := ParseCSV(data)
+		source, err := parseCSV(data)
 		require.NoError(t, err)
 
 		rows, _, err := source.Data(nil, "", nil, nil)
@@ -119,7 +119,7 @@ world,-3.14,off,NULL`
 	t.Run("data returns copy", func(t *testing.T) {
 		data := `id,name
 42,Alice`
-		source, err := ParseCSV(data)
+		source, err := parseCSV(data)
 		require.NoError(t, err)
 
 		rows1, _ := lo.Must2(source.Data(nil, "", nil, nil))
@@ -146,7 +146,7 @@ func TestParseCSVFile(t *testing.T) {
 		err := os.WriteFile(path, []byte(content), 0644)
 		require.NoError(t, err)
 
-		source, err := ParseCSVFile(path)
+		source, err := parseCSVFile(path)
 		require.NoError(t, err)
 
 		rows, _, err := source.Data(nil, "", nil, nil)
@@ -157,7 +157,7 @@ func TestParseCSVFile(t *testing.T) {
 	})
 
 	t.Run("file not found", func(t *testing.T) {
-		_, err := ParseCSVFile("/nonexistent/file.csv")
+		_, err := parseCSVFile("/nonexistent/file.csv")
 		require.Error(t, err)
 	})
 }

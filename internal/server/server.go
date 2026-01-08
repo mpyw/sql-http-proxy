@@ -37,14 +37,14 @@ func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (http.Handler
 	}
 
 	r := chi.NewRouter()
-	opts := HandlerOptions{
+	opts := handlerOptions{
 		ConfigDir:   configDir,
 		Helpers:     helpers,
 		ValueParser: valueParser,
 	}
 
 	for _, query := range cfg.Queries {
-		handler, err := NewQueryHandlerWithOptions(db, query, opts)
+		handler, err := newQueryHandlerWithOptions(db, query, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create handler for %s: %w", query.Path, err)
 		}
@@ -52,14 +52,14 @@ func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (http.Handler
 	}
 
 	for _, mutation := range cfg.Mutations {
-		handler, err := NewMutationHandlerWithOptions(db, mutation, opts)
+		handler, err := newMutationHandlerWithOptions(db, mutation, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create handler for %s: %w", mutation.Path, err)
 		}
 		r.Method(mutation.GetMethod(), convertPathPattern(mutation.Path), handler)
 	}
 
-	r.NotFound(CreateNotFoundHandler().ServeHTTP)
+	r.NotFound(createNotFoundHandler().ServeHTTP)
 
 	return r, nil
 }

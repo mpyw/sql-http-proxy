@@ -12,7 +12,7 @@ import (
 )
 
 // MutationHandler handles HTTP requests for mutations.
-type MutationHandler = BaseHandler[executor.MutationResult]
+type MutationHandler = baseHandler[executor.MutationResult]
 
 // mutationResultProcessor implements ResultProcessor for MutationResult.
 type mutationResultProcessor struct{}
@@ -30,12 +30,12 @@ func (p *mutationResultProcessor) BuildResponse(result *executor.MutationResult)
 // NewMutationHandler creates a new MutationHandler.
 // db can be nil if mock is configured.
 func NewMutationHandler(db *sqlx.DB, mutation config.Mutation) (*MutationHandler, error) {
-	return NewMutationHandlerWithOptions(db, mutation, HandlerOptions{})
+	return newMutationHandlerWithOptions(db, mutation, handlerOptions{})
 }
 
-// NewMutationHandlerWithOptions creates a new MutationHandler with options.
+// newMutationHandlerWithOptions creates a new MutationHandler with options.
 // db can be nil if mock is configured.
-func NewMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts HandlerOptions) (*MutationHandler, error) {
+func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts handlerOptions) (*MutationHandler, error) {
 	execOpts := executor.CompileTransformOptions{
 		ConfigDir:   opts.ConfigDir,
 		Helpers:     opts.Helpers,

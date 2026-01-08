@@ -16,7 +16,7 @@ func TestNewJSON(t *testing.T) {
 			map[string]any{"id": 1, "name": "Alice"},
 			map[string]any{"id": 2, "name": "Bob"},
 		}
-		source, err := NewJSON(data)
+		source, err := newJSON(data)
 		require.NoError(t, err)
 
 		result, ctx, err := source.Data(nil, "", nil, nil)
@@ -34,7 +34,7 @@ func TestNewJSON(t *testing.T) {
 
 	t.Run("object data", func(t *testing.T) {
 		data := map[string]any{"id": 1, "name": "Alice"}
-		source, err := NewJSON(data)
+		source, err := newJSON(data)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -46,7 +46,7 @@ func TestNewJSON(t *testing.T) {
 	})
 
 	t.Run("nil data", func(t *testing.T) {
-		source, err := NewJSON(nil)
+		source, err := newJSON(nil)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -56,7 +56,7 @@ func TestNewJSON(t *testing.T) {
 
 	t.Run("string data (JSON array)", func(t *testing.T) {
 		data := `[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]`
-		source, err := NewJSON(data)
+		source, err := newJSON(data)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -72,7 +72,7 @@ func TestNewJSON(t *testing.T) {
 
 	t.Run("string data (JSON object)", func(t *testing.T) {
 		data := `{"id": 1, "name": "Alice"}`
-		source, err := NewJSON(data)
+		source, err := newJSON(data)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -85,13 +85,13 @@ func TestNewJSON(t *testing.T) {
 
 	t.Run("invalid JSON string", func(t *testing.T) {
 		data := `{invalid json}`
-		_, err := NewJSON(data)
+		_, err := newJSON(data)
 		require.Error(t, err)
 	})
 
 	t.Run("data returns deep copy", func(t *testing.T) {
 		data := []any{map[string]any{"name": "Alice"}}
-		source, err := NewJSON(data)
+		source, err := newJSON(data)
 		require.NoError(t, err)
 
 		result1, _ := lo.Must2(source.Data(nil, "", nil, nil))
@@ -117,7 +117,7 @@ func TestParseJSONFile(t *testing.T) {
 		err := os.WriteFile(path, []byte(content), 0644)
 		require.NoError(t, err)
 
-		source, err := ParseJSONFile(path)
+		source, err := parseJSONFile(path)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -134,7 +134,7 @@ func TestParseJSONFile(t *testing.T) {
 		err := os.WriteFile(path, []byte(content), 0644)
 		require.NoError(t, err)
 
-		source, err := ParseJSONFile(path)
+		source, err := parseJSONFile(path)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -151,12 +151,12 @@ func TestParseJSONFile(t *testing.T) {
 		err := os.WriteFile(path, []byte(content), 0644)
 		require.NoError(t, err)
 
-		_, err = ParseJSONFile(path)
+		_, err = parseJSONFile(path)
 		require.Error(t, err)
 	})
 
 	t.Run("file not found", func(t *testing.T) {
-		_, err := ParseJSONFile("/nonexistent/file.json")
+		_, err := parseJSONFile("/nonexistent/file.json")
 		require.Error(t, err)
 	})
 }
@@ -165,7 +165,7 @@ func TestParseJSONL(t *testing.T) {
 	t.Run("valid JSONL", func(t *testing.T) {
 		data := `{"id": 1, "name": "Alice"}
 {"id": 2, "name": "Bob"}`
-		source, err := ParseJSONL(data)
+		source, err := parseJSONL(data)
 		require.NoError(t, err)
 
 		result, ctx, err := source.Data(nil, "", nil, nil)
@@ -189,7 +189,7 @@ func TestParseJSONL(t *testing.T) {
 
 {"id": 2}
 `
-		source, err := ParseJSONL(data)
+		source, err := parseJSONL(data)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -200,7 +200,7 @@ func TestParseJSONL(t *testing.T) {
 	})
 
 	t.Run("empty JSONL", func(t *testing.T) {
-		source, err := ParseJSONL("")
+		source, err := parseJSONL("")
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -214,7 +214,7 @@ func TestParseJSONL(t *testing.T) {
 		data := `{"id": 1}
 {invalid json}
 {"id": 2}`
-		_, err := ParseJSONL(data)
+		_, err := parseJSONL(data)
 		require.Error(t, err)
 	})
 
@@ -222,7 +222,7 @@ func TestParseJSONL(t *testing.T) {
 		data := `{"id": 1}
 
 {"id": 2}`
-		source, err := ParseJSONL(data)
+		source, err := parseJSONL(data)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -242,7 +242,7 @@ func TestParseJSONLFile(t *testing.T) {
 		err := os.WriteFile(path, []byte(content), 0644)
 		require.NoError(t, err)
 
-		source, err := ParseJSONLFile(path)
+		source, err := parseJSONLFile(path)
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil, nil)
@@ -253,7 +253,7 @@ func TestParseJSONLFile(t *testing.T) {
 	})
 
 	t.Run("file not found", func(t *testing.T) {
-		_, err := ParseJSONLFile("/nonexistent/file.jsonl")
+		_, err := parseJSONLFile("/nonexistent/file.jsonl")
 		require.Error(t, err)
 	})
 }

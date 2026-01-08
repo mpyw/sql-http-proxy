@@ -11,37 +11,37 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
-// JSONSource holds pre-parsed JSON data.
-type JSONSource struct {
+// jsonSource holds pre-parsed JSON data.
+type jsonSource struct {
 	data any
 }
 
-// NewJSON creates a JSONSource from inline YAML/JSON data.
+// newJSON creates a jsonSource from inline YAML/JSON data.
 // If data is a string, it is parsed as JSON.
 // Otherwise, it is used as-is (already parsed by YAML unmarshaler).
-func NewJSON(data any) (*JSONSource, error) {
+func newJSON(data any) (*jsonSource, error) {
 	// If data is a string, parse it as JSON
 	if s, ok := data.(string); ok {
 		var parsed any
 		if err := json.Unmarshal([]byte(s), &parsed); err != nil {
 			return nil, err
 		}
-		return &JSONSource{data: parsed}, nil
+		return &jsonSource{data: parsed}, nil
 	}
-	return &JSONSource{data: data}, nil
+	return &jsonSource{data: data}, nil
 }
 
-// ParseJSONString parses a JSON string into a JSONSource.
-func ParseJSONString(jsonStr string) (*JSONSource, error) {
+// parseJSONString parses a JSON string into a jsonSource.
+func parseJSONString(jsonStr string) (*jsonSource, error) {
 	var parsed any
 	if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
 		return nil, err
 	}
-	return &JSONSource{data: parsed}, nil
+	return &jsonSource{data: parsed}, nil
 }
 
-// ParseJSONFile parses a JSON file into a JSONSource.
-func ParseJSONFile(path string) (*JSONSource, error) {
+// parseJSONFile parses a JSON file into a jsonSource.
+func parseJSONFile(path string) (*jsonSource, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -57,17 +57,17 @@ func ParseJSONFile(path string) (*JSONSource, error) {
 		return nil, err
 	}
 
-	return &JSONSource{data: data}, nil
+	return &jsonSource{data: data}, nil
 }
 
-// ParseJSONL parses inline JSONL (JSON Lines) data.
+// parseJSONL parses inline JSONL (JSON Lines) data.
 // Each line is a separate JSON object.
-func ParseJSONL(data string) (*JSONSource, error) {
+func parseJSONL(data string) (*jsonSource, error) {
 	return parseJSONLReader(strings.NewReader(data))
 }
 
-// ParseJSONLFile parses a JSONL file into a JSONSource.
-func ParseJSONLFile(path string) (*JSONSource, error) {
+// parseJSONLFile parses a JSONL file into a jsonSource.
+func parseJSONLFile(path string) (*jsonSource, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func ParseJSONLFile(path string) (*JSONSource, error) {
 	return parseJSONLReader(f)
 }
 
-func parseJSONLReader(r io.Reader) (*JSONSource, error) {
+func parseJSONLReader(r io.Reader) (*jsonSource, error) {
 	var rows []any
 	scanner := bufio.NewScanner(r)
 
@@ -101,12 +101,12 @@ func parseJSONLReader(r io.Reader) (*JSONSource, error) {
 		return nil, err
 	}
 
-	return &JSONSource{data: rows}, nil
+	return &jsonSource{data: rows}, nil
 }
 
 // Data returns the parsed JSON data.
 // ctx, sql, and tc are ignored for static data sources.
-func (s *JSONSource) Data(_ map[string]any, _ string, _ map[string]any, _ *js.TransformContext) (any, map[string]any, error) {
+func (s *jsonSource) Data(_ map[string]any, _ string, _ map[string]any, _ *js.TransformContext) (any, map[string]any, error) {
 	// Return a deep copy to prevent mutation
 	return deepCopy(s.data), nil, nil
 }

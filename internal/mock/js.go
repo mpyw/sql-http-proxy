@@ -6,27 +6,27 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
-// JSSource wraps js.Transformer for mock data generation.
-type JSSource struct {
+// jsSource wraps js.Transformer for mock data generation.
+type jsSource struct {
 	transformer *js.Transformer
 }
 
 // SetHelpers sets the compiled helpers for this mock source.
-func (s *JSSource) SetHelpers(h *js.CompiledHelpers) {
+func (s *jsSource) SetHelpers(h *js.CompiledHelpers) {
 	s.transformer.SetHelpers(h)
 }
 
-// CompileJS compiles JavaScript code into a JSSource.
-func CompileJS(code string) (*JSSource, error) {
+// compileJS compiles JavaScript code into a jsSource.
+func compileJS(code string) (*jsSource, error) {
 	t, err := js.CompileMockJS(code)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile mock: %w", err)
 	}
-	return &JSSource{transformer: t}, nil
+	return &jsSource{transformer: t}, nil
 }
 
 // Data executes the JavaScript function and returns the mock data.
-func (s *JSSource) Data(ctx map[string]any, sql string, input map[string]any, tc *js.TransformContext) (any, map[string]any, error) {
+func (s *jsSource) Data(ctx map[string]any, sql string, input map[string]any, tc *js.TransformContext) (any, map[string]any, error) {
 	result, err := s.transformer.ApplyMock(ctx, sql, input, tc)
 	if err != nil {
 		return nil, nil, err
