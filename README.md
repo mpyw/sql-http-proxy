@@ -71,7 +71,20 @@ queries:
       mock:
         - { id: 1, name: Alice }
         - { id: 2, name: Bob }
+
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      mock: |
+        const users = [
+          { id: 1, name: 'Alice' },
+          { id: 2, name: 'Bob' },
+        ];
+        return users.find(u => u.id === parseInt(input.id)) || null;
 ```
+
+> Returning `null` from mock results in 404 Not Found for `type: one`.
 
 # Configuration Overview
 
