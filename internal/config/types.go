@@ -193,11 +193,6 @@ func (m *Mock) sourceFlags() []bool {
 	return append(m.objectSourceFlags(), m.arraySourceFlags()...)
 }
 
-// HasJS returns true if this mock uses a JavaScript source.
-func (m *Mock) HasJS() bool {
-	return m.ObjectJS != "" || m.ArrayJS != ""
-}
-
 // GetJS returns the JavaScript code if present.
 func (m *Mock) GetJS() string {
 	if m.ObjectJS != "" {

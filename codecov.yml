@@ -1,0 +1,28 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+flag_management:
+  default_rules:
+    carryforward: true
+  individual_flags:
+    - name: unit
+      paths:
+        - internal/
+      carryforward: true
+    - name: e2e
+      paths:
+        - e2e/
+      carryforward: true
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
