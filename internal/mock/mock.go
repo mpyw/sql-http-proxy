@@ -45,6 +45,9 @@ func Compile(mt *config.MockTransform, opts CompileOptions) (Source, error) {
 	// CSV parsing options
 	csvOpts := ParseCSVOptions{ValueParser: opts.ValueParser}
 
+	var source Source
+	var err error
+
 	switch {
 	case mt.JS != "":
 		src, err := CompileJS(mt.JS)
@@ -52,27 +55,38 @@ func Compile(mt *config.MockTransform, opts CompileOptions) (Source, error) {
 			return nil, err
 		}
 		src.SetHelpers(opts.Helpers)
-		return src, nil
+		return src, nil // JS handles its own filtering
 
 	case mt.CSV != "":
-		return ParseCSVWithOptions(mt.CSV, csvOpts)
+		source, err = ParseCSVWithOptions(mt.CSV, csvOpts)
 
 	case mt.CSVFile != "":
-		return ParseCSVFileWithOptions(resolvePath(mt.CSVFile), csvOpts)
+		source, err = ParseCSVFileWithOptions(resolvePath(mt.CSVFile), csvOpts)
 
 	case mt.JSON != nil:
-		return NewJSON(mt.JSON)
+		source, err = NewJSON(mt.JSON)
 
 	case mt.JSONFile != "":
-		return ParseJSONFile(resolvePath(mt.JSONFile))
+		source, err = ParseJSONFile(resolvePath(mt.JSONFile))
 
 	case mt.JSONL != "":
-		return ParseJSONL(mt.JSONL)
+		source, err = ParseJSONL(mt.JSONL)
 
 	case mt.JSONLFile != "":
-		return ParseJSONLFile(resolvePath(mt.JSONLFile))
+		source, err = ParseJSONLFile(resolvePath(mt.JSONLFile))
 
 	default:
 		return nil, fmt.Errorf("mock: no source specified")
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Wrap with FilteredSource if filter_by is specified
+	if mt.FilterBy == "input" {
+		return NewFilteredSource(source), nil
+	}
+
+	return source, nil
 }

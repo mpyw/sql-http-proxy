@@ -123,6 +123,11 @@
       "type": "string",
       "description": "JavaScript to transform parameters. Free vars: ctx, sql. Param: input"
     },
+    "filterBy": {
+      "type": "string",
+      "enum": ["input"],
+      "description": "Filter data by input parameters. When set, data is filtered to match input keys."
+    },
     "mockTransformOne": {
       "oneOf": [
         {
@@ -138,17 +143,91 @@
         },
         {
           "type": "object",
-          "properties": { "json": {} },
+          "properties": {
+            "json": {
+              "oneOf": [
+                { "type": "object" },
+                { "type": "string", "minLength": 1 }
+              ]
+            }
+          },
           "required": ["json"],
           "additionalProperties": false,
-          "description": "Inline JSON data (object)"
+          "description": "Inline JSON data (object or JSON string for type: one without filter_by)"
         },
         {
           "type": "object",
-          "properties": { "json_file": { "type": "string" } },
+          "properties": {
+            "json": {
+              "oneOf": [
+                { "type": "array", "items": { "type": "object" } },
+                { "type": "string", "minLength": 1 }
+              ]
+            },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
+          "required": ["json", "filter_by"],
+          "additionalProperties": false,
+          "description": "Inline JSON array with filter_by (filters to single result)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "json_file": { "type": "string", "minLength": 1 }
+          },
           "required": ["json_file"],
           "additionalProperties": false,
-          "description": "Path to JSON file (relative to config file)"
+          "description": "Path to JSON file (for type: one without filter_by)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "json_file": { "type": "string", "minLength": 1 },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
+          "required": ["json_file", "filter_by"],
+          "additionalProperties": false,
+          "description": "Path to JSON file with filter_by (filters to single result)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "csv": { "type": "string" },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
+          "required": ["csv", "filter_by"],
+          "additionalProperties": false,
+          "description": "Inline CSV data with filter_by (required for type: one)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "csv_file": { "type": "string" },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
+          "required": ["csv_file", "filter_by"],
+          "additionalProperties": false,
+          "description": "CSV file with filter_by (required for type: one)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "jsonl": { "type": "string" },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
+          "required": ["jsonl", "filter_by"],
+          "additionalProperties": false,
+          "description": "Inline JSONL data with filter_by (required for type: one)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "jsonl_file": { "type": "string" },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
+          "required": ["jsonl_file", "filter_by"],
+          "additionalProperties": false,
+          "description": "JSONL file with filter_by (required for type: one)"
         },
         {
           "type": "object",
@@ -160,13 +239,14 @@
               { "required": ["csv"] },
               { "required": ["csv_file"] },
               { "required": ["jsonl"] },
-              { "required": ["jsonl_file"] }
+              { "required": ["jsonl_file"] },
+              { "required": ["filter_by"] }
             ]
           },
           "description": "Plain object shorthand for JSON data (e.g., { id: 1, name: 'Alice' })"
         }
       ],
-      "description": "Mock data source for type: one (js, json only - no csv/jsonl)"
+      "description": "Mock data source for type: one"
     },
     "mockTransformMany": {
       "oneOf": [
@@ -183,48 +263,72 @@
         },
         {
           "type": "object",
-          "properties": { "csv": { "type": "string" } },
+          "properties": {
+            "csv": { "type": "string" },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
           "required": ["csv"],
           "additionalProperties": false,
           "description": "Inline CSV data with header row"
         },
         {
           "type": "object",
-          "properties": { "csv_file": { "type": "string" } },
+          "properties": {
+            "csv_file": { "type": "string" },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
           "required": ["csv_file"],
           "additionalProperties": false,
           "description": "Path to CSV file (relative to config file)"
         },
         {
           "type": "object",
-          "properties": { "json": {} },
+          "properties": {
+            "json": {
+              "oneOf": [
+                { "type": "array", "items": { "type": "object" } },
+                { "type": "string", "minLength": 1 }
+              ]
+            },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
           "required": ["json"],
           "additionalProperties": false,
-          "description": "Inline JSON data (array)"
+          "description": "Inline JSON data (array or JSON string)"
         },
         {
           "type": "object",
-          "properties": { "json_file": { "type": "string" } },
+          "properties": {
+            "json_file": { "type": "string", "minLength": 1 },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
           "required": ["json_file"],
           "additionalProperties": false,
           "description": "Path to JSON file (relative to config file)"
         },
         {
           "type": "object",
-          "properties": { "jsonl": { "type": "string" } },
+          "properties": {
+            "jsonl": { "type": "string", "minLength": 1 },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
           "required": ["jsonl"],
           "additionalProperties": false,
           "description": "Inline JSONL data (one JSON object per line)"
         },
         {
           "type": "object",
-          "properties": { "jsonl_file": { "type": "string" } },
+          "properties": {
+            "jsonl_file": { "type": "string", "minLength": 1 },
+            "filter_by": { "$ref": "#/$defs/filterBy" }
+          },
           "required": ["jsonl_file"],
           "additionalProperties": false,
           "description": "Path to JSONL file (relative to config file)"
         },
         {
           "type": "array",
+          "items": { "type": "object" },
           "description": "Array shorthand for JSON data (e.g., [{ id: 1 }, { id: 2 }])"
         },
         {
@@ -237,7 +341,8 @@
               { "required": ["json"] },
               { "required": ["json_file"] },
               { "required": ["jsonl"] },
-              { "required": ["jsonl_file"] }
+              { "required": ["jsonl_file"] },
+              { "required": ["filter_by"] }
             ]
           },
           "description": "Plain object shorthand for JSON data (e.g., { id: 1, name: 'Alice' })"

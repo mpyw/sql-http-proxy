@@ -190,17 +190,43 @@ pre: |
 
 ### Mock
 
-Returns mock data without database. **Only one format can be specified.**
+Returns mock data without database. **Only one data format can be specified.**
 
 | Format | type: one | type: many | Description |
 |--------|-----------|------------|-------------|
 | `js` | Yes | Yes | Inline JavaScript |
-| `json` | Yes | Yes | YAML/JSON object or array |
-| `json_file` | Yes | Yes | JSON file |
-| `csv` | No | Yes | Inline CSV |
-| `csv_file` | No | Yes | CSV file |
-| `jsonl` | No | Yes | Inline JSON Lines |
-| `jsonl_file` | No | Yes | JSON Lines file |
+| `json` | Yes* | Yes | YAML/JSON object or array |
+| `json_file` | Yes* | Yes | JSON file |
+| `csv` | with filter_by | Yes | Inline CSV |
+| `csv_file` | with filter_by | Yes | CSV file |
+| `jsonl` | with filter_by | Yes | Inline JSON Lines |
+| `jsonl_file` | with filter_by | Yes | JSON Lines file |
+
+> \* For `type: one` with array data, use `filter_by: input` to filter and return the first match.
+
+**filter_by option:**
+
+Use `filter_by: input` to automatically filter array data based on request parameters:
+
+```yaml
+# type: one with filter_by - filters array and returns first match (or 404)
+mock:
+  filter_by: input
+  json:
+    - { id: 1, name: Alice }
+    - { id: 2, name: Bob }
+
+# type: many with filter_by - filters and returns all matches
+mock:
+  filter_by: input
+  csv: |
+    id,name,role
+    1,Alice,admin
+    2,Bob,user
+    3,Charlie,admin
+```
+
+With `filter_by: input`, rows are filtered to match all provided input parameters. For `type: one`, the first matching row is returned (or 404 if none match).
 
 **Shorthand syntax:**
 

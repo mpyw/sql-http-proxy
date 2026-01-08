@@ -122,7 +122,7 @@ type Transform struct {
 }
 
 // MockTransform represents mock data source configuration.
-// Only one field should be set (mutually exclusive).
+// Only one data source field should be set (mutually exclusive).
 type MockTransform struct {
 	JS        string `yaml:"js,omitempty"`
 	CSV       string `yaml:"csv,omitempty"`
@@ -131,6 +131,7 @@ type MockTransform struct {
 	JSONFile  string `yaml:"json_file,omitempty"`
 	JSONL     string `yaml:"jsonl,omitempty"`
 	JSONLFile string `yaml:"jsonl_file,omitempty"`
+	FilterBy  string `yaml:"filter_by,omitempty"` // Filter data by input parameters (only "input" supported)
 }
 
 // UnmarshalYAML implements custom YAML unmarshaling for MockTransform.
@@ -173,7 +174,8 @@ func (m *MockTransform) UnmarshalYAML(value *yaml.Node) error {
 		if raw.JS != "" ||
 			raw.CSV != "" || raw.CSVFile != "" ||
 			raw.JSON != nil || raw.JSONFile != "" ||
-			raw.JSONL != "" || raw.JSONLFile != "" {
+			raw.JSONL != "" || raw.JSONLFile != "" ||
+			raw.FilterBy != "" {
 			*m = MockTransform(raw)
 			return nil
 		}
@@ -225,6 +227,7 @@ func (m *MockTransform) Validate() error {
 	if count > 1 {
 		return errors.New("mock: only one source type can be specified (js, csv, csv_file, json, json_file, jsonl, jsonl_file)")
 	}
+
 	return nil
 }
 

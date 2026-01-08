@@ -137,14 +137,27 @@ func (e *QueryExecutor) executeDB(reqCtx context.Context, ctx map[string]any, cu
 
 func (e *QueryExecutor) processOneResult(ctx, originalParams map[string]any, output any) (any, error) {
 	var entry map[string]any
-	if output == nil {
+	switch v := output.(type) {
+	case nil:
 		if !e.query.HandleNotFound {
 			return nil, ErrNotFound
 		}
 		entry = nil
-	} else if m, ok := output.(map[string]any); ok {
-		entry = m
-	} else {
+	case map[string]any:
+		entry = v
+	case []any:
+		// For filter_by: take first element or nil
+		if len(v) == 0 {
+			if !e.query.HandleNotFound {
+				return nil, ErrNotFound
+			}
+			entry = nil
+		} else if m, ok := v[0].(map[string]any); ok {
+			entry = m
+		} else {
+			return nil, errors.New("query result for 'one' must be object or null")
+		}
+	default:
 		return nil, errors.New("query result for 'one' must be object or null")
 	}
 

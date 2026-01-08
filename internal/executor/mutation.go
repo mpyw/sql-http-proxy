@@ -185,11 +185,21 @@ func (e *MutationExecutor) executeDB(reqCtx context.Context, ctx map[string]any,
 
 func (e *MutationExecutor) processOneResult(ctx, originalParams map[string]any, output any) (*MutationResult, error) {
 	var entry map[string]any
-	if output == nil {
+	switch v := output.(type) {
+	case nil:
 		entry = nil
-	} else if m, ok := output.(map[string]any); ok {
-		entry = m
-	} else {
+	case map[string]any:
+		entry = v
+	case []any:
+		// For filter_by: take first element or nil
+		if len(v) == 0 {
+			entry = nil
+		} else if m, ok := v[0].(map[string]any); ok {
+			entry = m
+		} else {
+			return nil, errors.New("mutation result for 'one' must be object or null")
+		}
+	default:
 		return nil, errors.New("mutation result for 'one' must be object or null")
 	}
 
