@@ -1,11 +1,18 @@
-dsn: "sqlite::memory:"
+dsn: postgres://localhost/test
 
 queries:
   - type: one
-    path: /user
     method: POST
-    accepts: json
-    sql: SELECT :id as id, :name as name
+    path: /search
+    sql: SELECT 1
     transform:
-      mock: |
-        return input
+      mock: { id: 1 }
+      post: |
+        return { query: input.query, result: output }
+
+  - type: one
+    method: GET
+    path: /get-only
+    sql: SELECT 1
+    transform:
+      mock: { id: 1 }

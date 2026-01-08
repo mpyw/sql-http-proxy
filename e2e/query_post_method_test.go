@@ -6,29 +6,54 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/mpyw/sql-http-proxy/internal/config"
+	"github.com/mpyw/sql-http-proxy/internal/server"
 )
 
 func TestQueryPostMethod(t *testing.T) {
-	cfg := loadConfig(t, "query_post_method_test.yaml")
-	handler := createHandler(t, nil, cfg)
+	cfg, err := config.ParseFile("query_post_method_test.yaml")
+	require.NoError(t, err)
 
-	t.Run("accepts POST with JSON body", func(t *testing.T) {
-		body := `{"id": 1, "name": "Alice"}`
-		req := httptest.NewRequest("POST", "/user", strings.NewReader(body))
+	mux, err := server.NewServeMux(nil, cfg, ".")
+	require.NoError(t, err)
+
+	t.Run("POST query with body", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"query":"test"}`))
 		req.Header.Set("Content-Type", "application/json")
-		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, req)
+		rec := httptest.NewRecorder()
 
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.JSONEq(t, `{"id": 1, "name": "Alice"}`, w.Body.String())
+		mux.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.JSONEq(t, `{"query":"test","result":{"id":1}}`, rec.Body.String())
 	})
 
-	t.Run("rejects GET when method is POST", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/user?id=1&name=Bob", nil)
-		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, req)
+	t.Run("POST query with form data", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`query=form-test`))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
 
-		assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
+		mux.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.JSONEq(t, `{"query":"form-test","result":{"id":1}}`, rec.Body.String())
+	})
+
+	t.Run("GET query wrong method returns 405", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/get-only", strings.NewReader(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+
+		mux.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusMethodNotAllowed, rec.Code)
+	})
+
+	t.Run("POST query wrong method returns 404", func(t *testing.T) {
+		// GET request to POST-only query endpoint
+		req := httptest.NewRequest(http.MethodGet, "/search", nil)
+		rec := httptest.NewRecorder()
+
+		mux.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 	})
 }
