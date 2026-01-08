@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "schema:generate:docs": "rm -rf docs/ out/ && npx @adobe/jsonschema2md -d internal/config -o docs"
-  }
-}
