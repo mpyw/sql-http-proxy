@@ -1,0 +1,13 @@
+dsn: postgres://localhost/test
+
+csv:
+  value_parser:
+    js: |
+      return { invalid syntax
+
+queries:
+  - type: one
+    path: /test
+    sql: SELECT 1
+    transform:
+      mock: { id: 1 }
