@@ -44,6 +44,7 @@ func NewQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts HandlerOpt
 	return &QueryHandler{
 		exec:          exec,
 		method:        query.GetMethod(),
+		pathParams:    extractPathParams(query.Path),
 		parser:        body.NewParser(query.GetAccepts()),
 		recorder:      opts.Recorder,
 		processor:     &queryResultProcessor{},

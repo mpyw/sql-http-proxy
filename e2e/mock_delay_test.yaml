@@ -1,0 +1,44 @@
+queries:
+  # Object source with delay
+  - type: one
+    path: /slow-user
+    mock:
+      object:
+        id: 1
+        name: Slow User
+      delay: 50ms
+
+  # Array source with delay
+  - type: many
+    path: /slow-users
+    mock:
+      array:
+        - { id: 1, name: Alice }
+        - { id: 2, name: Bob }
+      delay: 50ms
+
+  # Array source with filter and delay
+  - type: one
+    path: /slow-filtered-user
+    mock:
+      array:
+        - { id: 1, name: Alice }
+        - { id: 2, name: Bob }
+      filter: return row.id == parseInt(input.id)
+      delay: 50ms
+
+  # JS source with delay
+  - type: one
+    path: /slow-js-user
+    mock:
+      object_js: |
+        return { id: parseInt(input.id), name: "JS User" };
+      delay: 50ms
+
+  # Zero delay (no actual delay)
+  - type: one
+    path: /no-delay-user
+    mock:
+      object:
+        id: 1
+        name: Fast User

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/mpyw/sql-http-proxy/internal/config"
@@ -11,10 +12,10 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/mock"
 )
 
-// NewServeMux creates a new HTTP ServeMux with all configured handlers.
+// NewServeMux creates a new chi Router with all configured handlers.
 // db can be nil if all endpoints use mock.
 // configDir is the directory of the config file for resolving relative paths.
-func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (*http.ServeMux, error) {
+func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (http.Handler, error) {
 	// Compile global helpers once at startup
 	var helpers *js.CompiledHelpers
 	if cfg.GlobalHelpers != nil {
@@ -35,7 +36,7 @@ func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (*http.ServeM
 		}
 	}
 
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
 	opts := HandlerOptions{
 		ConfigDir:   configDir,
 		Helpers:     helpers,
@@ -47,7 +48,7 @@ func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (*http.ServeM
 		if err != nil {
 			return nil, fmt.Errorf("failed to create handler for %s: %w", query.Path, err)
 		}
-		mux.Handle(query.Path, handler)
+		r.Method(query.GetMethod(), convertPathPattern(query.Path), handler)
 	}
 
 	for _, mutation := range cfg.Mutations {
@@ -55,10 +56,38 @@ func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (*http.ServeM
 		if err != nil {
 			return nil, fmt.Errorf("failed to create handler for %s: %w", mutation.Path, err)
 		}
-		mux.Handle(fmt.Sprintf("%s %s", mutation.GetMethod(), mutation.Path), handler)
+		r.Method(mutation.GetMethod(), convertPathPattern(mutation.Path), handler)
 	}
 
-	mux.Handle("/", CreateNotFoundHandler())
+	r.NotFound(CreateNotFoundHandler().ServeHTTP)
 
-	return mux, nil
+	return r, nil
+}
+
+// convertPathPattern converts path patterns from :param syntax to {param} syntax for chi.
+// Example: /users/:id -> /users/{id}
+func convertPathPattern(path string) string {
+	result := make([]byte, 0, len(path))
+	i := 0
+	for i < len(path) {
+		if path[i] == ':' {
+			// Start of a path parameter
+			result = append(result, '{')
+			i++
+			// Read parameter name (alphanumeric and underscore)
+			for i < len(path) && (path[i] == '_' || isAlphanumeric(path[i])) {
+				result = append(result, path[i])
+				i++
+			}
+			result = append(result, '}')
+		} else {
+			result = append(result, path[i])
+			i++
+		}
+	}
+	return string(result)
+}
+
+func isAlphanumeric(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }

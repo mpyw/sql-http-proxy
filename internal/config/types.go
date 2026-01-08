@@ -157,6 +157,9 @@ type Mock struct {
 	// Filter for array sources (JS code: receives row, input params, ctx free var; returns boolean)
 	// Required for type: one with array sources, optional for type: many
 	Filter string `yaml:"filter,omitempty"`
+
+	// Delay adds artificial latency to mock responses (e.g., "100ms", "1s")
+	Delay string `yaml:"delay,omitempty"`
 }
 
 // IsEmpty returns true if no mock source is configured.

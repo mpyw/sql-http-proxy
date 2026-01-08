@@ -49,6 +49,7 @@ func NewMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts H
 	return &MutationHandler{
 		exec:          exec,
 		method:        mutation.GetMethod(),
+		pathParams:    extractPathParams(mutation.Path),
 		parser:        body.NewParser(mutation.GetAccepts()),
 		recorder:      opts.Recorder,
 		processor:     &mutationResultProcessor{},

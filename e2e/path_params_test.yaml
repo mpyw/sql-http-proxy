@@ -1,0 +1,40 @@
+queries:
+  # Basic path parameter
+  - type: one
+    path: /users/:id
+    mock:
+      array:
+        - { id: 1, name: Alice }
+        - { id: 2, name: Bob }
+        - { id: 3, name: Charlie }
+      filter: return row.id == parseInt(input.id)
+
+  # Multiple path parameters
+  - type: one
+    path: /users/:user_id/posts/:post_id
+    mock:
+      array:
+        - { user_id: 1, post_id: 10, title: "Post 10" }
+        - { user_id: 1, post_id: 20, title: "Post 20" }
+        - { user_id: 2, post_id: 30, title: "Post 30" }
+      filter: return row.user_id == parseInt(input.user_id) && row.post_id == parseInt(input.post_id)
+
+  # Path parameter takes priority over query parameter
+  - type: one
+    path: /priority/:id
+    mock:
+      object_js: |
+        return { received_id: input.id };
+
+mutations:
+  # Path parameter in mutation
+  - type: one
+    method: PUT
+    path: /users/:id
+    mock:
+      object_js: |
+        return {
+          id: parseInt(input.id),
+          name: input.name,
+          updated: true
+        };

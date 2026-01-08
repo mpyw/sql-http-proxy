@@ -3,6 +3,7 @@ package mock
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/mpyw/sql-http-proxy/internal/config"
 	"github.com/mpyw/sql-http-proxy/internal/js"
@@ -34,12 +35,30 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 		return nil, err
 	}
 
+	// Parse delay if specified
+	var delay time.Duration
+	if m.Delay != "" {
+		var err error
+		delay, err = time.ParseDuration(m.Delay)
+		if err != nil {
+			return nil, fmt.Errorf("mock: invalid delay %q: %w", m.Delay, err)
+		}
+	}
+
 	// Helper to resolve file paths
 	resolvePath := func(path string) string {
 		if filepath.IsAbs(path) {
 			return path
 		}
 		return filepath.Join(opts.ConfigDir, path)
+	}
+
+	// Helper to wrap with delay if needed
+	wrapWithDelay := func(source Source) Source {
+		if delay > 0 {
+			return NewDelayedSource(source, delay)
+		}
+		return source
 	}
 
 	// CSV parsing options
@@ -66,7 +85,7 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 			return nil, err
 		}
 		src.SetHelpers(opts.Helpers)
-		return src, nil // JS handles its own execution
+		return wrapWithDelay(src), nil // JS handles its own execution
 
 	// Array sources
 	case m.Array != nil:
@@ -89,9 +108,13 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 		src.SetHelpers(opts.Helpers)
 		// For array_js with filter, wrap with JSFilteredSource
 		if m.Filter != "" {
-			return NewJSFilteredSource(src, m.Filter, opts.Helpers)
+			filtered, err := NewJSFilteredSource(src, m.Filter, opts.Helpers)
+			if err != nil {
+				return nil, err
+			}
+			return wrapWithDelay(filtered), nil
 		}
-		return src, nil
+		return wrapWithDelay(src), nil
 
 	case m.CSV != "":
 		source, err = ParseCSVWithOptions(m.CSV, csvOpts)
@@ -119,8 +142,12 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 
 	// Wrap with JSFilteredSource if filter is specified
 	if filterJS != "" {
-		return NewJSFilteredSource(source, filterJS, opts.Helpers)
+		filtered, err := NewJSFilteredSource(source, filterJS, opts.Helpers)
+		if err != nil {
+			return nil, err
+		}
+		return wrapWithDelay(filtered), nil
 	}
 
-	return source, nil
+	return wrapWithDelay(source), nil
 }

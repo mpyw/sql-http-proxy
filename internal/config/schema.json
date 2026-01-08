@@ -117,8 +117,8 @@
       "title": "Endpoint Path",
       "type": "string",
       "pattern": "^/",
-      "description": "HTTP endpoint path. Must start with /.",
-      "examples": ["/users", "/user", "/api/v1/products"]
+      "description": "HTTP endpoint path. Must start with /. Supports path parameters with :param syntax (e.g., /users/:id).",
+      "examples": ["/users", "/users/:id", "/users/:user_id/posts/:post_id", "/api/v1/products"]
     },
     "sql": {
       "title": "SQL Query",
@@ -251,6 +251,13 @@
         "return !input.role || row.role === input.role"
       ]
     },
+    "delay": {
+      "title": "Mock Response Delay",
+      "type": "string",
+      "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
+      "description": "Artificial delay before returning mock response. Uses Go duration format (e.g., '100ms', '1s', '500µs').",
+      "examples": ["100ms", "1s", "500ms", "2s"]
+    },
     "mockOneObject": {
       "title": "Mock Object Sources (type: one)",
       "type": "object",
@@ -263,7 +270,8 @@
               "type": "object",
               "description": "Inline YAML/JSON object to return",
               "examples": [{ "id": 1, "name": "Alice", "email": "alice@example.com" }]
-            }
+            },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["object"],
           "additionalProperties": false,
@@ -278,7 +286,8 @@
               "minLength": 1,
               "description": "JSON string containing a single object",
               "examples": ["{\"id\": 1, \"name\": \"Alice\"}"]
-            }
+            },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["object_json"],
           "additionalProperties": false,
@@ -293,7 +302,8 @@
               "minLength": 1,
               "description": "Path to JSON file containing a single object (relative to config file)",
               "examples": ["./mocks/user.json", "./data/config.json"]
-            }
+            },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["object_json_file"],
           "additionalProperties": false,
@@ -311,7 +321,8 @@
                 "return { id: parseInt(input.id), name: 'User ' + input.id };",
                 "if (input.id === '404') return null;\nreturn { id: parseInt(input.id), name: 'Mock User' };"
               ]
-            }
+            },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["object_js"],
           "additionalProperties": false,
@@ -334,7 +345,8 @@
               "description": "Inline YAML/JSON array of objects",
               "examples": [[{ "id": 1, "name": "Alice" }, { "id": 2, "name": "Bob" }]]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["array", "filter"],
           "additionalProperties": false,
@@ -350,7 +362,8 @@
               "description": "JSON string containing array of objects",
               "examples": ["[{\"id\": 1, \"name\": \"Alice\"}, {\"id\": 2, \"name\": \"Bob\"}]"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["array_json", "filter"],
           "additionalProperties": false,
@@ -366,7 +379,8 @@
               "description": "Path to JSON file containing array of objects",
               "examples": ["./mocks/users.json"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["array_json_file", "filter"],
           "additionalProperties": false,
@@ -382,7 +396,8 @@
               "description": "Inline CSV data with header row. First line is column names.",
               "examples": ["id,name,email\n1,Alice,alice@example.com\n2,Bob,bob@example.com"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["csv", "filter"],
           "additionalProperties": false,
@@ -398,7 +413,8 @@
               "description": "Path to CSV file (relative to config file)",
               "examples": ["./mocks/users.csv", "./data/products.csv"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["csv_file", "filter"],
           "additionalProperties": false,
@@ -414,7 +430,8 @@
               "description": "Inline JSONL data (one JSON object per line)",
               "examples": ["{\"id\": 1, \"name\": \"Alice\"}\n{\"id\": 2, \"name\": \"Bob\"}"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["jsonl", "filter"],
           "additionalProperties": false,
@@ -430,7 +447,8 @@
               "description": "Path to JSONL file (one JSON object per line)",
               "examples": ["./mocks/users.jsonl", "./logs/events.jsonl"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["jsonl_file", "filter"],
           "additionalProperties": false,
@@ -461,7 +479,8 @@
               "description": "Inline YAML/JSON array of objects",
               "examples": [[{ "id": 1, "name": "Alice" }, { "id": 2, "name": "Bob" }]]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["array"],
           "additionalProperties": false,
@@ -477,7 +496,8 @@
               "description": "JSON string containing array of objects",
               "examples": ["[{\"id\": 1}, {\"id\": 2}]"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["array_json"],
           "additionalProperties": false,
@@ -493,7 +513,8 @@
               "description": "Path to JSON file containing array of objects",
               "examples": ["./mocks/users.json"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["array_json_file"],
           "additionalProperties": false,
@@ -511,7 +532,8 @@
                 "return [{ id: 1, name: 'User 1' }, { id: 2, name: 'User 2' }];",
                 "const count = parseInt(input.count) || 5;\nreturn Array.from({ length: count }, (_, i) => ({ id: i + 1, name: 'User ' + (i + 1) }));"
               ]
-            }
+            },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["array_js"],
           "additionalProperties": false,
@@ -527,7 +549,8 @@
               "description": "Inline CSV data with header row",
               "examples": ["id,name,role\n1,Alice,admin\n2,Bob,user\n3,Charlie,admin"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["csv"],
           "additionalProperties": false,
@@ -543,7 +566,8 @@
               "description": "Path to CSV file",
               "examples": ["./mocks/users.csv"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["csv_file"],
           "additionalProperties": false,
@@ -559,7 +583,8 @@
               "description": "Inline JSONL data (one JSON object per line)",
               "examples": ["{\"id\": 1, \"level\": \"info\"}\n{\"id\": 2, \"level\": \"error\"}"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["jsonl"],
           "additionalProperties": false,
@@ -575,7 +600,8 @@
               "description": "Path to JSONL file",
               "examples": ["./mocks/logs.jsonl"]
             },
-            "filter": { "$ref": "#/$defs/filter" }
+            "filter": { "$ref": "#/$defs/filter" },
+            "delay": { "$ref": "#/$defs/delay" }
           },
           "required": ["jsonl_file"],
           "additionalProperties": false,

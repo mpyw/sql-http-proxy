@@ -69,12 +69,12 @@ func TestMutationMethod(t *testing.T) {
 		require.JSONEq(t, `{"patched":true}`, rec.Body.String())
 	})
 
-	t.Run("wrong method returns 404", func(t *testing.T) {
-		// GET request to PUT-only endpoint returns 404 (not found for this method)
+	t.Run("wrong method returns 405", func(t *testing.T) {
+		// GET request to PUT-only endpoint returns 405 (Method Not Allowed)
 		req := httptest.NewRequest(http.MethodGet, "/put", nil)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
-		require.Equal(t, http.StatusNotFound, rec.Code)
+		require.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 	})
 }

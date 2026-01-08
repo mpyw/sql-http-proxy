@@ -105,6 +105,19 @@ queries:
     sql: SELECT * FROM users WHERE id = :id
 
   # ---------------------------------------------------------------------------
+  # Path Parameters
+  # ---------------------------------------------------------------------------
+  # Use :param syntax for path parameters. Path params take priority over query params.
+
+  - type: one
+    path: /users/:id
+    sql: SELECT * FROM users WHERE id = :id
+
+  - type: many
+    path: /users/:user_id/posts
+    sql: SELECT * FROM posts WHERE user_id = :user_id
+
+  # ---------------------------------------------------------------------------
   # Query with Custom HTTP Method
   # ---------------------------------------------------------------------------
   # Queries default to GET, but can use POST/PUT/PATCH/DELETE for complex params
@@ -494,6 +507,27 @@ queries:
             email: output.email,
             isMock: true
           };
+
+  # ---------------------------------------------------------------------------
+  # Mock with Delay
+  # ---------------------------------------------------------------------------
+  # Add artificial latency to mock responses (useful for testing loading states)
+
+  - type: one
+    path: /mock/slow-user
+    mock:
+      object:
+        id: 1
+        name: Slow User
+      delay: 500ms  # Wait 500ms before responding
+
+  - type: many
+    path: /mock/slow-users
+    mock:
+      array:
+        - { id: 1, name: Alice }
+        - { id: 2, name: Bob }
+      delay: 1s  # Wait 1 second before responding
 
 # =============================================================================
 # MUTATIONS (INSERT/UPDATE/DELETE operations)

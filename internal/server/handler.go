@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/samber/lo"
 
 	"github.com/mpyw/sql-http-proxy/internal/executor"
@@ -59,6 +60,7 @@ type ResultProcessor[R any] interface {
 type BaseHandler[R any] struct {
 	exec          Executor[R]
 	method        string
+	pathParams    []string // path parameter names in order
 	parser        *body.Parser
 	recorder      QueryRecorder
 	processor     ResultProcessor[R]
@@ -105,12 +107,27 @@ func (h *BaseHandler[R]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BaseHandler[R]) parseParams(r *http.Request) (map[string]any, error) {
+	var params map[string]any
+	var err error
+
 	switch r.Method {
 	case http.MethodGet, http.MethodHead:
-		return extractNamedParams(r.URL.Query()), nil
+		params = extractNamedParams(r.URL.Query())
 	default:
-		return h.parser.Parse(r)
+		params, err = h.parser.Parse(r)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	// Merge path parameters (path params take priority over query/body params)
+	for _, name := range h.pathParams {
+		if value := chi.URLParam(r, name); value != "" {
+			params[name] = value
+		}
+	}
+
+	return params, nil
 }
 
 func (h *BaseHandler[R]) handleError(res *responder, err error) {
@@ -169,4 +186,31 @@ func extractNamedParams(values url.Values) map[string]any {
 		}
 	}
 	return params
+}
+
+// extractPathParams extracts path parameter names from a path pattern.
+// Example: /users/:id/posts/:post_id -> ["id", "post_id"]
+func extractPathParams(path string) []string {
+	var params []string
+	i := 0
+	for i < len(path) {
+		if path[i] == ':' {
+			i++
+			start := i
+			// Read parameter name (alphanumeric and underscore)
+			for i < len(path) && (path[i] == '_' || isPathParamChar(path[i])) {
+				i++
+			}
+			if i > start {
+				params = append(params, path[start:i])
+			}
+		} else {
+			i++
+		}
+	}
+	return params
+}
+
+func isPathParamChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
