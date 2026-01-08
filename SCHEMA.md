@@ -2,17 +2,46 @@
 
 This document describes all configuration options for sql-http-proxy. For usage examples, see the main [README](README.md) and [sql-http-proxy.example.yaml](sql-http-proxy.example.yaml).
 
+## Table of Contents
+
+- [Top-Level Options](#top-level-options)
+- [DSN](#dsn)
+  - [Driver Examples](#driver-examples)
+- [Global Helpers](#global-helpers)
+- [CSV Config](#csv-config)
+- [Queries](#queries)
+  - [Query Type](#query-type)
+  - [Query Method](#query-method)
+- [Mutations](#mutations)
+  - [Mutation Type](#mutation-type)
+  - [Mutation Method](#mutation-method)
+  - [MySQL-Specific Behavior](#mysql-specific-behavior)
+- [Mock](#mock)
+  - [Mock Sources](#mock-sources)
+    - [Object Sources](#object-sources-type-one-only)
+    - [Array Sources](#array-sources-type-many-or-type-one-with-filter)
+  - [Filter](#filter)
+  - [Mock JS Variables](#mock-js-variables)
+- [Transform](#transform)
+  - [Pre-Transform](#pre-transform)
+  - [Post-Transform](#post-transform)
+- [Error Handling](#error-handling)
+- [Named Placeholders](#named-placeholders)
+- [Accepts](#accepts)
+
+---
+
 ## Top-Level Options
 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
-| `dsn` | string | No* | Database connection string. Supports `${VAR}`, `${VAR:-default}` env expansion |
-| `global_helpers` | object/string | No | JavaScript helpers for all transforms |
-| `csv` | object | No | CSV parsing options |
-| `queries` | array | No | Query endpoints (SELECT) |
-| `mutations` | array | No | Mutation endpoints (INSERT/UPDATE/DELETE) |
+| [`dsn`](#dsn) | string | No* | Database connection string. Supports `${VAR}`, `${VAR:-default}` env expansion |
+| [`global_helpers`](#global-helpers) | object/string | No | JavaScript helpers for all transforms |
+| [`csv`](#csv-config) | object | No | CSV parsing options |
+| [`queries`](#queries) | array | No | Query endpoints (SELECT) |
+| [`mutations`](#mutations) | array | No | Mutation endpoints (INSERT/UPDATE/DELETE) |
 
-> *Required unless all endpoints use mock
+> *Required unless all endpoints use [mock](#mock)
 
 ## DSN
 
@@ -33,7 +62,7 @@ dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}
 
 ## Global Helpers
 
-JavaScript functions available in all `pre`, `post` transforms, mock JS sources, `filter`, and `csv.value_parser`.
+JavaScript functions available in all [`pre`](#pre-transform), [`post`](#post-transform) transforms, [mock JS sources](#mock-js-variables), [`filter`](#filter), and [`csv.value_parser`](#csv-config).
 
 ```yaml
 # Full form
@@ -51,7 +80,7 @@ global_helpers:
 
 ## CSV Config
 
-Custom value parsing for CSV mock data.
+Custom value parsing for CSV [mock](#mock) data.
 
 ```yaml
 csv:
@@ -70,7 +99,7 @@ The `value_parser` function receives `value` (string) and should return the pars
 
 ## Queries
 
-Query endpoints for SELECT operations. Each query must have either `sql` OR `mock`, not both.
+Query endpoints for SELECT operations. Each query must have either `sql` OR [`mock`](#mock), not both.
 
 ```yaml
 queries:
@@ -87,23 +116,33 @@ queries:
 |----------|------|---------|-------------|
 | `type` | `one` \| `many` | - | **Required.** `one`: single row, `many`: array |
 | `path` | string | - | **Required.** Endpoint path (must start with `/`) |
-| `sql` | string | - | SQL query with `:name` placeholders (required if no mock) |
-| `mock` | object | - | Mock data source (required if no sql) |
+| `sql` | string | - | SQL query with [`:name` placeholders](#named-placeholders) (required if no mock) |
+| `mock` | object | - | [Mock data source](#mock) (required if no sql) |
 | `method` | string | `GET` | HTTP method |
-| `accepts` | string/array | `[json, form]` | Accepted Content-Types |
-| `handle_not_found` | boolean | `false` | Pass `null` to post instead of 404 (type: one only) |
-| `transform` | object | - | Pre/post transforms |
+| `accepts` | string/array | `[json, form]` | [Accepted Content-Types](#accepts) |
+| `handle_not_found` | boolean | `false` | Pass `null` to [post](#post-transform) instead of 404 (type: one only) |
+| `transform` | object | - | [Pre/post transforms](#transform) |
 
-### Type Behavior
+### Query Type
 
-| Type | Found | Not Found |
-|------|-------|-----------|
-| `one` | Returns object | Returns 404 (or `null` with `handle_not_found`) |
-| `many` | Returns array | Returns empty array `[]` |
+| Value | Description |
+|-------|-------------|
+| `one` | Returns a single row as an object. Returns 404 if not found (or `null` to post with `handle_not_found: true`) |
+| `many` | Returns multiple rows as an array. Returns empty array `[]` if no rows found |
+
+### Query Method
+
+| Value | Description |
+|-------|-------------|
+| `GET` | (Default) Parameters from query string |
+| `POST` | Parameters from request body |
+| `PUT` | Parameters from request body |
+| `PATCH` | Parameters from request body |
+| `DELETE` | Parameters from request body |
 
 ## Mutations
 
-Mutation endpoints for INSERT/UPDATE/DELETE operations. Each mutation (type: one/many) must have either `sql` OR `mock`, not both. Type: none requires `sql`.
+Mutation endpoints for INSERT/UPDATE/DELETE operations. Each mutation (type: one/many) must have either `sql` OR [`mock`](#mock), not both. Type: none requires `sql`.
 
 ```yaml
 mutations:
@@ -121,23 +160,32 @@ mutations:
 | `method` | string | `POST` | HTTP method |
 | `path` | string | - | **Required.** Endpoint path |
 | `sql` | string | - | SQL (use `RETURNING *` for one/many) |
-| `mock` | object | - | Mock data source (type: one/many only) |
-| `accepts` | string/array | `[json, form]` | Accepted Content-Types |
-| `transform` | object | - | Pre/post transforms |
+| `mock` | object | - | [Mock data source](#mock) (type: one/many only) |
+| `accepts` | string/array | `[json, form]` | [Accepted Content-Types](#accepts) |
+| `transform` | object | - | [Pre/post transforms](#transform) |
 
-> Note: `type: none` requires `sql` - mock is not supported for type: none.
+> Note: `type: none` requires `sql` - [mock](#mock) is not supported for type: none.
 
-### Type Behavior
+### Mutation Type
 
-| Type | Response |
-|------|----------|
-| `one` | Returns single row object |
-| `many` | Returns array of rows |
-| `none` | Returns 204 No Content |
+| Value | Description |
+|-------|-------------|
+| `one` | Returns a single row as an object (use `RETURNING *` in SQL) |
+| `many` | Returns multiple rows as an array (use `RETURNING *` in SQL) |
+| `none` | Returns 204 No Content with empty body. For fire-and-forget operations |
+
+### Mutation Method
+
+| Value | Description |
+|-------|-------------|
+| `POST` | (Default) Create resource |
+| `PUT` | Replace resource |
+| `PATCH` | Partial update |
+| `DELETE` | Delete resource |
 
 ### MySQL-Specific Behavior
 
-For MySQL, mutations use `Exec` instead of `Query` since MySQL does not support `RETURNING` clause. This makes `ctx.lastInsertId` and `ctx.rowsAffected` available in post-transform:
+For MySQL, mutations use `Exec` instead of `Query` since MySQL does not support `RETURNING` clause. This makes `ctx.lastInsertId` and `ctx.rowsAffected` available in [post-transform](#post-transform):
 
 ```yaml
 mutations:
@@ -160,7 +208,7 @@ mutations:
 
 Mock allows returning data without a database connection. Useful for testing, prototyping, or static data endpoints.
 
-Mock is specified at the query/mutation level (same level as `sql`). Use either `sql` OR `mock`, not both.
+Mock is specified at the [query](#queries)/[mutation](#mutations) level (same level as `sql`). Use either `sql` OR `mock`, not both.
 
 ### Mock Sources
 
@@ -173,7 +221,7 @@ Mock is specified at the query/mutation level (same level as `sql`). Use either 
 | `object` | object | YAML object |
 | `object_json` | string | JSON string containing object |
 | `object_json_file` | string | Path to JSON file containing object |
-| `object_js` | string | JavaScript returning object |
+| `object_js` | string | JavaScript returning object (see [Mock JS Variables](#mock-js-variables)) |
 
 ```yaml
 # YAML object
@@ -201,7 +249,7 @@ mock:
 | `array` | array | YAML array of objects |
 | `array_json` | string | JSON string containing array |
 | `array_json_file` | string | Path to JSON file containing array |
-| `array_js` | string | JavaScript returning array |
+| `array_js` | string | JavaScript returning array (see [Mock JS Variables](#mock-js-variables)) |
 | `csv` | string | Inline CSV data with header row |
 | `csv_file` | string | Path to CSV file |
 | `jsonl` | string | Inline JSONL (one JSON object per line) |
@@ -233,7 +281,7 @@ mock:
 
 ### Filter
 
-The `filter` option allows filtering array data using JavaScript. For `type: one` with array sources, `filter` is **required** to select which row to return.
+The `filter` option allows filtering array data using JavaScript. For `type: one` with [array sources](#array-sources-type-many-or-type-one-with-filter), `filter` is **required** to select which row to return.
 
 **Filter variables:**
 - `row` (parameter): Current row being evaluated
@@ -273,7 +321,7 @@ For `object_js` and `array_js`:
 
 ## Transform
 
-JavaScript processing at different stages.
+JavaScript processing at different stages. See also [Global Helpers](#global-helpers) for reusable functions.
 
 ```yaml
 transform:
@@ -285,11 +333,11 @@ transform:
 
 ### Pre-Transform
 
-Validates and transforms input before SQL/mock execution.
+Validates and transforms input before SQL/[mock](#mock) execution.
 
 **Variables:**
 - `input` (parameter): Request parameters
-- `ctx` (free variable): Shared state (persists to post)
+- `ctx` (free variable): Shared state (persists to [post](#post-transform))
 - `sql` (free variable): SQL string (modifiable, only meaningful when using sql)
 
 **Returns:** Object with parameters for SQL/mock
@@ -303,14 +351,14 @@ pre: |
 
 ### Post-Transform
 
-Transforms the result after SQL/mock execution.
+Transforms the result after SQL/[mock](#mock) execution.
 
 **Variables:**
 - `input` (parameter): Original request parameters
 - `output` (parameter): Query result
-- `ctx` (free variable): Shared state from pre
-  - `ctx.lastInsertId`: Auto-increment ID (MySQL mutations only)
-  - `ctx.rowsAffected`: Number of affected rows (MySQL mutations only)
+- `ctx` (free variable): Shared state from [pre](#pre-transform)
+  - `ctx.lastInsertId`: Auto-increment ID ([MySQL mutations](#mysql-specific-behavior) only)
+  - `ctx.rowsAffected`: Number of affected rows ([MySQL mutations](#mysql-specific-behavior) only)
 
 **For type: one:**
 
@@ -342,7 +390,7 @@ post:
 
 ## Error Handling
 
-Throw an object with `status` and `body`:
+Throw an object with `status` and `body` in any [transform](#transform):
 
 ```yaml
 pre: |
@@ -353,9 +401,9 @@ pre: |
 
 | Phase | Default Status |
 |-------|----------------|
-| `pre` | 400 Bad Request |
-| `mock` | 500 Internal Server Error |
-| `post` | 500 Internal Server Error |
+| [`pre`](#pre-transform) | 400 Bad Request |
+| [`mock`](#mock) | 500 Internal Server Error |
+| [`post`](#post-transform) | 500 Internal Server Error |
 
 ## Named Placeholders
 
@@ -367,14 +415,23 @@ sql: SELECT * FROM users WHERE id = :id AND status = :status
 
 Parameters come from:
 - **GET:** Query string (`?id=1&status=active`)
-- **POST/PUT/PATCH/DELETE:** Request body (JSON or form-urlencoded)
+- **POST/PUT/PATCH/DELETE:** Request body (JSON or form-urlencoded, see [Accepts](#accepts))
 
 ## Accepts
 
 Control which Content-Types are accepted for request body.
+
+| Value | Content-Type | Description |
+|-------|--------------|-------------|
+| `json` | `application/json` | JSON request body |
+| `form` | `application/x-www-form-urlencoded` | Form data request body |
+
+**Usage:**
 
 ```yaml
 accepts: json          # Only application/json
 accepts: form          # Only application/x-www-form-urlencoded
 accepts: [json, form]  # Both (default)
 ```
+
+Returns 415 Unsupported Media Type if the request Content-Type doesn't match.
