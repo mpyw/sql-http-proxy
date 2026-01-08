@@ -33,8 +33,8 @@ func NewJSFilteredSource(source Source, filterJS string, helpers *js.CompiledHel
 }
 
 // Data returns filtered data based on JavaScript filter function.
-func (f *JSFilteredSource) Data(ctx map[string]any, sql string, input map[string]any) (any, map[string]any, error) {
-	data, newCtx, err := f.source.Data(ctx, sql, input)
+func (f *JSFilteredSource) Data(ctx map[string]any, sql string, input map[string]any, tc *js.TransformContext) (any, map[string]any, error) {
+	data, newCtx, err := f.source.Data(ctx, sql, input, tc)
 	if err != nil {
 		return nil, nil, err
 	}

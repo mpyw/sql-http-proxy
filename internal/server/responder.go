@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/samber/lo"
 )
 
 type responder struct {
@@ -32,7 +34,7 @@ func (r *responder) Respond(status int, payload any) {
 }
 
 func (r *responder) Error(status int, err error) {
-	msg, _ := json.Marshal(err.Error())
+	msg := lo.Must(json.Marshal(err.Error()))
 	r.w.Header().Set("Content-Type", "application/json")
 	r.w.WriteHeader(status)
 	if _, err = fmt.Fprintf(r.w, "{\"error\":%s}", msg); err != nil {

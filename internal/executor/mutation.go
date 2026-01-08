@@ -4,27 +4,53 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"maps"
+	"net/http"
 
 	"github.com/jmoiron/sqlx"
 
 	"github.com/mpyw/sql-http-proxy/internal/config"
 	"github.com/mpyw/sql-http-proxy/internal/db"
-	"github.com/mpyw/sql-http-proxy/internal/mock"
+	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
 // MutationResult holds the result of a mutation execution.
 type MutationResult struct {
-	Data      any
-	NoContent bool // true if result should be 204 No Content
+	Data           any
+	NoContent      bool
+	Status         int
+	ResponseHeader http.Header
+}
+
+// mutationResultBuilder implements ResultBuilder for MutationResult.
+type mutationResultBuilder struct{}
+
+func (b *mutationResultBuilder) BuildResult(output any, tc *js.TransformContext) *MutationResult {
+	if output == nil {
+		return &MutationResult{
+			NoContent:      true,
+			Status:         tc.Response.Status(),
+			ResponseHeader: tc.Response.ToHTTPHeader(),
+		}
+	}
+	return &MutationResult{
+		Data:           output,
+		Status:         tc.Response.Status(),
+		ResponseHeader: tc.Response.ToHTTPHeader(),
+	}
+}
+
+func (b *mutationResultBuilder) OnEmptyOne(tc *js.TransformContext) (*MutationResult, error) {
+	return &MutationResult{
+		NoContent:      true,
+		Status:         tc.Response.Status(),
+		ResponseHeader: tc.Response.ToHTTPHeader(),
+	}, nil
 }
 
 // MutationExecutor executes mutations (mock or DB).
 type MutationExecutor struct {
-	db         *sqlx.DB
-	mutation   config.Mutation
-	transforms *Transforms
-	mockSource mock.Source
+	base     *BaseExecutor[MutationResult]
+	mutation config.Mutation
 }
 
 // NewMutationExecutor creates a new MutationExecutor with pre-compiled transforms.
@@ -34,92 +60,39 @@ func NewMutationExecutor(db *sqlx.DB, mutation config.Mutation, opts CompileTran
 		return nil, err
 	}
 
-	// Compile mock from mutation level
 	mockSource, err := CompileMock(mutation.Mock, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	return &MutationExecutor{
-		db:         db,
-		mutation:   mutation,
-		transforms: transforms,
-		mockSource: mockSource,
+		base: &BaseExecutor[MutationResult]{
+			DB:         db,
+			SQL:        mutation.SQL,
+			OpType:     string(mutation.Type),
+			Entity:     "mutation",
+			Transforms: transforms,
+			MockSource: mockSource,
+			Builder:    &mutationResultBuilder{},
+		},
+		mutation: mutation,
 	}, nil
 }
 
 // Execute runs the mutation with the given parameters.
 func (e *MutationExecutor) Execute(reqCtx context.Context, params map[string]any, opts Options) (*MutationResult, error) {
-	// Shared context for pre/mock/post transforms (mutable)
-	ctx := make(map[string]any)
-
-	// Keep original params for post-transform
-	originalParams := maps.Clone(params)
-
-	// SQL can be modified by pre-transform
-	currentSQL := e.mutation.SQL
-
-	// Apply pre-transform
-	if e.transforms.Pre != nil {
-		result, err := e.transforms.Pre.ApplyPre(ctx, currentSQL, params)
-		if err != nil {
-			return nil, WrapPreError(err)
-		}
-		params = result.Output
-		currentSQL = result.SQL
-		ctx = result.Ctx
-	}
-
-	// Execute mock or DB
-	if e.mockSource != nil {
-		return e.executeMock(ctx, currentSQL, params, originalParams, opts)
-	}
-	return e.executeDB(reqCtx, ctx, currentSQL, params, originalParams, opts)
+	return e.base.ExecuteBase(reqCtx, params, opts, e)
 }
 
-func (e *MutationExecutor) executeMock(ctx map[string]any, sqlStr string, params, originalParams map[string]any, opts Options) (*MutationResult, error) {
-	slog.Debug("Executing mock mutation", "type", e.mutation.Type, "sql", sqlStr, "params", params)
-
-	if opts.Recorder != nil {
-		opts.Recorder(Record{
-			Type:   string(e.mutation.Type),
-			IsMock: true,
-			SQL:    sqlStr,
-			Params: params,
-		})
-	}
-
-	mockOutput, newCtx, err := e.mockSource.Data(ctx, sqlStr, params)
-	if err != nil {
-		return nil, WrapMockError(err)
-	}
-	if newCtx != nil {
-		ctx = newCtx
-	}
-
-	switch e.mutation.Type {
-	case config.MutationTypeNone:
-		if mockOutput != nil {
-			slog.Warn("Mock for 'none' mutation returned a value, but it will be ignored")
-		}
-		return &MutationResult{NoContent: true}, nil
-	case config.MutationTypeOne:
-		return e.processOneResult(ctx, originalParams, mockOutput)
-	case config.MutationTypeMany:
-		return e.processManyResult(ctx, originalParams, mockOutput)
-	default:
-		return nil, errors.New("unsupported mutation type")
-	}
-}
-
-func (e *MutationExecutor) executeDB(reqCtx context.Context, ctx map[string]any, currentSQL string, params, originalParams map[string]any, opts Options) (*MutationResult, error) {
-	boundSQL, args, err := db.BindParams(e.db, currentSQL, params)
+// ExecuteDB implements DBExecutor interface.
+func (e *MutationExecutor) ExecuteDB(reqCtx context.Context, ec *ExecContext[MutationResult]) (*MutationResult, error) {
+	boundSQL, args, err := db.BindParams(ec.Base.DB, ec.SQL, ec.Params)
 	if err != nil {
 		return nil, err
 	}
 
-	if opts.Recorder != nil {
-		opts.Recorder(Record{
+	if ec.Opts.Recorder != nil {
+		ec.Opts.Recorder(Record{
 			Type:   string(e.mutation.Type),
 			IsMock: false,
 			SQL:    boundSQL,
@@ -127,158 +100,75 @@ func (e *MutationExecutor) executeDB(reqCtx context.Context, ctx map[string]any,
 		})
 	}
 
-	// For MySQL, use Exec to get lastInsertId/rowsAffected
-	// For other drivers, use Query to get RETURNING results
-	isMySQL := e.db.DriverName() == "mysql"
+	isMySQL := ec.Base.DB.DriverName() == "mysql"
 
 	switch e.mutation.Type {
 	case config.MutationTypeNone:
 		slog.Debug("Executing mutation", "type", "none", "sql", boundSQL, "args", args)
-		_, err := db.Exec(reqCtx, e.db, boundSQL, args...)
+		_, err := db.Exec(reqCtx, ec.Base.DB, boundSQL, args...)
 		if err != nil {
 			return nil, err
 		}
-		return &MutationResult{NoContent: true}, nil
+		return &MutationResult{
+			NoContent:      true,
+			Status:         ec.TC.Response.Status(),
+			ResponseHeader: ec.TC.Response.ToHTTPHeader(),
+		}, nil
 
 	case config.MutationTypeOne:
 		slog.Debug("Executing mutation", "type", "one", "sql", boundSQL, "args", args)
 		if isMySQL {
-			execResult, err := db.Exec(reqCtx, e.db, boundSQL, args...)
-			if err != nil {
-				return nil, err
-			}
-			// Set rowsAffected in ctx (always available)
-			ctx["rowsAffected"] = execResult.RowsAffected
-			// Set lastInsertId in ctx (MySQL only)
-			if execResult.LastInsertId != nil {
-				ctx["lastInsertId"] = *execResult.LastInsertId
-			}
-			return e.processOneResult(ctx, originalParams, nil)
+			return e.execMySQLOne(reqCtx, ec, boundSQL, args)
 		}
-		result, err := db.QueryOne(reqCtx, e.db, boundSQL, args...)
+		result, err := db.QueryOne(reqCtx, ec.Base.DB, boundSQL, args...)
 		if err != nil {
 			return nil, err
 		}
-		// Explicitly convert typed nil to untyped nil for interface comparison
 		var output any
 		if result != nil {
 			output = result
 		}
-		return e.processOneResult(ctx, originalParams, output)
+		return ec.Base.ProcessOneResult(ec.Ctx, ec.OriginalParams, output, ec.TC)
 
 	case config.MutationTypeMany:
 		slog.Debug("Executing mutation", "type", "many", "sql", boundSQL, "args", args)
 		if isMySQL {
-			execResult, err := db.Exec(reqCtx, e.db, boundSQL, args...)
-			if err != nil {
-				return nil, err
-			}
-			// Set rowsAffected in ctx (always available)
-			ctx["rowsAffected"] = execResult.RowsAffected
-			// Set lastInsertId in ctx (MySQL only)
-			if execResult.LastInsertId != nil {
-				ctx["lastInsertId"] = *execResult.LastInsertId
-			}
-			return e.processManyResult(ctx, originalParams, nil)
+			return e.execMySQLMany(reqCtx, ec, boundSQL, args)
 		}
-		results, err := db.QueryMany(reqCtx, e.db, boundSQL, args...)
+		results, err := db.QueryMany(reqCtx, ec.Base.DB, boundSQL, args...)
 		if err != nil {
 			return nil, err
 		}
-		return e.processManyResult(ctx, originalParams, results)
+		return ec.Base.ProcessManyResult(ec.Ctx, ec.OriginalParams, results, ec.TC)
 
 	default:
-		return nil, errors.New("unsupported mutation type")
+		return nil, ErrUnsupportedMutationType
 	}
 }
 
-func (e *MutationExecutor) processOneResult(ctx, originalParams map[string]any, output any) (*MutationResult, error) {
-	var entry map[string]any
-	switch v := output.(type) {
-	case nil:
-		entry = nil
-	case map[string]any:
-		entry = v
-	case []any:
-		// For filter: take first element or nil
-		if len(v) == 0 {
-			entry = nil
-		} else if m, ok := v[0].(map[string]any); ok {
-			entry = m
-		} else {
-			return nil, errors.New("mutation result for 'one' must be object or null")
-		}
-	default:
-		return nil, errors.New("mutation result for 'one' must be object or null")
+func (e *MutationExecutor) execMySQLOne(reqCtx context.Context, ec *ExecContext[MutationResult], boundSQL string, args []any) (*MutationResult, error) {
+	execResult, err := db.Exec(reqCtx, ec.Base.DB, boundSQL, args...)
+	if err != nil {
+		return nil, err
 	}
-
-	if e.transforms.PostAll != nil {
-		postResult, err := e.transforms.PostAll.ApplyPost(ctx, originalParams, entry)
-		if err != nil {
-			return nil, WrapPostError(err)
-		}
-		if postResult.Output == nil {
-			return &MutationResult{NoContent: true}, nil
-		}
-		return &MutationResult{Data: postResult.Output}, nil
+	ec.Ctx["rowsAffected"] = execResult.RowsAffected
+	if execResult.LastInsertId != nil {
+		ec.Ctx["lastInsertId"] = *execResult.LastInsertId
 	}
-
-	if entry == nil {
-		return &MutationResult{NoContent: true}, nil
-	}
-	return &MutationResult{Data: entry}, nil
+	return ec.Base.ProcessOneResult(ec.Ctx, ec.OriginalParams, nil, ec.TC)
 }
 
-func (e *MutationExecutor) processManyResult(ctx, originalParams map[string]any, output any) (*MutationResult, error) {
-	var entries []map[string]any
-
-	switch v := output.(type) {
-	case []map[string]any:
-		entries = v
-	case []any:
-		entries = make([]map[string]any, len(v))
-		for i, item := range v {
-			if m, ok := item.(map[string]any); ok {
-				entries[i] = m
-			} else {
-				return nil, errors.New("mutation result for 'many' must be array of objects")
-			}
-		}
-	case nil:
-		entries = []map[string]any{}
-	default:
-		return nil, errors.New("mutation result for 'many' must be array")
+func (e *MutationExecutor) execMySQLMany(reqCtx context.Context, ec *ExecContext[MutationResult], boundSQL string, args []any) (*MutationResult, error) {
+	execResult, err := db.Exec(reqCtx, ec.Base.DB, boundSQL, args...)
+	if err != nil {
+		return nil, err
 	}
-
-	var result any = entries
-	currentEntries := entries
-	currentCtx := ctx
-
-	if e.transforms.PostEach != nil {
-		eachResult, newCtx, err := e.transforms.PostEach.ApplyPostToEachRow(currentCtx, originalParams, currentEntries)
-		if err != nil {
-			return nil, WrapPostError(err)
-		}
-		result = eachResult
-		currentCtx = newCtx
-
-		currentEntries = make([]map[string]any, len(eachResult))
-		for i, r := range eachResult {
-			m, ok := r.(map[string]any)
-			if !ok {
-				return nil, WrapPostError(errors.New("post.each transform must return object"))
-			}
-			currentEntries[i] = m
-		}
+	ec.Ctx["rowsAffected"] = execResult.RowsAffected
+	if execResult.LastInsertId != nil {
+		ec.Ctx["lastInsertId"] = *execResult.LastInsertId
 	}
-
-	if e.transforms.PostAll != nil {
-		postResult, err := e.transforms.PostAll.ApplyPostToAllRows(currentCtx, originalParams, currentEntries)
-		if err != nil {
-			return nil, WrapPostError(err)
-		}
-		result = postResult.Output
-	}
-
-	return &MutationResult{Data: result}, nil
+	return ec.Base.ProcessManyResult(ec.Ctx, ec.OriginalParams, nil, ec.TC)
 }
+
+// ErrUnsupportedMutationType is returned when mutation type is not supported.
+var ErrUnsupportedMutationType = errors.New("unsupported mutation type")

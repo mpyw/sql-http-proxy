@@ -45,7 +45,7 @@ func TestParseJSError_LambdaStyle(t *testing.T) {
 		transformer, err := CompilePre(`throw { status: 400, body: { message: "bad request" } }`)
 		require.NoError(t, err)
 
-		_, err = transformer.ApplyMock(nil, "", nil)
+		_, err = transformer.ApplyMock(nil, "", nil, nil)
 		require.Error(t, err)
 
 		var transformErr *TransformError
@@ -60,7 +60,7 @@ func TestParseJSError_LambdaStyle(t *testing.T) {
 		transformer, err := CompilePre(`throw { status: 422, body: "validation error" }`)
 		require.NoError(t, err)
 
-		_, err = transformer.ApplyMock(nil, "", nil)
+		_, err = transformer.ApplyMock(nil, "", nil, nil)
 		require.Error(t, err)
 
 		var transformErr *TransformError
@@ -73,7 +73,7 @@ func TestParseJSError_LambdaStyle(t *testing.T) {
 		transformer, err := CompilePre(`throw { status: 500 }`)
 		require.NoError(t, err)
 
-		_, err = transformer.ApplyMock(nil, "", nil)
+		_, err = transformer.ApplyMock(nil, "", nil, nil)
 		require.Error(t, err)
 
 		var transformErr *TransformError
@@ -85,7 +85,7 @@ func TestParseJSError_LambdaStyle(t *testing.T) {
 		transformer, err := CompilePre(`throw { body: "error message" }`)
 		require.NoError(t, err)
 
-		_, err = transformer.ApplyMock(nil, "", nil)
+		_, err = transformer.ApplyMock(nil, "", nil, nil)
 		require.Error(t, err)
 
 		var transformErr *TransformError
@@ -98,7 +98,7 @@ func TestParseJSError_LambdaStyle(t *testing.T) {
 		transformer, err := CompilePre(`throw { status: 400.0, body: "error" }`)
 		require.NoError(t, err)
 
-		_, err = transformer.ApplyMock(nil, "", nil)
+		_, err = transformer.ApplyMock(nil, "", nil, nil)
 		require.Error(t, err)
 
 		var transformErr *TransformError
@@ -112,7 +112,7 @@ func TestParseJSError_NativeError(t *testing.T) {
 		transformer, err := CompilePre(`throw new Error("something went wrong")`)
 		require.NoError(t, err)
 
-		_, err = transformer.ApplyMock(nil, "", nil)
+		_, err = transformer.ApplyMock(nil, "", nil, nil)
 		require.Error(t, err)
 
 		var transformErr *TransformError
@@ -124,7 +124,7 @@ func TestParseJSError_NativeError(t *testing.T) {
 		transformer, err := CompilePre(`throw { message: "error", code: "ERR_001" }`)
 		require.NoError(t, err)
 
-		_, err = transformer.ApplyMock(nil, "", nil)
+		_, err = transformer.ApplyMock(nil, "", nil, nil)
 		require.Error(t, err)
 
 		var transformErr *TransformError
@@ -138,7 +138,7 @@ func TestParseJSError_ThrownString(t *testing.T) {
 		transformer, err := CompilePre(`throw "simple error message"`)
 		require.NoError(t, err)
 
-		_, err = transformer.ApplyMock(nil, "", nil)
+		_, err = transformer.ApplyMock(nil, "", nil, nil)
 		require.Error(t, err)
 
 		var transformErr *TransformError

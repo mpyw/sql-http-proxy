@@ -26,8 +26,8 @@ func CompileJS(code string) (*JSSource, error) {
 }
 
 // Data executes the JavaScript function and returns the mock data.
-func (s *JSSource) Data(ctx map[string]any, sql string, input map[string]any) (any, map[string]any, error) {
-	result, err := s.transformer.ApplyMock(ctx, sql, input)
+func (s *JSSource) Data(ctx map[string]any, sql string, input map[string]any, tc *js.TransformContext) (any, map[string]any, error) {
+	result, err := s.transformer.ApplyMock(ctx, sql, input, tc)
 	if err != nil {
 		return nil, nil, err
 	}

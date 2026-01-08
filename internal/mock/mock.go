@@ -11,9 +11,9 @@ import (
 // Source represents a mock data source.
 type Source interface {
 	// Data returns the mock data.
-	// For JS: executes the function with ctx, sql, input
-	// For static sources: returns the pre-parsed data (ctx unchanged)
-	Data(ctx map[string]any, sql string, input map[string]any) (any, map[string]any, error)
+	// For JS: executes the function with ctx, sql, input, tc (transform context)
+	// For static sources: returns the pre-parsed data (ctx unchanged, tc ignored)
+	Data(ctx map[string]any, sql string, input map[string]any, tc *js.TransformContext) (any, map[string]any, error)
 }
 
 // CompileOptions contains options for compiling mock sources.

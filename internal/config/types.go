@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 
+	"github.com/samber/lo"
 	"gopkg.in/yaml.v3"
 )
 
@@ -160,22 +161,33 @@ type Mock struct {
 
 // IsEmpty returns true if no mock source is configured.
 func (m *Mock) IsEmpty() bool {
-	return m.Object == nil && m.ObjectJSON == "" && m.ObjectJSONFile == "" && m.ObjectJS == "" &&
-		m.Array == nil && m.ArrayJSON == "" && m.ArrayJSONFile == "" && m.ArrayJS == "" &&
-		m.CSV == "" && m.CSVFile == "" &&
-		m.JSONL == "" && m.JSONLFile == ""
+	return !lo.Contains(m.sourceFlags(), true)
 }
 
 // IsArraySource returns true if this mock uses an array source.
 func (m *Mock) IsArraySource() bool {
-	return m.Array != nil || m.ArrayJSON != "" || m.ArrayJSONFile != "" || m.ArrayJS != "" ||
-		m.CSV != "" || m.CSVFile != "" ||
-		m.JSONL != "" || m.JSONLFile != ""
+	return lo.Contains(m.arraySourceFlags(), true)
 }
 
 // IsObjectSource returns true if this mock uses an object source.
 func (m *Mock) IsObjectSource() bool {
-	return m.Object != nil || m.ObjectJSON != "" || m.ObjectJSONFile != "" || m.ObjectJS != ""
+	return lo.Contains(m.objectSourceFlags(), true)
+}
+
+func (m *Mock) objectSourceFlags() []bool {
+	return []bool{m.Object != nil, m.ObjectJSON != "", m.ObjectJSONFile != "", m.ObjectJS != ""}
+}
+
+func (m *Mock) arraySourceFlags() []bool {
+	return []bool{
+		m.Array != nil, m.ArrayJSON != "", m.ArrayJSONFile != "", m.ArrayJS != "",
+		m.CSV != "", m.CSVFile != "",
+		m.JSONL != "", m.JSONLFile != "",
+	}
+}
+
+func (m *Mock) sourceFlags() []bool {
+	return append(m.objectSourceFlags(), m.arraySourceFlags()...)
 }
 
 // HasJS returns true if this mock uses a JavaScript source.
@@ -194,48 +206,9 @@ func (m *Mock) GetJS() string {
 // Validate checks that only one mock source is specified.
 // Does NOT check filter requirement - that depends on query type and is validated elsewhere.
 func (m *Mock) Validate() error {
-	count := 0
-	if m.Object != nil {
-		count++
-	}
-	if m.ObjectJSON != "" {
-		count++
-	}
-	if m.ObjectJSONFile != "" {
-		count++
-	}
-	if m.ObjectJS != "" {
-		count++
-	}
-	if m.Array != nil {
-		count++
-	}
-	if m.ArrayJSON != "" {
-		count++
-	}
-	if m.ArrayJSONFile != "" {
-		count++
-	}
-	if m.ArrayJS != "" {
-		count++
-	}
-	if m.CSV != "" {
-		count++
-	}
-	if m.CSVFile != "" {
-		count++
-	}
-	if m.JSONL != "" {
-		count++
-	}
-	if m.JSONLFile != "" {
-		count++
-	}
-
-	if count > 1 {
+	if lo.Count(m.sourceFlags(), true) > 1 {
 		return errors.New("mock: only one source type can be specified")
 	}
-
 	return nil
 }
 

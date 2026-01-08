@@ -16,6 +16,7 @@ func TestApplyPre(t *testing.T) {
 			map[string]any{},
 			"SELECT * FROM users",
 			map[string]any{"id": 1},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -31,6 +32,7 @@ func TestApplyPre(t *testing.T) {
 			map[string]any{},
 			"SELECT * FROM users",
 			map[string]any{"id": 1},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -45,6 +47,7 @@ func TestApplyPre(t *testing.T) {
 			map[string]any{},
 			"SELECT * FROM users",
 			map[string]any{},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -59,6 +62,7 @@ func TestApplyPre(t *testing.T) {
 			map[string]any{},
 			"SELECT * FROM users",
 			map[string]any{},
+			nil,
 		)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "must return an object")
@@ -72,6 +76,7 @@ func TestApplyPre(t *testing.T) {
 			map[string]any{},
 			"SELECT * FROM users",
 			map[string]any{},
+			nil,
 		)
 		require.Error(t, err)
 
@@ -90,6 +95,7 @@ func TestApplyMock(t *testing.T) {
 			map[string]any{},
 			"SELECT * FROM users WHERE id = :id",
 			map[string]any{"id": "42"},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -106,6 +112,7 @@ func TestApplyMock(t *testing.T) {
 			map[string]any{},
 			"SELECT * FROM users",
 			map[string]any{},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -121,6 +128,7 @@ func TestApplyMock(t *testing.T) {
 			map[string]any{},
 			"SELECT * FROM users",
 			map[string]any{},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -136,6 +144,7 @@ func TestApplyMock(t *testing.T) {
 			map[string]any{},
 			"SELECT * FROM users",
 			map[string]any{},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -152,6 +161,7 @@ func TestApplyPost(t *testing.T) {
 			map[string]any{},
 			map[string]any{"requestId": "123"},
 			map[string]any{"id": 1, "name": "test"},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -168,6 +178,7 @@ func TestApplyPost(t *testing.T) {
 			map[string]any{},
 			map[string]any{"requestId": "abc"},
 			map[string]any{"id": 1},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -183,6 +194,7 @@ func TestApplyPost(t *testing.T) {
 			map[string]any{"startTime": int64(12345)},
 			map[string]any{},
 			map[string]any{"id": 1},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -198,6 +210,7 @@ func TestApplyPost(t *testing.T) {
 			map[string]any{},
 			map[string]any{},
 			map[string]any{"id": 1},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -219,6 +232,7 @@ func TestApplyPostToEachRow(t *testing.T) {
 			map[string]any{},
 			map[string]any{},
 			rows,
+			nil,
 		)
 		require.NoError(t, err)
 		assert.NotNil(t, newCtx)
@@ -242,6 +256,7 @@ func TestApplyPostToEachRow(t *testing.T) {
 			map[string]any{},
 			map[string]any{},
 			rows,
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -264,6 +279,7 @@ func TestApplyPostToAllRows(t *testing.T) {
 			map[string]any{},
 			map[string]any{},
 			rows,
+			nil,
 		)
 		require.NoError(t, err)
 

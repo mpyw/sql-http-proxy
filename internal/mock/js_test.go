@@ -17,6 +17,7 @@ func TestCompileJS(t *testing.T) {
 			map[string]any{},
 			"SELECT * FROM users",
 			map[string]any{"id": "42"},
+			nil,
 		)
 		require.NoError(t, err)
 		assert.NotNil(t, ctx)
@@ -31,7 +32,7 @@ func TestCompileJS(t *testing.T) {
 		source, err := CompileJS(code)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		resultSlice := result.([]any)
@@ -44,7 +45,7 @@ func TestCompileJS(t *testing.T) {
 		require.NoError(t, err)
 
 		ctx := map[string]any{}
-		_, newCtx, err := source.Data(ctx, "", nil)
+		_, newCtx, err := source.Data(ctx, "", nil, nil)
 		require.NoError(t, err)
 
 		assert.Contains(t, newCtx, "mockTime")
@@ -55,7 +56,7 @@ func TestCompileJS(t *testing.T) {
 		source, err := CompileJS(code)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "SELECT * FROM users", nil)
+		result, _, err := source.Data(nil, "SELECT * FROM users", nil, nil)
 		require.NoError(t, err)
 
 		resultMap := result.(map[string]any)
@@ -73,7 +74,7 @@ func TestCompileJS(t *testing.T) {
 		source, err := CompileJS(code)
 		require.NoError(t, err)
 
-		_, _, err = source.Data(nil, "", nil)
+		_, _, err = source.Data(nil, "", nil, nil)
 		require.Error(t, err)
 	})
 }

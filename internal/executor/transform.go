@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/samber/lo"
+
 	"github.com/mpyw/sql-http-proxy/internal/config"
 	"github.com/mpyw/sql-http-proxy/internal/js"
 	"github.com/mpyw/sql-http-proxy/internal/mock"
@@ -31,43 +33,28 @@ func CompileTransforms(t *config.Transform, opts CompileTransformOptions) (*Tran
 	}
 
 	transforms := &Transforms{}
-	var errs []error
+	var err error
 
-	// Compile pre-transform
-	if t.Pre != "" {
-		pre, err := js.CompilePre(t.Pre)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("pre-transform: %w", err))
+	for _, entry := range []lo.Tuple4[string, func(string) (*js.Transformer, error), string, **js.Transformer]{
+		lo.T4("pre-transform", js.CompilePre, t.Pre, &transforms.Pre),
+		lo.T4("post.each", js.CompilePost, t.Post.Each, &transforms.PostEach),
+		lo.T4("post.all", js.CompilePost, t.Post.All, &transforms.PostAll),
+	} {
+		name, compile, script, target := entry.Unpack()
+		if script == "" {
+			continue
+		}
+		compiled, compileErr := compile(script)
+		if compileErr != nil {
+			err = errors.Join(err, fmt.Errorf("%s: %w", name, compileErr))
 		} else {
-			pre.SetHelpers(opts.Helpers)
-			transforms.Pre = pre
+			compiled.SetHelpers(opts.Helpers)
+			*target = compiled
 		}
 	}
 
-	// Compile post.each transform
-	if t.Post.Each != "" {
-		postEach, err := js.CompilePost(t.Post.Each)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("post.each: %w", err))
-		} else {
-			postEach.SetHelpers(opts.Helpers)
-			transforms.PostEach = postEach
-		}
-	}
-
-	// Compile post.all transform
-	if t.Post.All != "" {
-		postAll, err := js.CompilePost(t.Post.All)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("post.all: %w", err))
-		} else {
-			postAll.SetHelpers(opts.Helpers)
-			transforms.PostAll = postAll
-		}
-	}
-
-	if len(errs) > 0 {
-		return nil, errors.Join(errs...)
+	if err != nil {
+		return nil, err
 	}
 	return transforms, nil
 }

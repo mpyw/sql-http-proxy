@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
 // CSVSource holds pre-parsed CSV data.
@@ -123,8 +125,8 @@ func parseCSVReaderWithOptions(r io.Reader, opts ParseCSVOptions) (*CSVSource, e
 }
 
 // Data returns the parsed CSV rows.
-// ctx and sql are ignored for static data sources.
-func (s *CSVSource) Data(_ map[string]any, _ string, _ map[string]any) (any, map[string]any, error) {
+// ctx, sql, and tc are ignored for static data sources.
+func (s *CSVSource) Data(_ map[string]any, _ string, _ map[string]any, _ *js.TransformContext) (any, map[string]any, error) {
 	// Return a copy to prevent mutation
 	result := make([]map[string]any, len(s.rows))
 	for i, row := range s.rows {

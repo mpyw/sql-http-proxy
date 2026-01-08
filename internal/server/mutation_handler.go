@@ -1,24 +1,30 @@
 package server
 
 import (
-	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/samber/lo"
 
 	"github.com/mpyw/sql-http-proxy/internal/config"
 	"github.com/mpyw/sql-http-proxy/internal/executor"
-	"github.com/mpyw/sql-http-proxy/internal/js"
 	"github.com/mpyw/sql-http-proxy/internal/server/body"
 )
 
 // MutationHandler handles HTTP requests for mutations.
-type MutationHandler struct {
-	exec     *executor.MutationExecutor
-	method   string
-	parser   *body.Parser
-	recorder QueryRecorder
+type MutationHandler = BaseHandler[executor.MutationResult]
+
+// mutationResultProcessor implements ResultProcessor for MutationResult.
+type mutationResultProcessor struct{}
+
+func (p *mutationResultProcessor) BuildResponse(result *executor.MutationResult) (int, any, http.Header) {
+	// For NoContent, always use 204 (original behavior)
+	// result.Status from Response defaults to 200, which should not override 204
+	if result.NoContent {
+		return http.StatusNoContent, nil, result.ResponseHeader
+	}
+	status := lo.CoalesceOrEmpty(result.Status, http.StatusOK)
+	return status, result.Data, result.ResponseHeader
 }
 
 // NewMutationHandler creates a new MutationHandler.
@@ -41,70 +47,11 @@ func NewMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts H
 	}
 
 	return &MutationHandler{
-		exec:     exec,
-		method:   mutation.GetMethod(),
-		parser:   body.NewParser(mutation.GetAccepts()),
-		recorder: opts.Recorder,
+		exec:          exec,
+		method:        mutation.GetMethod(),
+		parser:        body.NewParser(mutation.GetAccepts()),
+		recorder:      opts.Recorder,
+		processor:     &mutationResultProcessor{},
+		checkNotFound: false,
 	}, nil
-}
-
-// ServeHTTP implements http.Handler.
-func (h *MutationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != h.method {
-		w.Header().Set("Allow", h.method)
-		res := &responder{w: w}
-		res.Error(http.StatusMethodNotAllowed, errors.New("method not allowed"))
-		return
-	}
-
-	slog.Info("Accepting request", "method", r.Method, "uri", r.RequestURI)
-	res := &responder{w: w}
-
-	params, err := h.parser.Parse(r)
-	if err != nil {
-		if errors.Is(err, body.ErrUnsupportedMediaType) {
-			res.Error(http.StatusUnsupportedMediaType, err)
-		} else {
-			res.Error(http.StatusBadRequest, err)
-		}
-		return
-	}
-
-	var execOpts executor.Options
-	if h.recorder != nil {
-		execOpts.Recorder = func(rec executor.Record) {
-			h.recorder(QueryRecord{
-				Type:   rec.Type,
-				IsMock: rec.IsMock,
-				SQL:    rec.SQL,
-				Params: rec.Params,
-				Args:   rec.Args,
-			})
-		}
-	}
-
-	result, err := h.exec.Execute(r.Context(), params, execOpts)
-	if err != nil {
-		h.handleError(res, err)
-		return
-	}
-
-	if result.NoContent {
-		res.Respond(http.StatusNoContent, nil)
-	} else {
-		res.Respond(http.StatusOK, result.Data)
-	}
-}
-
-func (h *MutationHandler) handleError(res *responder, err error) {
-	var transformErr *js.TransformError
-	if errors.As(err, &transformErr) {
-		status := transformErr.Status
-		if status == 0 {
-			status = defaultStatusForPhase(err)
-		}
-		res.Respond(status, transformErr.Body)
-		return
-	}
-	res.Error(http.StatusInternalServerError, err)
 }

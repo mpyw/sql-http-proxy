@@ -15,7 +15,8 @@ import (
 // Returns the original data unchanged if charset is already UTF-8.
 func ToUTF8(data []byte, charsetName string) ([]byte, error) {
 	charsetName = strings.ToLower(charsetName)
-	if charsetName == "utf-8" || charsetName == "utf8" {
+	switch charsetName {
+	case "utf-8", "utf8":
 		return data, nil
 	}
 

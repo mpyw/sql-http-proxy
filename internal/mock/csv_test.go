@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,7 @@ func TestParseCSV(t *testing.T) {
 		source, err := ParseCSV(data)
 		require.NoError(t, err)
 
-		rows, ctx, err := source.Data(nil, "", nil)
+		rows, ctx, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		assert.Nil(t, ctx)
 
@@ -42,7 +43,7 @@ world,-3.14,off,NULL`
 		source, err := ParseCSV(data)
 		require.NoError(t, err)
 
-		rows, _, err := source.Data(nil, "", nil)
+		rows, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		rowSlice := rows.([]map[string]any)
@@ -72,7 +73,7 @@ world,-3.14,off,NULL`
 		source, err := ParseCSV(data)
 		require.NoError(t, err)
 
-		rows, _, err := source.Data(nil, "", nil)
+		rows, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		rowSlice := rows.([]map[string]any)
@@ -85,7 +86,7 @@ world,-3.14,off,NULL`
 		source, err := ParseCSV(data)
 		require.NoError(t, err)
 
-		rows, _, err := source.Data(nil, "", nil)
+		rows, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		rowSlice := rows.([]map[string]any)
@@ -102,7 +103,7 @@ world,-3.14,off,NULL`
 		source, err := ParseCSV(data)
 		require.NoError(t, err)
 
-		rows, _, err := source.Data(nil, "", nil)
+		rows, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		rowSlice := rows.([]map[string]any)
@@ -121,8 +122,8 @@ world,-3.14,off,NULL`
 		source, err := ParseCSV(data)
 		require.NoError(t, err)
 
-		rows1, _, _ := source.Data(nil, "", nil)
-		rows2, _, _ := source.Data(nil, "", nil)
+		rows1, _ := lo.Must2(source.Data(nil, "", nil, nil))
+		rows2, _ := lo.Must2(source.Data(nil, "", nil, nil))
 
 		// Modify first result
 		rowSlice1 := rows1.([]map[string]any)
@@ -148,7 +149,7 @@ func TestParseCSVFile(t *testing.T) {
 		source, err := ParseCSVFile(path)
 		require.NoError(t, err)
 
-		rows, _, err := source.Data(nil, "", nil)
+		rows, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		rowSlice := rows.([]map[string]any)

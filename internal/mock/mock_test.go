@@ -24,7 +24,7 @@ func TestCompile(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, source)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultMap := result.(map[string]any)
 		assert.Equal(t, int64(1), resultMap["id"])
@@ -36,7 +36,7 @@ func TestCompile(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, source)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultSlice := result.([]any)
 		assert.Len(t, resultSlice, 2)
@@ -47,7 +47,7 @@ func TestCompile(t *testing.T) {
 		source, err := Compile(m, CompileOptions{})
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultSlice := result.([]map[string]any)
 		assert.Len(t, resultSlice, 1)
@@ -64,7 +64,7 @@ func TestCompile(t *testing.T) {
 		source, err := Compile(m, CompileOptions{ConfigDir: dir})
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultSlice := result.([]map[string]any)
 		assert.Len(t, resultSlice, 1)
@@ -77,7 +77,7 @@ func TestCompile(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, source)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultMap := result.(map[string]any)
 		// JSON marshaling converts int to float64
@@ -102,7 +102,7 @@ func TestCompile(t *testing.T) {
 		source, err := Compile(m, CompileOptions{ConfigDir: dir})
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultMap := result.(map[string]any)
 		assert.Equal(t, float64(1), resultMap["id"])
@@ -118,7 +118,7 @@ func TestCompile(t *testing.T) {
 		source, err := Compile(m, CompileOptions{ConfigDir: dir})
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultSlice := result.([]any)
 		assert.Len(t, resultSlice, 1)
@@ -130,7 +130,7 @@ func TestCompile(t *testing.T) {
 		source, err := Compile(m, CompileOptions{})
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultSlice := result.([]any)
 		assert.Len(t, resultSlice, 2)
@@ -147,7 +147,7 @@ func TestCompile(t *testing.T) {
 		source, err := Compile(m, CompileOptions{ConfigDir: dir})
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultSlice := result.([]any)
 		assert.Len(t, resultSlice, 2)
@@ -211,7 +211,7 @@ func TestCompile(t *testing.T) {
 		source, err := Compile(m, CompileOptions{})
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultMap := result.(map[string]any)
 		assert.Equal(t, float64(1), resultMap["id"])
@@ -223,7 +223,7 @@ func TestCompile(t *testing.T) {
 		source, err := Compile(m, CompileOptions{})
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultSlice := result.([]any)
 		assert.Len(t, resultSlice, 2)
@@ -242,7 +242,7 @@ func TestCompile(t *testing.T) {
 		source, err := Compile(m, CompileOptions{})
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultSlice := result.([]any)
 		assert.Len(t, resultSlice, 2)
@@ -261,7 +261,7 @@ func TestCompile(t *testing.T) {
 		require.NoError(t, err)
 
 		input := map[string]any{"id": float64(2)}
-		result, _, err := source.Data(nil, "", input)
+		result, _, err := source.Data(nil, "", input, nil)
 		require.NoError(t, err)
 		resultSlice := result.([]any)
 		assert.Len(t, resultSlice, 1)

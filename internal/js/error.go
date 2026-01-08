@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/dop251/goja"
+	"github.com/samber/lo"
 )
 
 // TransformError represents an error thrown from JavaScript transform.
@@ -39,8 +40,8 @@ func parseJSError(err error) error {
 
 	// Handle thrown object
 	if obj, ok := val.(map[string]any); ok {
-		_, hasStatus := obj["status"]
-		_, hasBody := obj["body"]
+		status, hasStatus := obj["status"]
+		body, hasBody := obj["body"]
 
 		// Native Error object: has "message" but no "status" or "body"
 		// Always return 500 for native errors (don't trust user JS)
@@ -48,20 +49,20 @@ func parseJSError(err error) error {
 			return &TransformError{Status: 500, Body: jsErr.String()}
 		}
 
-		// Lambda-style: throw { status: 400, body: ... }
-		status := 0
-		if s, ok := obj["status"].(int64); ok {
-			status = int(s)
-		} else if s, ok := obj["status"].(float64); ok {
-			status = int(s)
+		return &TransformError{
+			// Lambda-style: throw { status: 400, body: ... }
+			Status: func() int {
+				switch status := status.(type) {
+				case int64:
+					return int(status)
+				case float64:
+					return int(status)
+				default:
+					return 0
+				}
+			}(),
+			Body: lo.Ternary(hasBody, body, any(jsErr.String())),
 		}
-
-		body, hasBody := obj["body"]
-		if !hasBody {
-			body = jsErr.String()
-		}
-
-		return &TransformError{Status: status, Body: body}
 	}
 
 	// Handle thrown string: throw "error message"

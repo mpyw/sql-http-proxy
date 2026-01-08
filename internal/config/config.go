@@ -14,6 +14,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 
+	"github.com/mpyw/sql-http-proxy/internal"
 	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
@@ -65,52 +66,55 @@ func (cfg *Config) RequiresDB() bool {
 // Note: type-specific constraints (each for many, handle_not_found for one)
 // are now enforced by JSON Schema via separate queryOne/queryMany definitions.
 func (cfg *Config) validate() error {
-	var errs []error
+	var err error
 
-	// Validate global_helpers JS compilation
-	if cfg.GlobalHelpers != nil && cfg.GlobalHelpers.JS != "" {
-		if _, err := js.CompilePre(cfg.GlobalHelpers.JS); err != nil {
-			errs = append(errs, fmt.Errorf("global_helpers.js: %w", err))
+	for _, entry := range internal.SliceOf(
+		lo.T2("global_helpers.js", lo.FromPtr(cfg.GlobalHelpers).JS),
+		lo.T2("csv.value_parser", lo.FromPtr(cfg.CSV).ValueParser),
+	) {
+		name, script := entry.Unpack()
+		if script != "" {
+			if _, e := js.CompilePre(script); e != nil {
+				err = errors.Join(err, fmt.Errorf("%s: %w", name, e))
+			}
 		}
 	}
 
-	// Validate csv.value_parser
-	if cfg.CSV != nil && cfg.CSV.ValueParser != "" {
-		if _, err := js.CompilePre(cfg.CSV.ValueParser); err != nil {
-			errs = append(errs, fmt.Errorf("csv.value_parser: %w", err))
-		}
-	}
-
-	return errors.Join(errs...)
+	return err
 }
 
 // ValidateTransforms validates all transforms and mocks are valid.
 // Returns all errors joined, not just the first one.
 func (cfg *Config) ValidateTransforms() error {
-	var errs []error
+	var err error
+
+	validateJS := func(
+		entries []lo.Tuple3[
+			string,                                // name
+			func(string) (*js.Transformer, error), // compileFunc
+			string,                                // script
+		],
+		location string,
+	) {
+		for _, entry := range entries {
+			name, compileFunc, script := entry.Unpack()
+			if script != "" {
+				if _, e := compileFunc(script); e != nil {
+					err = errors.Join(err, fmt.Errorf("%s %s: %w", location, name, e))
+				}
+			}
+		}
+	}
 
 	validateTransform := func(t *Transform, location string) {
 		if t == nil {
 			return
 		}
-		// Validate pre-transform JS
-		if t.Pre != "" {
-			if _, err := js.CompilePre(t.Pre); err != nil {
-				errs = append(errs, fmt.Errorf("%s pre: %w", location, err))
-			}
-		}
-		// Validate post.each JS
-		if t.Post.Each != "" {
-			if _, err := js.CompilePost(t.Post.Each); err != nil {
-				errs = append(errs, fmt.Errorf("%s post.each: %w", location, err))
-			}
-		}
-		// Validate post.all JS
-		if t.Post.All != "" {
-			if _, err := js.CompilePost(t.Post.All); err != nil {
-				errs = append(errs, fmt.Errorf("%s post.all: %w", location, err))
-			}
-		}
+		validateJS(internal.SliceOf(
+			lo.T3("pre", js.CompilePre, t.Pre),
+			lo.T3("post.each", js.CompilePost, t.Post.Each),
+			lo.T3("post.all", js.CompilePost, t.Post.All),
+		), location)
 	}
 
 	validateMock := func(m *Mock, isTypeOne bool, location string) {
@@ -118,41 +122,35 @@ func (cfg *Config) ValidateTransforms() error {
 			return
 		}
 		// Validate type-specific constraints
-		if isTypeOne {
-			if err := m.ValidateForTypeOne(); err != nil {
-				errs = append(errs, fmt.Errorf("%s %w", location, err))
-			}
-		} else {
-			if err := m.ValidateForTypeMany(); err != nil {
-				errs = append(errs, fmt.Errorf("%s %w", location, err))
-			}
+		if e := lo.Ternary(isTypeOne, m.ValidateForTypeOne, m.ValidateForTypeMany)(); e != nil {
+			err = errors.Join(err, fmt.Errorf("%s %w", location, e))
 		}
-		// Compile JS mock if specified
-		if m.HasJS() {
-			if _, err := js.CompilePre(m.GetJS()); err != nil {
-				errs = append(errs, fmt.Errorf("%s mock js: %w", location, err))
-			}
-		}
-		// Compile filter JS if specified
-		if m.Filter != "" {
-			if _, err := js.CompileFilter(m.Filter); err != nil {
-				errs = append(errs, fmt.Errorf("%s mock.filter: %w", location, err))
-			}
-		}
+		validateJS(internal.SliceOf(
+			lo.T3("mock js", js.CompilePre, m.GetJS()),
+			lo.T3("mock.filter", js.CompileFilter, m.Filter),
+		), location)
 	}
 
 	for i, q := range cfg.Queries {
 		location := fmt.Sprintf("queries[%d] (%s)", i, q.Path)
 		validateTransform(q.Transform, location)
-		validateMock(q.Mock, q.Type == QueryTypeOne, location)
+		validateMock(
+			q.Mock,
+			q.Type == QueryTypeOne,
+			location,
+		)
 	}
 	for i, m := range cfg.Mutations {
 		location := fmt.Sprintf("mutations[%d] (%s)", i, m.Path)
 		validateTransform(m.Transform, location)
-		isTypeOne := m.Type == MutationTypeOne || m.Type == MutationTypeNone
-		validateMock(m.Mock, isTypeOne, location)
+		validateMock(
+			m.Mock,
+			m.Type == MutationTypeOne || m.Type == MutationTypeNone,
+			location,
+		)
 	}
-	return errors.Join(errs...)
+
+	return err
 }
 
 // Parse parses configuration from YAML bytes.
@@ -165,7 +163,7 @@ func Parse(data []byte) (Config, error) {
 
 	// Validate against JSON Schema
 	if err := configSchema.Validate(raw); err != nil {
-		if validationErr, ok := err.(*jsonschema.ValidationError); ok {
+		if validationErr := (*jsonschema.ValidationError)(nil); errors.As(err, &validationErr) {
 			return Config{}, fmt.Errorf("config validation failed: %s", formatValidationError(validationErr))
 		}
 		return Config{}, fmt.Errorf("config validation failed: %w", err)

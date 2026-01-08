@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
 // JSONSource holds pre-parsed JSON data.
@@ -94,8 +96,8 @@ func parseJSONLReader(r io.Reader) (*JSONSource, error) {
 }
 
 // Data returns the parsed JSON data.
-// ctx and sql are ignored for static data sources.
-func (s *JSONSource) Data(_ map[string]any, _ string, _ map[string]any) (any, map[string]any, error) {
+// ctx, sql, and tc are ignored for static data sources.
+func (s *JSONSource) Data(_ map[string]any, _ string, _ map[string]any, _ *js.TransformContext) (any, map[string]any, error) {
 	// Return a deep copy to prevent mutation
 	return deepCopy(s.data), nil, nil
 }

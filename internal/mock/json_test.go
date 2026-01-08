@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +19,7 @@ func TestNewJSON(t *testing.T) {
 		source, err := NewJSON(data)
 		require.NoError(t, err)
 
-		result, ctx, err := source.Data(nil, "", nil)
+		result, ctx, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		assert.Nil(t, ctx)
 
@@ -36,7 +37,7 @@ func TestNewJSON(t *testing.T) {
 		source, err := NewJSON(data)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		resultMap := result.(map[string]any)
@@ -48,7 +49,7 @@ func TestNewJSON(t *testing.T) {
 		source, err := NewJSON(nil)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		assert.Nil(t, result)
 	})
@@ -58,7 +59,7 @@ func TestNewJSON(t *testing.T) {
 		source, err := NewJSON(data)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		resultSlice := result.([]any)
@@ -74,7 +75,7 @@ func TestNewJSON(t *testing.T) {
 		source, err := NewJSON(data)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		resultMap := result.(map[string]any)
@@ -93,8 +94,8 @@ func TestNewJSON(t *testing.T) {
 		source, err := NewJSON(data)
 		require.NoError(t, err)
 
-		result1, _, _ := source.Data(nil, "", nil)
-		result2, _, _ := source.Data(nil, "", nil)
+		result1, _ := lo.Must2(source.Data(nil, "", nil, nil))
+		result2, _ := lo.Must2(source.Data(nil, "", nil, nil))
 
 		// Modify first result
 		slice1 := result1.([]any)
@@ -119,7 +120,7 @@ func TestParseJSONFile(t *testing.T) {
 		source, err := ParseJSONFile(path)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		resultSlice := result.([]any)
@@ -136,7 +137,7 @@ func TestParseJSONFile(t *testing.T) {
 		source, err := ParseJSONFile(path)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		resultMap := result.(map[string]any)
@@ -167,7 +168,7 @@ func TestParseJSONL(t *testing.T) {
 		source, err := ParseJSONL(data)
 		require.NoError(t, err)
 
-		result, ctx, err := source.Data(nil, "", nil)
+		result, ctx, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		assert.Nil(t, ctx)
 
@@ -191,7 +192,7 @@ func TestParseJSONL(t *testing.T) {
 		source, err := ParseJSONL(data)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		resultSlice := result.([]any)
@@ -202,7 +203,7 @@ func TestParseJSONL(t *testing.T) {
 		source, err := ParseJSONL("")
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		// Empty JSONL returns nil (via deepCopy of nil []any)
@@ -224,7 +225,7 @@ func TestParseJSONL(t *testing.T) {
 		source, err := ParseJSONL(data)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		resultSlice := result.([]any)
@@ -244,7 +245,7 @@ func TestParseJSONLFile(t *testing.T) {
 		source, err := ParseJSONLFile(path)
 		require.NoError(t, err)
 
-		result, _, err := source.Data(nil, "", nil)
+		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
 		resultSlice := result.([]any)

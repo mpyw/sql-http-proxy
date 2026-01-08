@@ -4,21 +4,42 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"maps"
 
 	"github.com/jmoiron/sqlx"
 
 	"github.com/mpyw/sql-http-proxy/internal/config"
 	"github.com/mpyw/sql-http-proxy/internal/db"
-	"github.com/mpyw/sql-http-proxy/internal/mock"
+	"github.com/mpyw/sql-http-proxy/internal/js"
 )
+
+// queryResultBuilder implements ResultBuilder for ExecuteResult.
+type queryResultBuilder struct {
+	handleNotFound bool
+}
+
+func (b *queryResultBuilder) BuildResult(output any, tc *js.TransformContext) *ExecuteResult {
+	return &ExecuteResult{
+		Output:         output,
+		Status:         tc.Response.Status(),
+		ResponseHeader: tc.Response.ToHTTPHeader(),
+	}
+}
+
+func (b *queryResultBuilder) OnEmptyOne(tc *js.TransformContext) (*ExecuteResult, error) {
+	if !b.handleNotFound {
+		return nil, ErrNotFound
+	}
+	return &ExecuteResult{
+		Output:         nil,
+		Status:         tc.Response.Status(),
+		ResponseHeader: tc.Response.ToHTTPHeader(),
+	}, nil
+}
 
 // QueryExecutor executes queries (mock or DB).
 type QueryExecutor struct {
-	db         *sqlx.DB
-	query      config.Query
-	transforms *Transforms
-	mockSource mock.Source
+	base  *BaseExecutor[ExecuteResult]
+	query config.Query
 }
 
 // NewQueryExecutor creates a new QueryExecutor with pre-compiled transforms.
@@ -28,88 +49,39 @@ func NewQueryExecutor(db *sqlx.DB, query config.Query, opts CompileTransformOpti
 		return nil, err
 	}
 
-	// Compile mock from query level
 	mockSource, err := CompileMock(query.Mock, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	return &QueryExecutor{
-		db:         db,
-		query:      query,
-		transforms: transforms,
-		mockSource: mockSource,
+		base: &BaseExecutor[ExecuteResult]{
+			DB:         db,
+			SQL:        query.SQL,
+			OpType:     string(query.Type),
+			Entity:     "query",
+			Transforms: transforms,
+			MockSource: mockSource,
+			Builder:    &queryResultBuilder{handleNotFound: query.HandleNotFound},
+		},
+		query: query,
 	}, nil
 }
 
 // Execute runs the query with the given parameters.
-// Returns ErrNotFound for "one" type queries when no row is found and handle_not_found is false.
-func (e *QueryExecutor) Execute(reqCtx context.Context, params map[string]any, opts Options) (any, error) {
-	// Shared context for pre/mock/post transforms (mutable)
-	ctx := make(map[string]any)
-
-	// Keep original params for post-transform
-	originalParams := maps.Clone(params)
-
-	// SQL can be modified by pre-transform
-	currentSQL := e.query.SQL
-
-	// Apply pre-transform
-	if e.transforms.Pre != nil {
-		result, err := e.transforms.Pre.ApplyPre(ctx, currentSQL, params)
-		if err != nil {
-			return nil, WrapPreError(err)
-		}
-		params = result.Output
-		currentSQL = result.SQL
-		ctx = result.Ctx
-	}
-
-	// Execute mock or DB
-	if e.mockSource != nil {
-		return e.executeMock(ctx, currentSQL, params, originalParams, opts)
-	}
-	return e.executeDB(reqCtx, ctx, currentSQL, params, originalParams, opts)
+func (e *QueryExecutor) Execute(reqCtx context.Context, params map[string]any, opts Options) (*ExecuteResult, error) {
+	return e.base.ExecuteBase(reqCtx, params, opts, e)
 }
 
-func (e *QueryExecutor) executeMock(ctx map[string]any, sqlStr string, params, originalParams map[string]any, opts Options) (any, error) {
-	slog.Debug("Executing mock query", "type", e.query.Type, "sql", sqlStr, "params", params)
-
-	if opts.Recorder != nil {
-		opts.Recorder(Record{
-			Type:   string(e.query.Type),
-			IsMock: true,
-			SQL:    sqlStr,
-			Params: params,
-		})
-	}
-
-	mockOutput, newCtx, err := e.mockSource.Data(ctx, sqlStr, params)
-	if err != nil {
-		return nil, WrapMockError(err)
-	}
-	if newCtx != nil {
-		ctx = newCtx
-	}
-
-	switch e.query.Type {
-	case config.QueryTypeOne:
-		return e.processOneResult(ctx, originalParams, mockOutput)
-	case config.QueryTypeMany:
-		return e.processManyResult(ctx, originalParams, mockOutput)
-	default:
-		return nil, errors.New("unsupported query type")
-	}
-}
-
-func (e *QueryExecutor) executeDB(reqCtx context.Context, ctx map[string]any, currentSQL string, params, originalParams map[string]any, opts Options) (any, error) {
-	boundSQL, args, err := db.BindParams(e.db, currentSQL, params)
+// ExecuteDB implements DBExecutor interface.
+func (e *QueryExecutor) ExecuteDB(reqCtx context.Context, ec *ExecContext[ExecuteResult]) (*ExecuteResult, error) {
+	boundSQL, args, err := db.BindParams(ec.Base.DB, ec.SQL, ec.Params)
 	if err != nil {
 		return nil, err
 	}
 
-	if opts.Recorder != nil {
-		opts.Recorder(Record{
+	if ec.Opts.Recorder != nil {
+		ec.Opts.Recorder(Record{
 			Type:   string(e.query.Type),
 			IsMock: false,
 			SQL:    boundSQL,
@@ -120,117 +92,28 @@ func (e *QueryExecutor) executeDB(reqCtx context.Context, ctx map[string]any, cu
 	switch e.query.Type {
 	case config.QueryTypeOne:
 		slog.Debug("Executing query", "type", "one", "sql", boundSQL, "args", args)
-		result, err := db.QueryOne(reqCtx, e.db, boundSQL, args...)
+		result, err := db.QueryOne(reqCtx, ec.Base.DB, boundSQL, args...)
 		if err != nil {
 			return nil, err
 		}
-		// Explicitly convert typed nil to untyped nil for interface comparison
 		var output any
 		if result != nil {
 			output = result
 		}
-		return e.processOneResult(ctx, originalParams, output)
+		return ec.Base.ProcessOneResult(ec.Ctx, ec.OriginalParams, output, ec.TC)
 
 	case config.QueryTypeMany:
 		slog.Debug("Executing query", "type", "many", "sql", boundSQL, "args", args)
-		results, err := db.QueryMany(reqCtx, e.db, boundSQL, args...)
+		results, err := db.QueryMany(reqCtx, ec.Base.DB, boundSQL, args...)
 		if err != nil {
 			return nil, err
 		}
-		return e.processManyResult(ctx, originalParams, results)
+		return ec.Base.ProcessManyResult(ec.Ctx, ec.OriginalParams, results, ec.TC)
 
 	default:
-		return nil, errors.New("unsupported query type")
+		return nil, ErrUnsupportedQueryType
 	}
 }
 
-func (e *QueryExecutor) processOneResult(ctx, originalParams map[string]any, output any) (any, error) {
-	var entry map[string]any
-	switch v := output.(type) {
-	case nil:
-		if !e.query.HandleNotFound {
-			return nil, ErrNotFound
-		}
-		entry = nil
-	case map[string]any:
-		entry = v
-	case []any:
-		// For filter: take first element or nil
-		if len(v) == 0 {
-			if !e.query.HandleNotFound {
-				return nil, ErrNotFound
-			}
-			entry = nil
-		} else if m, ok := v[0].(map[string]any); ok {
-			entry = m
-		} else {
-			return nil, errors.New("query result for 'one' must be object or null")
-		}
-	default:
-		return nil, errors.New("query result for 'one' must be object or null")
-	}
-
-	var result any = entry
-	if e.transforms.PostAll != nil {
-		postResult, err := e.transforms.PostAll.ApplyPost(ctx, originalParams, entry)
-		if err != nil {
-			return nil, WrapPostError(err)
-		}
-		result = postResult.Output
-	}
-	return result, nil
-}
-
-func (e *QueryExecutor) processManyResult(ctx, originalParams map[string]any, output any) (any, error) {
-	var entries []map[string]any
-
-	switch v := output.(type) {
-	case []map[string]any:
-		entries = v
-	case []any:
-		entries = make([]map[string]any, len(v))
-		for i, item := range v {
-			if m, ok := item.(map[string]any); ok {
-				entries[i] = m
-			} else {
-				return nil, errors.New("query result for 'many' must be array of objects")
-			}
-		}
-	case nil:
-		entries = []map[string]any{}
-	default:
-		return nil, errors.New("query result for 'many' must be array")
-	}
-
-	var result any = entries
-	currentEntries := entries
-	currentCtx := ctx
-
-	if e.transforms.PostEach != nil {
-		eachResult, newCtx, err := e.transforms.PostEach.ApplyPostToEachRow(currentCtx, originalParams, currentEntries)
-		if err != nil {
-			return nil, WrapPostError(err)
-		}
-		result = eachResult
-		currentCtx = newCtx
-
-		currentEntries = make([]map[string]any, len(eachResult))
-		for i, r := range eachResult {
-			m, ok := r.(map[string]any)
-			if !ok {
-				return nil, WrapPostError(errors.New("post.each transform must return object"))
-			}
-			currentEntries[i] = m
-		}
-	}
-
-	if e.transforms.PostAll != nil {
-		postResult, err := e.transforms.PostAll.ApplyPostToAllRows(currentCtx, originalParams, currentEntries)
-		if err != nil {
-			return nil, WrapPostError(err)
-		}
-		result = postResult.Output
-	}
-
-	return result, nil
-}
+// ErrUnsupportedQueryType is returned when query type is not supported.
+var ErrUnsupportedQueryType = errors.New("unsupported query type")
