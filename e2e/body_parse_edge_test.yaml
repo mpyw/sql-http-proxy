@@ -1,0 +1,18 @@
+dsn: postgres://localhost/test
+
+mutations:
+  - type: one
+    method: POST
+    path: /json-only
+    accepts: [json]
+    sql: SELECT 1
+    transform:
+      mock: { received: true }
+
+  - type: one
+    method: POST
+    path: /form-only
+    accepts: [form]
+    sql: SELECT 1
+    transform:
+      mock: { received: true }

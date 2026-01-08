@@ -1,0 +1,11 @@
+dsn: postgres://localhost/test
+
+mutations:
+  - type: one
+    method: POST
+    path: /form
+    sql: SELECT 1
+    transform:
+      mock: { received: true }
+      post: |
+        return { name: input.name }

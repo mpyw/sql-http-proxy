@@ -1,0 +1,7 @@
+queries:
+  - type: one
+    path: /user
+    sql: SELECT 1
+    transform:
+      mock: |
+        return { invalid syntax

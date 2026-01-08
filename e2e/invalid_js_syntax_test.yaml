@@ -1,0 +1,9 @@
+dsn: postgres://localhost/test
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT 1
+    transform:
+      pre: |
+        return { invalid syntax here

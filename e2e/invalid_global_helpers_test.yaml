@@ -1,0 +1,9 @@
+global_helpers: |
+  function broken( { invalid
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT 1
+    transform:
+      mock: { id: 1 }
