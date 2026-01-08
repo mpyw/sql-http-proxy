@@ -243,6 +243,13 @@ transform:
 
 Return mock data without database execution. Only one source type can be specified.
 
+| Format | `type: one` | `type: many` |
+|--------|-------------|--------------|
+| `js` / `js_file` | ✓ | ✓ |
+| `json` / `json_file` | ✓ | ✓ |
+| `csv` / `csv_file` | - | ✓ |
+| `jsonl` / `jsonl_file` | - | ✓ |
+
 ```yaml
 # JavaScript (inline)
 mock: |
@@ -252,34 +259,37 @@ mock: |
 mock:
   js_file: ./mocks/data.js
 
-# CSV (inline)
+# JSON (inline) - string or YAML literal
+mock:
+  json:
+    - { id: 1, name: Alice }
+    - { id: 2, name: Bob }
+# or as JSON string
+mock:
+  json: '[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]'
+
+# JSON (file)
+mock:
+  json_file: ./data.json
+
+# CSV (inline) - type: many only
 mock:
   csv: |
     id,name,active
     1,Alice,true
     2,Bob,false
 
-# CSV (file)
+# CSV (file) - type: many only
 mock:
   csv_file: ./data.csv
 
-# JSON (inline)
-mock:
-  json:
-    - { id: 1, name: Alice }
-    - { id: 2, name: Bob }
-
-# JSON (file)
-mock:
-  json_file: ./data.json
-
-# JSONL (inline)
+# JSONL (inline) - type: many only
 mock:
   jsonl: |
     {"id": 1, "name": "Alice"}
     {"id": 2, "name": "Bob"}
 
-# JSONL (file)
+# JSONL (file) - type: many only
 mock:
   jsonl_file: ./data.jsonl
 ```

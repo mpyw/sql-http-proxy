@@ -69,7 +69,7 @@ func Compile(mt *config.MockTransform, opts CompileOptions) (Source, error) {
 		return ParseCSVFileWithOptions(resolvePath(mt.CSVFile), csvOpts)
 
 	case mt.JSON != nil:
-		return NewJSON(mt.JSON), nil
+		return NewJSON(mt.JSON)
 
 	case mt.JSONFile != "":
 		return ParseJSONFile(resolvePath(mt.JSONFile))

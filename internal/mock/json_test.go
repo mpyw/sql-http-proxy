@@ -15,7 +15,8 @@ func TestNewJSON(t *testing.T) {
 			map[string]any{"id": 1, "name": "Alice"},
 			map[string]any{"id": 2, "name": "Bob"},
 		}
-		source := NewJSON(data)
+		source, err := NewJSON(data)
+		require.NoError(t, err)
 
 		result, ctx, err := source.Data(nil, "", nil)
 		require.NoError(t, err)
@@ -32,7 +33,8 @@ func TestNewJSON(t *testing.T) {
 
 	t.Run("object data", func(t *testing.T) {
 		data := map[string]any{"id": 1, "name": "Alice"}
-		source := NewJSON(data)
+		source, err := NewJSON(data)
+		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil)
 		require.NoError(t, err)
@@ -43,16 +45,53 @@ func TestNewJSON(t *testing.T) {
 	})
 
 	t.Run("nil data", func(t *testing.T) {
-		source := NewJSON(nil)
+		source, err := NewJSON(nil)
+		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil)
 		require.NoError(t, err)
 		assert.Nil(t, result)
 	})
 
+	t.Run("string data (JSON array)", func(t *testing.T) {
+		data := `[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]`
+		source, err := NewJSON(data)
+		require.NoError(t, err)
+
+		result, _, err := source.Data(nil, "", nil)
+		require.NoError(t, err)
+
+		resultSlice := result.([]any)
+		assert.Len(t, resultSlice, 2)
+
+		row1 := resultSlice[0].(map[string]any)
+		assert.Equal(t, float64(1), row1["id"])
+		assert.Equal(t, "Alice", row1["name"])
+	})
+
+	t.Run("string data (JSON object)", func(t *testing.T) {
+		data := `{"id": 1, "name": "Alice"}`
+		source, err := NewJSON(data)
+		require.NoError(t, err)
+
+		result, _, err := source.Data(nil, "", nil)
+		require.NoError(t, err)
+
+		resultMap := result.(map[string]any)
+		assert.Equal(t, float64(1), resultMap["id"])
+		assert.Equal(t, "Alice", resultMap["name"])
+	})
+
+	t.Run("invalid JSON string", func(t *testing.T) {
+		data := `{invalid json}`
+		_, err := NewJSON(data)
+		require.Error(t, err)
+	})
+
 	t.Run("data returns deep copy", func(t *testing.T) {
 		data := []any{map[string]any{"name": "Alice"}}
-		source := NewJSON(data)
+		source, err := NewJSON(data)
+		require.NoError(t, err)
 
 		result1, _, _ := source.Data(nil, "", nil)
 		result2, _, _ := source.Data(nil, "", nil)

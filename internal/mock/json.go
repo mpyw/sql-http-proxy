@@ -14,9 +14,18 @@ type JSONSource struct {
 }
 
 // NewJSON creates a JSONSource from inline YAML/JSON data.
-// The data is already parsed by the YAML unmarshaler.
-func NewJSON(data any) *JSONSource {
-	return &JSONSource{data: data}
+// If data is a string, it is parsed as JSON.
+// Otherwise, it is used as-is (already parsed by YAML unmarshaler).
+func NewJSON(data any) (*JSONSource, error) {
+	// If data is a string, parse it as JSON
+	if s, ok := data.(string); ok {
+		var parsed any
+		if err := json.Unmarshal([]byte(s), &parsed); err != nil {
+			return nil, err
+		}
+		return &JSONSource{data: parsed}, nil
+	}
+	return &JSONSource{data: data}, nil
 }
 
 // ParseJSONFile parses a JSON file into a JSONSource.

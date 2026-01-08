@@ -144,7 +144,44 @@
       "type": "string",
       "description": "JavaScript to transform parameters. Free vars: ctx, sql. Param: input"
     },
-    "mockTransform": {
+    "mockTransformOne": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "JavaScript code (shorthand for mock.js)"
+        },
+        {
+          "type": "object",
+          "properties": { "js": { "type": "string" } },
+          "required": ["js"],
+          "additionalProperties": false,
+          "description": "JavaScript code. Free vars: ctx, sql. Param: input"
+        },
+        {
+          "type": "object",
+          "properties": { "js_file": { "type": "string" } },
+          "required": ["js_file"],
+          "additionalProperties": false,
+          "description": "Path to JavaScript file (relative to config file)"
+        },
+        {
+          "type": "object",
+          "properties": { "json": {} },
+          "required": ["json"],
+          "additionalProperties": false,
+          "description": "Inline JSON data (object)"
+        },
+        {
+          "type": "object",
+          "properties": { "json_file": { "type": "string" } },
+          "required": ["json_file"],
+          "additionalProperties": false,
+          "description": "Path to JSON file (relative to config file)"
+        }
+      ],
+      "description": "Mock data source for type: one (js, json only - no csv/jsonl)"
+    },
+    "mockTransformMany": {
       "oneOf": [
         {
           "type": "string",
@@ -183,7 +220,7 @@
           "properties": { "json": {} },
           "required": ["json"],
           "additionalProperties": false,
-          "description": "Inline JSON data (array or object)"
+          "description": "Inline JSON data (array)"
         },
         {
           "type": "object",
@@ -207,7 +244,7 @@
           "description": "Path to JSONL file (relative to config file)"
         }
       ],
-      "description": "Mock data source (only one type can be specified)"
+      "description": "Mock data source for type: many (all formats supported)"
     },
     "postTransformAll": {
       "type": "string",
@@ -311,7 +348,7 @@
       "type": "object",
       "properties": {
         "pre": { "$ref": "#/$defs/preTransform" },
-        "mock": { "$ref": "#/$defs/mockTransform" },
+        "mock": { "$ref": "#/$defs/mockTransformOne" },
         "post": {
           "type": "string",
           "description": "JavaScript to transform result. Signature: function(ctx, input, output)"
@@ -323,7 +360,7 @@
       "type": "object",
       "properties": {
         "pre": { "$ref": "#/$defs/preTransform" },
-        "mock": { "$ref": "#/$defs/mockTransform" },
+        "mock": { "$ref": "#/$defs/mockTransformMany" },
         "post": {
           "oneOf": [
             { "$ref": "#/$defs/postTransformAll" },
@@ -348,7 +385,7 @@
       "type": "object",
       "properties": {
         "pre": { "$ref": "#/$defs/preTransform" },
-        "mock": { "$ref": "#/$defs/mockTransform" }
+        "mock": { "$ref": "#/$defs/mockTransformOne" }
       },
       "additionalProperties": false,
       "description": "Transform for mutations with no return value (pre only, no post)"
