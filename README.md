@@ -160,16 +160,63 @@ queries:
 
 ## Mock Sources
 
-| Source | Type | Example |
-|--------|------|---------|
-| `object` | one | `mock: { object: { id: 1, name: Alice } }` |
-| `object_js` | one | `mock: { object_js: \| return { id: 1 }; }` |
-| `array` | many | `mock: { array: [{ id: 1 }, { id: 2 }] }` |
-| `array_js` | many | `mock: { array_js: \| return [{ id: 1 }]; }` |
-| `csv` | many | `mock: { csv: \| id,name \n 1,Alice }` |
-| `jsonl` | many | `mock: { jsonl: \| {"id":1} \n {"id":2} }` |
+Mock sources are divided into two categories based on the endpoint type.
 
-For `type: one` with array sources, use `filter` to select the matching row.
+### Object Sources (for `type: one`)
+
+Return a single object directly:
+
+```yaml
+mock:
+  object: { id: 1, name: Alice }          # Inline YAML object
+  # or
+  object_json: '{"id": 1, "name": "Alice"}'  # JSON string
+  # or
+  object_json_file: ./data/user.json      # External JSON file
+  # or
+  object_js: |                            # JavaScript (dynamic)
+    return { id: parseInt(input.id), name: 'User ' + input.id };
+```
+
+### Array Sources (for `type: many`)
+
+Return multiple rows:
+
+```yaml
+mock:
+  array:                                  # Inline YAML array
+    - { id: 1, name: Alice }
+    - { id: 2, name: Bob }
+  # or
+  array_json: '[{"id": 1}, {"id": 2}]'   # JSON string
+  # or
+  csv: |                                  # CSV with header
+    id,name
+    1,Alice
+    2,Bob
+  # or
+  jsonl: |                                # JSON Lines
+    {"id": 1, "name": "Alice"}
+    {"id": 2, "name": "Bob"}
+```
+
+### Array Sources with Filter (for `type: one`)
+
+Use `filter` to select a single row from array data:
+
+```yaml
+- type: one
+  path: /user
+  mock:
+    array:
+      - { id: 1, name: Alice }
+      - { id: 2, name: Bob }
+    filter: return row.id === parseInt(input.id)
+```
+
+The filter receives `row` and `input`, returns `true` to include. First matching row is returned (404 if none match).
+
+See [SCHEMA.md](SCHEMA.md#mock) for complete mock reference.
 
 # License
 
