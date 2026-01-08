@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/mpyw/sql-http-proxy/internal/config/schema.json",
   "title": "sql-http-proxy configuration",
-  "description": "Configuration file schema for sql-http-proxy",
+  "description": "Configuration file schema for sql-http-proxy. Define HTTP endpoints that map to SQL queries or mock data.",
   "type": "object",
   "properties": {
     "global_helpers": {
@@ -12,7 +12,8 @@
           "title": "Inline JavaScript (string)",
           "type": "string",
           "minLength": 1,
-          "description": "Inline JavaScript helpers (shorthand for global_helpers.js)"
+          "description": "Inline JavaScript helpers (shorthand for global_helpers.js)",
+          "examples": ["function requireInt(v) { return parseInt(v) || 0; }"]
         },
         {
           "title": "JavaScript Files (object)",
@@ -22,21 +23,30 @@
               "title": "Inline JavaScript",
               "type": "string",
               "minLength": 1,
-              "description": "Inline JavaScript helper code"
+              "description": "Inline JavaScript helper code",
+              "examples": ["function validate(x) { if (!x) throw { status: 400, body: { error: 'required' } }; return x; }"]
             },
             "js_files": {
               "title": "JavaScript File Paths",
               "type": "array",
-              "items": { "type": "string", "minLength": 1 },
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "title": "JavaScript File Path",
+                "description": "Path to JavaScript helper file",
+                "examples": ["./helpers/validation.js"]
+              },
               "minItems": 1,
-              "description": "Paths to JavaScript helper files (relative to config)"
+              "description": "Paths to JavaScript helper files (relative to config file)",
+              "examples": [["./helpers/validation.js", "./helpers/auth.js"]]
             }
           },
           "anyOf": [
             { "required": ["js"] },
             { "required": ["js_files"] }
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Object form with js and/or js_files"
         }
       ],
       "description": "Global JavaScript helpers available in all JS contexts (pre, post, mock JS, filter, csv.value_parser)"
@@ -46,19 +56,28 @@
       "type": "object",
       "properties": {
         "value_parser": {
-          "title": "Value Parser",
+          "title": "CSV Value Parser",
           "type": "string",
           "minLength": 1,
-          "description": "JavaScript code to parse CSV cell values. Receives: value. Returns: parsed value"
+          "description": "JavaScript code to parse each CSV cell value. Receives 'value' (string). Should return the parsed value.",
+          "examples": [
+            "if (value === 'true') return true;\nif (value === 'false') return false;\nif (/^\\d+$/.test(value)) return parseInt(value);\nreturn value;"
+          ]
         }
       },
       "additionalProperties": false,
-      "description": "Global CSV parsing options"
+      "description": "Global CSV parsing configuration for mock csv and csv_file sources"
     },
     "dsn": {
-      "title": "DSN",
+      "title": "DSN (Data Source Name)",
       "type": ["string", "null"],
-      "description": "Database connection string. Supports ${VAR}, $VAR, ${VAR:-default} environment variable expansion. Required unless all operations use mock"
+      "description": "Database connection string. Supports ${VAR}, $VAR, ${VAR:-default} environment variable expansion. Required unless all endpoints use mock data.",
+      "examples": [
+        "postgres://user:pass@localhost:5432/mydb?sslmode=disable",
+        "mysql://user:pass@tcp(localhost:3306)/mydb",
+        "sqlite:./data.db",
+        "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:5432/mydb"
+      ]
     },
     "queries": {
       "title": "Queries",
@@ -71,7 +90,7 @@
         ]
       },
       "minItems": 1,
-      "description": "List of query endpoints (SELECT)"
+      "description": "List of query endpoints for SELECT operations. Each query maps an HTTP path to a SQL SELECT or mock data."
     },
     "mutations": {
       "title": "Mutations",
@@ -85,7 +104,7 @@
         ]
       },
       "minItems": 1,
-      "description": "List of mutation endpoints (INSERT/UPDATE/DELETE)"
+      "description": "List of mutation endpoints for INSERT/UPDATE/DELETE operations. Each mutation maps an HTTP path to a SQL statement or mock data."
     }
   },
   "anyOf": [
@@ -98,244 +117,327 @@
       "title": "Endpoint Path",
       "type": "string",
       "pattern": "^/",
-      "description": "HTTP endpoint path (must start with /)"
+      "description": "HTTP endpoint path. Must start with /.",
+      "examples": ["/users", "/user", "/api/v1/products"]
     },
     "sql": {
       "title": "SQL Query",
       "type": "string",
       "minLength": 1,
-      "description": "SQL query with named placeholders (:name)"
+      "description": "SQL query or statement with named placeholders using :name syntax. Placeholders are replaced with request parameters.",
+      "examples": [
+        "SELECT * FROM users WHERE id = :id",
+        "SELECT * FROM users WHERE status = :status ORDER BY created_at DESC LIMIT :limit",
+        "INSERT INTO users (name, email) VALUES (:name, :email) RETURNING *",
+        "UPDATE users SET name = :name WHERE id = :id RETURNING *",
+        "DELETE FROM users WHERE id = :id"
+      ]
     },
     "method": {
       "title": "HTTP Method (Mutation)",
       "type": "string",
       "enum": ["POST", "PUT", "PATCH", "DELETE"],
-      "description": "HTTP method for mutation (default: POST)"
+      "default": "POST",
+      "description": "HTTP method for mutation endpoint. POST: create, PUT: replace, PATCH: partial update, DELETE: delete.",
+      "examples": ["POST", "PUT", "PATCH", "DELETE"]
     },
     "queryMethod": {
       "title": "HTTP Method (Query)",
       "type": "string",
       "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      "description": "HTTP method for query (default: GET)"
+      "default": "GET",
+      "description": "HTTP method for query endpoint. GET is default. Use POST for complex parameters in request body.",
+      "examples": ["GET", "POST"]
     },
     "accepts": {
       "title": "Accepted Content-Types",
       "oneOf": [
         {
+          "title": "Single Content-Type",
           "type": "string",
-          "enum": ["json", "form"]
+          "enum": ["json", "form"],
+          "description": "Accept single content type. json: application/json, form: application/x-www-form-urlencoded"
         },
         {
+          "title": "Multiple Content-Types",
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["json", "form"]
+            "enum": ["json", "form"],
+            "title": "Content-Type",
+            "description": "Content type identifier"
           },
-          "minItems": 1
+          "minItems": 1,
+          "description": "Accept multiple content types"
         }
       ],
-      "description": "Accepted Content-Types for request body (default: [json, form])"
+      "default": ["json", "form"],
+      "description": "Accepted Content-Types for request body. json: application/json, form: application/x-www-form-urlencoded. Returns 415 if not matched.",
+      "examples": ["json", "form", ["json", "form"]]
     },
     "preTransform": {
       "title": "Pre-Transform",
       "type": "string",
       "minLength": 1,
-      "description": "JavaScript to transform input before SQL/mock. Receives: input (param), ctx, sql (free vars). Returns: transformed input object"
+      "description": "JavaScript to validate/transform input before SQL/mock execution. Receives: input (param), ctx (free var, shared state), sql (free var, modifiable). Must return: object with parameters for SQL/mock.",
+      "examples": [
+        "return { id: parseInt(input.id) };",
+        "ctx.startTime = Date.now();\nif (!input.id) throw { status: 400, body: { error: 'id required' } };\nreturn { id: parseInt(input.id) };",
+        "sql += ' WHERE status = :status';\nreturn { ...input, status: 'active' };"
+      ]
     },
     "postTransformOne": {
       "title": "Post-Transform (type: one)",
       "type": "string",
       "minLength": 1,
-      "description": "JavaScript to transform result. Receives: input, output (params), ctx (free var). Returns: transformed output"
+      "description": "JavaScript to transform single row result. Receives: input (param, original request), output (param, query result), ctx (free var, shared state). Must return: transformed output.",
+      "examples": [
+        "return { ...output, formatted: true };",
+        "return { id: output.id, fullName: output.first_name + ' ' + output.last_name, processingTime: Date.now() - ctx.startTime };"
+      ]
     },
     "postTransformMany": {
       "title": "Post-Transform (type: many)",
       "oneOf": [
         {
-          "title": "Post-Transform (all)",
+          "title": "Transform All (string shorthand)",
           "type": "string",
           "minLength": 1,
-          "description": "JavaScript to transform all rows. Receives: input, output (params), ctx (free var). Returns: transformed output"
+          "description": "JavaScript to transform entire array. Receives: input, output (params), ctx (free var). Returns: transformed output.",
+          "examples": [
+            "return { data: output, count: output.length };",
+            "return output.map(row => ({ ...row, processed: true }));"
+          ]
         },
         {
-          "title": "Post-Transform (each/all)",
+          "title": "Transform Each/All (object)",
           "type": "object",
           "properties": {
             "each": {
-              "title": "Post-Transform (each)",
+              "title": "Transform Each Row",
               "type": "string",
               "minLength": 1,
-              "description": "JavaScript to transform each row. Receives: input, output (params), ctx (free var). Returns: transformed row"
+              "description": "JavaScript to transform each row individually. Receives: input, output (params, output is current row), ctx (free var). Returns: transformed row.",
+              "examples": [
+                "return { ...output, fullName: output.first_name + ' ' + output.last_name };",
+                "return { id: output.id, name: output.name.toUpperCase() };"
+              ]
             },
             "all": {
-              "title": "Post-Transform (all)",
+              "title": "Transform All Rows",
               "type": "string",
               "minLength": 1,
-              "description": "JavaScript to transform all rows after each. Receives: input, output (params), ctx (free var). Returns: transformed output"
+              "description": "JavaScript to transform entire array after each transform. Receives: input, output (params, output is array), ctx (free var). Returns: transformed output.",
+              "examples": [
+                "return { items: output, total: output.length };",
+                "return { data: output, meta: { count: output.length, limit: ctx.limit } };"
+              ]
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Object with each (per-row transform) and/or all (array transform). If both specified, each runs first."
         }
       ],
-      "description": "JavaScript to transform results"
+      "description": "JavaScript to transform array results. Can be string (transform all) or object with each/all."
     },
     "filter": {
       "title": "Filter",
       "type": "string",
       "minLength": 1,
-      "description": "JavaScript to filter array data. Receives: row, input (params), ctx (free var). Returns: boolean (true to include)"
+      "description": "JavaScript to filter array data rows. Receives: row (param, current row), input (param, request parameters), ctx (free var, shared state). Must return: boolean (true to include row).",
+      "examples": [
+        "return row.id == parseInt(input.id)",
+        "return row.status === input.status",
+        "return !input.role || row.role === input.role"
+      ]
     },
     "mockOneObject": {
-      "title": "Mock (type: one, object sources)",
+      "title": "Mock Object Sources (type: one)",
       "type": "object",
       "oneOf": [
         {
           "title": "YAML Object",
           "properties": {
             "object": {
+              "title": "Object Data",
               "type": "object",
-              "description": "Inline YAML object"
+              "description": "Inline YAML/JSON object to return",
+              "examples": [{ "id": 1, "name": "Alice", "email": "alice@example.com" }]
             }
           },
           "required": ["object"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return inline YAML object"
         },
         {
           "title": "JSON String (object)",
           "properties": {
             "object_json": {
+              "title": "JSON Object String",
               "type": "string",
               "minLength": 1,
-              "description": "JSON string containing object"
+              "description": "JSON string containing a single object",
+              "examples": ["{\"id\": 1, \"name\": \"Alice\"}"]
             }
           },
           "required": ["object_json"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return object parsed from JSON string"
         },
         {
           "title": "JSON File (object)",
           "properties": {
             "object_json_file": {
+              "title": "JSON File Path",
               "type": "string",
               "minLength": 1,
-              "description": "Path to JSON file containing object"
+              "description": "Path to JSON file containing a single object (relative to config file)",
+              "examples": ["./mocks/user.json", "./data/config.json"]
             }
           },
           "required": ["object_json_file"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return object loaded from JSON file"
         },
         {
           "title": "JavaScript (object)",
           "properties": {
             "object_js": {
+              "title": "JavaScript Object Generator",
               "type": "string",
               "minLength": 1,
-              "description": "JavaScript code returning object. Receives: input (param), ctx, sql (free vars)"
+              "description": "JavaScript code that returns an object. Receives: input (param), ctx (free var), sql (free var). Return null for 404.",
+              "examples": [
+                "return { id: parseInt(input.id), name: 'User ' + input.id };",
+                "if (input.id === '404') return null;\nreturn { id: parseInt(input.id), name: 'Mock User' };"
+              ]
             }
           },
           "required": ["object_js"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return object generated by JavaScript"
         }
       ],
-      "description": "Mock data source returning single object for type: one"
+      "description": "Mock data source returning single object for type: one queries/mutations"
     },
     "mockOneArray": {
-      "title": "Mock (type: one, array sources with filter)",
+      "title": "Mock Array Sources with Filter (type: one)",
       "type": "object",
       "oneOf": [
         {
           "title": "YAML Array with filter",
           "properties": {
             "array": {
+              "title": "Array Data",
               "type": "array",
               "items": { "type": "object" },
-              "description": "Inline YAML array of objects"
+              "description": "Inline YAML/JSON array of objects",
+              "examples": [[{ "id": 1, "name": "Alice" }, { "id": 2, "name": "Bob" }]]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["array", "filter"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Filter YAML array to find matching row"
         },
         {
           "title": "JSON String (array) with filter",
           "properties": {
             "array_json": {
+              "title": "JSON Array String",
               "type": "string",
               "minLength": 1,
-              "description": "JSON string containing array of objects"
+              "description": "JSON string containing array of objects",
+              "examples": ["[{\"id\": 1, \"name\": \"Alice\"}, {\"id\": 2, \"name\": \"Bob\"}]"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["array_json", "filter"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Filter JSON array string to find matching row"
         },
         {
           "title": "JSON File (array) with filter",
           "properties": {
             "array_json_file": {
+              "title": "JSON Array File Path",
               "type": "string",
               "minLength": 1,
-              "description": "Path to JSON file containing array of objects"
+              "description": "Path to JSON file containing array of objects",
+              "examples": ["./mocks/users.json"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["array_json_file", "filter"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Filter JSON file array to find matching row"
         },
         {
           "title": "CSV with filter",
           "properties": {
             "csv": {
+              "title": "Inline CSV Data",
               "type": "string",
               "minLength": 1,
-              "description": "Inline CSV data with header row"
+              "description": "Inline CSV data with header row. First line is column names.",
+              "examples": ["id,name,email\n1,Alice,alice@example.com\n2,Bob,bob@example.com"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["csv", "filter"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Filter CSV data to find matching row"
         },
         {
           "title": "CSV File with filter",
           "properties": {
             "csv_file": {
+              "title": "CSV File Path",
               "type": "string",
               "minLength": 1,
-              "description": "Path to CSV file"
+              "description": "Path to CSV file (relative to config file)",
+              "examples": ["./mocks/users.csv", "./data/products.csv"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["csv_file", "filter"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Filter CSV file to find matching row"
         },
         {
           "title": "JSONL with filter",
           "properties": {
             "jsonl": {
+              "title": "Inline JSONL Data",
               "type": "string",
               "minLength": 1,
-              "description": "Inline JSONL data (one JSON object per line)"
+              "description": "Inline JSONL data (one JSON object per line)",
+              "examples": ["{\"id\": 1, \"name\": \"Alice\"}\n{\"id\": 2, \"name\": \"Bob\"}"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["jsonl", "filter"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Filter JSONL data to find matching row"
         },
         {
           "title": "JSONL File with filter",
           "properties": {
             "jsonl_file": {
+              "title": "JSONL File Path",
               "type": "string",
               "minLength": 1,
-              "description": "Path to JSONL file"
+              "description": "Path to JSONL file (one JSON object per line)",
+              "examples": ["./mocks/users.jsonl", "./logs/events.jsonl"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["jsonl_file", "filter"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Filter JSONL file to find matching row"
         }
       ],
-      "description": "Mock data source using array with required filter for type: one"
+      "description": "Mock array source with required filter for type: one. Filter selects the first matching row (404 if none match)."
     },
     "mockOne": {
       "title": "Mock (type: one)",
@@ -343,7 +445,7 @@
         { "$ref": "#/$defs/mockOneObject" },
         { "$ref": "#/$defs/mockOneArray" }
       ],
-      "description": "Mock data source for type: one"
+      "description": "Mock data source for type: one. Either object sources (return single object) or array sources with filter (select matching row)."
     },
     "mockMany": {
       "title": "Mock (type: many)",
@@ -353,107 +455,134 @@
           "title": "YAML Array",
           "properties": {
             "array": {
+              "title": "Array Data",
               "type": "array",
               "items": { "type": "object" },
-              "description": "Inline YAML array of objects"
+              "description": "Inline YAML/JSON array of objects",
+              "examples": [[{ "id": 1, "name": "Alice" }, { "id": 2, "name": "Bob" }]]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["array"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return YAML array (optionally filtered)"
         },
         {
           "title": "JSON String (array)",
           "properties": {
             "array_json": {
+              "title": "JSON Array String",
               "type": "string",
               "minLength": 1,
-              "description": "JSON string containing array of objects"
+              "description": "JSON string containing array of objects",
+              "examples": ["[{\"id\": 1}, {\"id\": 2}]"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["array_json"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return array parsed from JSON string (optionally filtered)"
         },
         {
           "title": "JSON File (array)",
           "properties": {
             "array_json_file": {
+              "title": "JSON Array File Path",
               "type": "string",
               "minLength": 1,
-              "description": "Path to JSON file containing array of objects"
+              "description": "Path to JSON file containing array of objects",
+              "examples": ["./mocks/users.json"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["array_json_file"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return array loaded from JSON file (optionally filtered)"
         },
         {
           "title": "JavaScript (array)",
           "properties": {
             "array_js": {
+              "title": "JavaScript Array Generator",
               "type": "string",
               "minLength": 1,
-              "description": "JavaScript code returning array. Receives: input (param), ctx, sql (free vars)"
+              "description": "JavaScript code that returns an array. Receives: input (param), ctx (free var), sql (free var).",
+              "examples": [
+                "return [{ id: 1, name: 'User 1' }, { id: 2, name: 'User 2' }];",
+                "const count = parseInt(input.count) || 5;\nreturn Array.from({ length: count }, (_, i) => ({ id: i + 1, name: 'User ' + (i + 1) }));"
+              ]
             }
           },
           "required": ["array_js"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return array generated by JavaScript"
         },
         {
           "title": "CSV",
           "properties": {
             "csv": {
+              "title": "Inline CSV Data",
               "type": "string",
               "minLength": 1,
-              "description": "Inline CSV data with header row"
+              "description": "Inline CSV data with header row",
+              "examples": ["id,name,role\n1,Alice,admin\n2,Bob,user\n3,Charlie,admin"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["csv"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return array parsed from CSV data (optionally filtered)"
         },
         {
           "title": "CSV File",
           "properties": {
             "csv_file": {
+              "title": "CSV File Path",
               "type": "string",
               "minLength": 1,
-              "description": "Path to CSV file"
+              "description": "Path to CSV file",
+              "examples": ["./mocks/users.csv"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["csv_file"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return array loaded from CSV file (optionally filtered)"
         },
         {
           "title": "JSONL",
           "properties": {
             "jsonl": {
+              "title": "Inline JSONL Data",
               "type": "string",
               "minLength": 1,
-              "description": "Inline JSONL data (one JSON object per line)"
+              "description": "Inline JSONL data (one JSON object per line)",
+              "examples": ["{\"id\": 1, \"level\": \"info\"}\n{\"id\": 2, \"level\": \"error\"}"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["jsonl"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return array parsed from JSONL data (optionally filtered)"
         },
         {
           "title": "JSONL File",
           "properties": {
             "jsonl_file": {
+              "title": "JSONL File Path",
               "type": "string",
               "minLength": 1,
-              "description": "Path to JSONL file"
+              "description": "Path to JSONL file",
+              "examples": ["./mocks/logs.jsonl"]
             },
             "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["jsonl_file"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Return array loaded from JSONL file (optionally filtered)"
         }
       ],
-      "description": "Mock data source for type: many (filter is optional)"
+      "description": "Mock data source for type: many. Returns array of objects. Filter is optional."
     },
     "transformOne": {
       "title": "Transform (type: one)",
@@ -462,7 +591,8 @@
         "pre": { "$ref": "#/$defs/preTransform" },
         "post": { "$ref": "#/$defs/postTransformOne" }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Transform configuration for type: one queries/mutations. Pre runs before SQL/mock, post transforms the result."
     },
     "transformMany": {
       "title": "Transform (type: many)",
@@ -471,7 +601,8 @@
         "pre": { "$ref": "#/$defs/preTransform" },
         "post": { "$ref": "#/$defs/postTransformMany" }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Transform configuration for type: many queries/mutations. Pre runs before SQL/mock, post transforms the results."
     },
     "transformNone": {
       "title": "Transform (type: none)",
@@ -480,25 +611,30 @@
         "pre": { "$ref": "#/$defs/preTransform" }
       },
       "additionalProperties": false,
-      "description": "Transform for mutations with no return value (pre only, no post)"
+      "description": "Transform configuration for type: none mutations. Only pre-transform is available (no return value to transform)."
+    },
+    "handleNotFound": {
+      "title": "Handle Not Found",
+      "type": "boolean",
+      "default": false,
+      "description": "If true, pass null to post-transform instead of returning 404 when no row found. Allows custom not-found handling.",
+      "examples": [true, false]
     },
     "queryOne": {
       "title": "Query (type: one)",
       "type": "object",
       "properties": {
         "type": {
+          "title": "Query Type",
           "const": "one",
-          "description": "Single row query (404 if not found)"
+          "description": "Single row query. Returns object if found, 404 if not found."
         },
         "method": { "$ref": "#/$defs/queryMethod" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
         "mock": { "$ref": "#/$defs/mockOne" },
         "accepts": { "$ref": "#/$defs/accepts" },
-        "handle_not_found": {
-          "type": "boolean",
-          "description": "Pass null to post-transform instead of returning 404"
-        },
+        "handle_not_found": { "$ref": "#/$defs/handleNotFound" },
         "transform": { "$ref": "#/$defs/transformOne" }
       },
       "required": ["type", "path"],
@@ -506,15 +642,17 @@
         { "required": ["sql"] },
         { "required": ["mock"] }
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Query endpoint returning single row. Use sql OR mock (not both)."
     },
     "queryMany": {
       "title": "Query (type: many)",
       "type": "object",
       "properties": {
         "type": {
+          "title": "Query Type",
           "const": "many",
-          "description": "Multiple rows query (returns array)"
+          "description": "Multiple rows query. Returns array (empty array if no rows)."
         },
         "method": { "$ref": "#/$defs/queryMethod" },
         "path": { "$ref": "#/$defs/path" },
@@ -528,15 +666,17 @@
         { "required": ["sql"] },
         { "required": ["mock"] }
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Query endpoint returning multiple rows. Use sql OR mock (not both)."
     },
     "mutationOne": {
       "title": "Mutation (type: one)",
       "type": "object",
       "properties": {
         "type": {
+          "title": "Mutation Type",
           "const": "one",
-          "description": "Mutation returning single row (via RETURNING)"
+          "description": "Mutation returning single row. Use RETURNING * in SQL."
         },
         "method": { "$ref": "#/$defs/method" },
         "path": { "$ref": "#/$defs/path" },
@@ -550,15 +690,17 @@
         { "required": ["sql"] },
         { "required": ["mock"] }
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Mutation endpoint returning single row. Use sql OR mock (not both)."
     },
     "mutationMany": {
       "title": "Mutation (type: many)",
       "type": "object",
       "properties": {
         "type": {
+          "title": "Mutation Type",
           "const": "many",
-          "description": "Mutation returning multiple rows (via RETURNING)"
+          "description": "Mutation returning multiple rows. Use RETURNING * in SQL."
         },
         "method": { "$ref": "#/$defs/method" },
         "path": { "$ref": "#/$defs/path" },
@@ -572,15 +714,17 @@
         { "required": ["sql"] },
         { "required": ["mock"] }
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Mutation endpoint returning multiple rows. Use sql OR mock (not both)."
     },
     "mutationNone": {
       "title": "Mutation (type: none)",
       "type": "object",
       "properties": {
         "type": {
+          "title": "Mutation Type",
           "const": "none",
-          "description": "Mutation with no return value (204 No Content)"
+          "description": "Mutation with no return value. Returns 204 No Content."
         },
         "method": { "$ref": "#/$defs/method" },
         "path": { "$ref": "#/$defs/path" },
@@ -589,7 +733,8 @@
         "transform": { "$ref": "#/$defs/transformNone" }
       },
       "required": ["type", "path", "sql"],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Mutation endpoint with no return value (204 No Content). Requires sql (mock not supported)."
     }
   }
 }
