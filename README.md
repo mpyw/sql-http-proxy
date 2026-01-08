@@ -475,4 +475,4 @@ The server will log "All endpoints use mock - skipping database connection" and 
 
 ## Full Example
 
-See [examples/full-example.yaml](examples/full-example.yaml) for a comprehensive example showcasing all features.
+See [sql-http-proxy.example.yaml](sql-http-proxy.example.yaml) for a comprehensive example showcasing all features.
