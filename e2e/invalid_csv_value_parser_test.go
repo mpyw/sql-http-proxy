@@ -9,7 +9,9 @@ import (
 )
 
 func TestInvalidCSVValueParser(t *testing.T) {
-	_, err := config.ParseFile("invalid_csv_value_parser_test.yaml")
+	cfg, err := config.ParseFile("invalid_csv_value_parser_test.yaml")
+	require.NoError(t, err)
+	err = cfg.ValidateTransforms()
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "csv.value_parser")
 }

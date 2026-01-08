@@ -3,10 +3,15 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/urfave/cli/v3"
 
@@ -14,6 +19,9 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/db"
 	"github.com/mpyw/sql-http-proxy/internal/server"
 )
+
+// ShutdownTimeout is the maximum time to wait for graceful shutdown.
+const ShutdownTimeout = 30 * time.Second
 
 // Version is set by goreleaser via ldflags.
 var Version = "dev"
@@ -74,7 +82,9 @@ func action(ctx context.Context, cmd *cli.Command) error {
 	}
 	if conn != nil {
 		defer func() {
-			_ = conn.Close()
+			if err := conn.Close(); err != nil {
+				slog.Warn("Failed to close database connection", "error", err)
+			}
 		}()
 	} else {
 		slog.Info("All endpoints use mock - skipping database connection")
@@ -87,10 +97,44 @@ func action(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	slog.Info("Launching HTTP server", "address", listen)
-	if err := http.ListenAndServe(listen, mux); err != nil {
-		return fmt.Errorf("server error: %w", err)
+	srv := &http.Server{
+		Addr:    listen,
+		Handler: mux,
 	}
+
+	// Channel to receive server errors
+	serverErr := make(chan error, 1)
+
+	// Start server in goroutine
+	go func() {
+		slog.Info("Launching HTTP server", "address", listen)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErr <- fmt.Errorf("server error: %w", err)
+		}
+		close(serverErr)
+	}()
+
+	// Wait for interrupt signal or server error
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case err := <-serverErr:
+		return err
+	case sig := <-quit:
+		slog.Info("Received shutdown signal", "signal", sig)
+	}
+
+	// Graceful shutdown with timeout
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), ShutdownTimeout)
+	defer cancel()
+
+	slog.Info("Shutting down server...")
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("server shutdown error: %w", err)
+	}
+
+	slog.Info("Server stopped gracefully")
 	return nil
 }
 

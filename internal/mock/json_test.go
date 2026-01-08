@@ -28,7 +28,7 @@ func TestNewJSON(t *testing.T) {
 		assert.Len(t, resultSlice, 2)
 
 		row1 := resultSlice[0].(map[string]any)
-		assert.Equal(t, float64(1), row1["id"]) // JSON unmarshal converts int to float64
+		assert.Equal(t, 1, row1["id"]) // Preserves original Go type
 		assert.Equal(t, "Alice", row1["name"])
 	})
 
@@ -41,7 +41,7 @@ func TestNewJSON(t *testing.T) {
 		require.NoError(t, err)
 
 		resultMap := result.(map[string]any)
-		assert.Equal(t, float64(1), resultMap["id"])
+		assert.Equal(t, 1, resultMap["id"]) // Preserves original Go type
 		assert.Equal(t, "Alice", resultMap["name"])
 	})
 
@@ -206,7 +206,7 @@ func TestParseJSONL(t *testing.T) {
 		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 
-		// Empty JSONL returns nil (via deepCopy of nil []any)
+		// Empty JSONL returns nil (nil slice preserved by deepCopy)
 		assert.Nil(t, result)
 	})
 

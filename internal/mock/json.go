@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -45,7 +46,11 @@ func ParseJSONFile(path string) (*JSONSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		if err := f.Close(); err != nil {
+			slog.Debug("Failed to close file", "error", err)
+		}
+	}()
 
 	var data any
 	if err := json.NewDecoder(f).Decode(&data); err != nil {
@@ -67,7 +72,11 @@ func ParseJSONLFile(path string) (*JSONSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		if err := f.Close(); err != nil {
+			slog.Debug("Failed to close file", "error", err)
+		}
+	}()
 	return parseJSONLReader(f)
 }
 
@@ -102,21 +111,42 @@ func (s *JSONSource) Data(_ map[string]any, _ string, _ map[string]any, _ *js.Tr
 	return deepCopy(s.data), nil, nil
 }
 
-// deepCopy creates a deep copy of the data using JSON marshaling.
+// deepCopy creates a deep copy of JSON-compatible data recursively.
+// Supported types: nil, bool, float64, string, []any, map[string]any
 func deepCopy(data any) any {
-	if data == nil {
+	switch v := data.(type) {
+	case nil:
 		return nil
+	case bool, float64, string:
+		// Primitives are immutable, return as-is
+		return v
+	case int:
+		// YAML may parse integers as int
+		return v
+	case int64:
+		// Some JSON parsers use int64
+		return v
+	case []any:
+		if v == nil {
+			return nil
+		}
+		result := make([]any, len(v))
+		for i, item := range v {
+			result[i] = deepCopy(item)
+		}
+		return result
+	case map[string]any:
+		if v == nil {
+			return nil
+		}
+		result := make(map[string]any, len(v))
+		for key, val := range v {
+			result[key] = deepCopy(val)
+		}
+		return result
+	default:
+		// Fallback for unexpected types: return as-is (shallow)
+		// This shouldn't happen with JSON/YAML parsed data
+		return v
 	}
-
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return data // Fall back to shallow reference if marshal fails
-	}
-
-	var result any
-	if err := json.Unmarshal(bytes, &result); err != nil {
-		return data // Fall back to shallow reference if unmarshal fails
-	}
-
-	return result
 }

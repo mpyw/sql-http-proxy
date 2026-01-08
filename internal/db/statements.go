@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -40,7 +41,11 @@ func QueryMany(ctx context.Context, db *sqlx.DB, query string, args ...any) ([]m
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Warn("Failed to close rows", "error", err)
+		}
+	}()
 
 	results := make([]map[string]any, 0)
 	for rows.Next() {

@@ -80,15 +80,16 @@ func (h *BaseHandler[R]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	params, err := h.parseParams(r)
 	if err != nil {
-		res.Error(
-			lo.Ternary(
-				errors.Is(err, body.ErrUnsupportedMediaType),
-				http.StatusUnsupportedMediaType,
-				http.StatusBadRequest,
-			),
-			err,
-		)
-
+		var status int
+		switch {
+		case errors.Is(err, body.ErrBodyTooLarge):
+			status = http.StatusRequestEntityTooLarge
+		case errors.Is(err, body.ErrUnsupportedMediaType):
+			status = http.StatusUnsupportedMediaType
+		default:
+			status = http.StatusBadRequest
+		}
+		res.Error(status, err)
 		return
 	}
 

@@ -3,6 +3,7 @@ package body
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"mime/multipart"
 	"net/url"
 
@@ -15,6 +16,9 @@ func (p *Parser) parseURLEncoded(body io.Reader, charsetName string) (map[string
 	data, err := io.ReadAll(body)
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to read body: %v", ErrBadRequest, err)
+	}
+	if len(data) > MaxBodySize {
+		return nil, ErrBodyTooLarge
 	}
 
 	if charsetName != "" {
@@ -47,18 +51,24 @@ func (p *Parser) parseMultipart(body io.Reader, boundary, charsetName string) (m
 
 		// Skip file uploads (only process form fields)
 		if part.FileName() != "" {
-			_ = part.Close()
+			if err := part.Close(); err != nil {
+				slog.Warn("Failed to close multipart part", "error", err)
+			}
 			continue
 		}
 
 		name := part.FormName()
 		if name == "" {
-			_ = part.Close()
+			if err := part.Close(); err != nil {
+				slog.Warn("Failed to close multipart part", "error", err)
+			}
 			continue
 		}
 
 		data, err := io.ReadAll(part)
-		_ = part.Close()
+		if closeErr := part.Close(); closeErr != nil {
+			slog.Warn("Failed to close multipart part", "error", closeErr)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("%w: failed to read multipart field: %v", ErrBadRequest, err)
 		}

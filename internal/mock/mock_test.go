@@ -80,8 +80,8 @@ func TestCompile(t *testing.T) {
 		result, _, err := source.Data(nil, "", nil, nil)
 		require.NoError(t, err)
 		resultMap := result.(map[string]any)
-		// JSON marshaling converts int to float64
-		assert.Equal(t, float64(1), resultMap["id"])
+		// Preserves original Go type
+		assert.Equal(t, 1, resultMap["id"])
 	})
 
 	t.Run("Array inline", func(t *testing.T) {

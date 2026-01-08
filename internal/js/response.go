@@ -30,7 +30,12 @@ func (r *Response) Status() int {
 }
 
 // SetStatus sets the HTTP status code.
+// Status must be in the valid HTTP range (100-599).
+// Invalid values are ignored.
 func (r *Response) SetStatus(status int) {
+	if status < 100 || status > 599 {
+		return // Ignore invalid status codes
+	}
 	r.status = status
 	// Update statusText to match common status codes
 	r.statusText = http.StatusText(status)

@@ -16,15 +16,31 @@ type TransformError struct {
 }
 
 func (e *TransformError) Error() string {
-	if msg, ok := e.Body.(string); ok {
-		return msg
-	}
-	if obj, ok := e.Body.(map[string]any); ok {
-		if msg, ok := obj["message"].(string); ok {
+	switch body := e.Body.(type) {
+	case string:
+		return body
+	case map[string]any:
+		if msg, ok := body["message"].(string); ok {
+			return msg
+		}
+		if msg, ok := body["error"].(string); ok {
 			return msg
 		}
 	}
 	return "transform error"
+}
+
+// toHTTPStatus converts goja numeric types to an HTTP status code.
+// Returns 0 if the value is not int64 or float64.
+func toHTTPStatus(v any) int {
+	switch n := v.(type) {
+	case int64:
+		return int(n)
+	case float64:
+		return int(n)
+	default:
+		return 0
+	}
 }
 
 // parseJSError extracts status and body from a thrown JS error.
@@ -51,17 +67,8 @@ func parseJSError(err error) error {
 
 		return &TransformError{
 			// Lambda-style: throw { status: 400, body: ... }
-			Status: func() int {
-				switch status := status.(type) {
-				case int64:
-					return int(status)
-				case float64:
-					return int(status)
-				default:
-					return 0
-				}
-			}(),
-			Body: lo.Ternary(hasBody, body, any(jsErr.String())),
+			Status: toHTTPStatus(status),
+			Body:   lo.Ternary(hasBody, body, any(jsErr.String())),
 		}
 	}
 

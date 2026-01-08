@@ -19,10 +19,14 @@ const (
 	AcceptForm = "form"
 )
 
+// MaxBodySize is the maximum allowed request body size (10MB).
+const MaxBodySize = 10 * 1024 * 1024
+
 // Error types
 var (
 	ErrUnsupportedMediaType = errors.New("unsupported media type")
 	ErrBadRequest           = errors.New("bad request")
+	ErrBodyTooLarge         = errors.New("request body too large")
 )
 
 // Parser parses HTTP request bodies based on Content-Type.
@@ -38,12 +42,16 @@ func NewParser(accepts []string) *Parser {
 // Parse parses the request body based on Content-Type.
 // Returns ErrUnsupportedMediaType if Content-Type is not in accepts.
 // Returns ErrBadRequest if body parsing fails.
+// Returns ErrBodyTooLarge if body exceeds MaxBodySize.
 func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
+	// Limit body size to prevent DoS
+	body := io.LimitReader(r.Body, MaxBodySize+1)
+
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
 		// Default to json if no Content-Type specified and json is accepted
 		if slices.Contains(p.accepts, AcceptJSON) {
-			return p.parseJSON(r.Body, "")
+			return p.parseJSON(body, "")
 		}
 		return nil, fmt.Errorf("%w: missing Content-Type header", ErrUnsupportedMediaType)
 	}
@@ -60,13 +68,13 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 		if !slices.Contains(p.accepts, AcceptJSON) {
 			return nil, fmt.Errorf("%w: application/json not accepted", ErrUnsupportedMediaType)
 		}
-		return p.parseJSON(r.Body, charsetName)
+		return p.parseJSON(body, charsetName)
 
 	case "application/x-www-form-urlencoded":
 		if !slices.Contains(p.accepts, AcceptForm) {
 			return nil, fmt.Errorf("%w: application/x-www-form-urlencoded not accepted", ErrUnsupportedMediaType)
 		}
-		return p.parseURLEncoded(r.Body, charsetName)
+		return p.parseURLEncoded(body, charsetName)
 
 	case "multipart/form-data":
 		if !slices.Contains(p.accepts, AcceptForm) {
@@ -76,7 +84,7 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 		if boundary == "" {
 			return nil, fmt.Errorf("%w: missing boundary in multipart/form-data", ErrBadRequest)
 		}
-		return p.parseMultipart(r.Body, boundary, charsetName)
+		return p.parseMultipart(body, boundary, charsetName)
 
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedMediaType, mediaType)
@@ -87,6 +95,9 @@ func (p *Parser) parseJSON(body io.Reader, charsetName string) (map[string]any, 
 	data, err := io.ReadAll(body)
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to read body: %v", ErrBadRequest, err)
+	}
+	if len(data) > MaxBodySize {
+		return nil, ErrBodyTooLarge
 	}
 
 	if charsetName != "" {

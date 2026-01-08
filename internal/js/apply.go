@@ -1,12 +1,20 @@
 package js
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/dop251/goja"
 	"github.com/samber/lo"
 )
+
+// JSTimeout is the maximum execution time for JavaScript transforms.
+const JSTimeout = 5 * time.Second
+
+// ErrJSTimeout is returned when JS execution exceeds JSTimeout.
+var ErrJSTimeout = errors.New("JavaScript execution timeout")
 
 // PreTransformResult holds the result of a pre-transform execution.
 type PreTransformResult struct {
@@ -76,6 +84,7 @@ func (t *Transformer) setupVM(ctx map[string]any, tc *TransformContext, opts vmS
 }
 
 // runCallable runs the compiled program and calls it with the given arguments.
+// Execution is limited to JSTimeout to prevent infinite loops.
 func (t *Transformer) runCallable(vm *goja.Runtime, fnName string, args ...goja.Value) (goja.Value, error) {
 	fn, err := vm.RunProgram(t.program)
 	if err != nil {
@@ -87,8 +96,24 @@ func (t *Transformer) runCallable(vm *goja.Runtime, fnName string, args ...goja.
 		return nil, fmt.Errorf("%s is not a function", fnName)
 	}
 
+	// Set up timeout to prevent infinite loops
+	timer := time.AfterFunc(JSTimeout, func() {
+		vm.Interrupt(ErrJSTimeout)
+	})
+	defer timer.Stop()
+
 	result, err := callable(goja.Undefined(), args...)
 	if err != nil {
+		// Check if error was due to timeout interrupt
+		if errors.Is(err, ErrJSTimeout) {
+			return nil, ErrJSTimeout
+		}
+		var interrupted *goja.InterruptedError
+		if errors.As(err, &interrupted) {
+			if errors.Is(interrupted.Value().(error), ErrJSTimeout) {
+				return nil, ErrJSTimeout
+			}
+		}
 		return nil, parseJSError(err)
 	}
 

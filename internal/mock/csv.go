@@ -43,7 +43,11 @@ func ParseCSVFileWithOptions(path string, opts ParseCSVOptions) (*CSVSource, err
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		if err := f.Close(); err != nil {
+			slog.Debug("Failed to close file", "error", err)
+		}
+	}()
 	return parseCSVReaderWithOptions(f, opts)
 }
 

@@ -62,12 +62,12 @@ func (cfg *Config) RequiresDB() bool {
 	})
 }
 
-// validate checks semantic constraints that JSON Schema cannot express.
-// Note: type-specific constraints (each for many, handle_not_found for one)
-// are now enforced by JSON Schema via separate queryOne/queryMany definitions.
-func (cfg *Config) validate() error {
+// ValidateTransforms validates all transforms and mocks are valid.
+// Returns all errors joined, not just the first one.
+func (cfg *Config) ValidateTransforms() error {
 	var err error
 
+	// Validate global helpers and CSV value parser
 	for _, entry := range internal.SliceOf(
 		lo.T2("global_helpers.js", lo.FromPtr(cfg.GlobalHelpers).JS),
 		lo.T2("csv.value_parser", lo.FromPtr(cfg.CSV).ValueParser),
@@ -79,14 +79,6 @@ func (cfg *Config) validate() error {
 			}
 		}
 	}
-
-	return err
-}
-
-// ValidateTransforms validates all transforms and mocks are valid.
-// Returns all errors joined, not just the first one.
-func (cfg *Config) ValidateTransforms() error {
-	var err error
 
 	validateJS := func(
 		entries []lo.Tuple3[
@@ -173,11 +165,6 @@ func Parse(data []byte) (Config, error) {
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return Config{}, fmt.Errorf("failed to parse config: %w", err)
-	}
-
-	// Validate semantic constraints
-	if err := cfg.validate(); err != nil {
-		return Config{}, err
 	}
 
 	// Expand environment variables in DSN (e.g., ${DB_PASSWORD}, $DB_HOST, ${DB_PORT:-5432})
