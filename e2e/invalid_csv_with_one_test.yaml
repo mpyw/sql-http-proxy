@@ -1,0 +1,12 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      mock:
+        csv: |
+          id,name
+          1,Alice
+          2,Bob

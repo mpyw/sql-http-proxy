@@ -1,0 +1,11 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      mock:
+        jsonl: |
+          {"id": 1, "name": "Alice"}
+          {"id": 2, "name": "Bob"}
