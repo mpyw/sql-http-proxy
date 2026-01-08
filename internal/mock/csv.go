@@ -3,6 +3,7 @@ package mock
 import (
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -14,22 +15,37 @@ type CSVSource struct {
 	rows []map[string]any
 }
 
+// ParseCSVOptions contains options for CSV parsing.
+type ParseCSVOptions struct {
+	ValueParser *ValueParser
+}
+
 // ParseCSV parses inline CSV data into a CSVSource.
 func ParseCSV(data string) (*CSVSource, error) {
-	return parseCSVReader(strings.NewReader(data))
+	return ParseCSVWithOptions(data, ParseCSVOptions{})
+}
+
+// ParseCSVWithOptions parses inline CSV data with custom options.
+func ParseCSVWithOptions(data string, opts ParseCSVOptions) (*CSVSource, error) {
+	return parseCSVReaderWithOptions(strings.NewReader(data), opts)
 }
 
 // ParseCSVFile parses a CSV file into a CSVSource.
 func ParseCSVFile(path string) (*CSVSource, error) {
+	return ParseCSVFileWithOptions(path, ParseCSVOptions{})
+}
+
+// ParseCSVFileWithOptions parses a CSV file with custom options.
+func ParseCSVFileWithOptions(path string, opts ParseCSVOptions) (*CSVSource, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = f.Close() }()
-	return parseCSVReader(f)
+	return parseCSVReaderWithOptions(f, opts)
 }
 
-func parseCSVReader(r io.Reader) (*CSVSource, error) {
+func parseCSVReaderWithOptions(r io.Reader, opts ParseCSVOptions) (*CSVSource, error) {
 	reader := csv.NewReader(r)
 	// Allow variable number of fields per record
 	reader.FieldsPerRecord = -1
@@ -83,7 +99,17 @@ func parseCSVReader(r io.Reader) (*CSVSource, error) {
 
 		for i, header := range headers {
 			if i < actualCols {
-				row[header] = parseValue(record[i])
+				var val any
+				var err error
+				if opts.ValueParser != nil {
+					val, err = opts.ValueParser.Parse(record[i])
+					if err != nil {
+						return nil, fmt.Errorf("line %d, column %q: %w", lineNum, header, err)
+					}
+				} else {
+					val = parseValue(record[i])
+				}
+				row[header] = val
 			} else {
 				// Missing column: use empty string
 				row[header] = ""

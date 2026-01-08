@@ -11,6 +11,11 @@ type JSSource struct {
 	transformer *js.Transformer
 }
 
+// SetHelpers sets the compiled helpers for this mock source.
+func (s *JSSource) SetHelpers(h *js.CompiledHelpers) {
+	s.transformer.SetHelpers(h)
+}
+
 // CompileJS compiles JavaScript code into a JSSource.
 func CompileJS(code string) (*JSSource, error) {
 	t, err := js.CompilePre(code)

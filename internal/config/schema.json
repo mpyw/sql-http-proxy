@@ -5,6 +5,70 @@
   "description": "Configuration file schema for sql-http-proxy",
   "type": "object",
   "properties": {
+    "global_helpers": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "description": "Inline JavaScript helpers (shorthand for global_helpers.js)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "js": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inline JavaScript helper code"
+            },
+            "js_files": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1,
+              "description": "Paths to JavaScript helper files (relative to config)"
+            }
+          },
+          "anyOf": [
+            { "required": ["js"] },
+            { "required": ["js_files"] }
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Global JavaScript helpers available in all JS contexts (pre, mock, post, csv.value_parser)"
+    },
+    "csv": {
+      "type": "object",
+      "properties": {
+        "value_parser": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inline JavaScript (shorthand for value_parser.js)"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "js": { "type": "string", "minLength": 1 }
+              },
+              "required": ["js"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "js_file": { "type": "string", "minLength": 1 }
+              },
+              "required": ["js_file"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Custom JavaScript to parse CSV cell values. Signature: function(value) { return parsed }"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Global CSV parsing options"
+    },
     "dsn": {
       "type": ["string", "null"],
       "description": "Database connection string. Required unless all operations use mock. Can also be set via SQL_PROXY_DSN environment variable"

@@ -31,7 +31,12 @@ func NewQueryHandler(db *sqlx.DB, query config.Query) (*QueryHandler, error) {
 // NewQueryHandlerWithOptions creates a new QueryHandler with options.
 // db can be nil if mock is configured.
 func NewQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts HandlerOptions) (*QueryHandler, error) {
-	exec, err := executor.NewQueryExecutor(db, query, opts.ConfigDir)
+	execOpts := executor.CompileTransformOptions{
+		ConfigDir:   opts.ConfigDir,
+		Helpers:     opts.Helpers,
+		ValueParser: opts.ValueParser,
+	}
+	exec, err := executor.NewQueryExecutor(db, query, execOpts)
 	if err != nil {
 		return nil, err
 	}

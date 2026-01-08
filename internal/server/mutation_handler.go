@@ -30,7 +30,12 @@ func NewMutationHandler(db *sqlx.DB, mutation config.Mutation) (*MutationHandler
 // NewMutationHandlerWithOptions creates a new MutationHandler with options.
 // db can be nil if mock is configured.
 func NewMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts HandlerOptions) (*MutationHandler, error) {
-	exec, err := executor.NewMutationExecutor(db, mutation, opts.ConfigDir)
+	execOpts := executor.CompileTransformOptions{
+		ConfigDir:   opts.ConfigDir,
+		Helpers:     opts.Helpers,
+		ValueParser: opts.ValueParser,
+	}
+	exec, err := executor.NewMutationExecutor(db, mutation, execOpts)
 	if err != nil {
 		return nil, err
 	}

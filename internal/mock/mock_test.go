@@ -13,14 +13,14 @@ import (
 
 func TestCompile(t *testing.T) {
 	t.Run("nil MockTransform", func(t *testing.T) {
-		source, err := Compile(nil, "")
+		source, err := Compile(nil, CompileOptions{})
 		require.NoError(t, err)
 		assert.Nil(t, source)
 	})
 
 	t.Run("JS inline", func(t *testing.T) {
 		mt := &config.MockTransform{JS: `return { id: 1 }`}
-		source, err := Compile(mt, "")
+		source, err := Compile(mt, CompileOptions{})
 		require.NoError(t, err)
 		assert.NotNil(t, source)
 
@@ -37,7 +37,7 @@ func TestCompile(t *testing.T) {
 		require.NoError(t, err)
 
 		mt := &config.MockTransform{JSFile: "mock.js"}
-		source, err := Compile(mt, dir)
+		source, err := Compile(mt, CompileOptions{ConfigDir: dir})
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil)
@@ -53,7 +53,7 @@ func TestCompile(t *testing.T) {
 		require.NoError(t, err)
 
 		mt := &config.MockTransform{JSFile: path}
-		source, err := Compile(mt, "/different/config/dir")
+		source, err := Compile(mt, CompileOptions{ConfigDir: "/different/config/dir"})
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil)
@@ -64,7 +64,7 @@ func TestCompile(t *testing.T) {
 
 	t.Run("CSV inline", func(t *testing.T) {
 		mt := &config.MockTransform{CSV: "id,name\n42,Alice"}
-		source, err := Compile(mt, "")
+		source, err := Compile(mt, CompileOptions{})
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil)
@@ -81,7 +81,7 @@ func TestCompile(t *testing.T) {
 		require.NoError(t, err)
 
 		mt := &config.MockTransform{CSVFile: "data.csv"}
-		source, err := Compile(mt, dir)
+		source, err := Compile(mt, CompileOptions{ConfigDir: dir})
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil)
@@ -93,7 +93,7 @@ func TestCompile(t *testing.T) {
 	t.Run("JSON inline", func(t *testing.T) {
 		data := []any{map[string]any{"id": 1}}
 		mt := &config.MockTransform{JSON: data}
-		source, err := Compile(mt, "")
+		source, err := Compile(mt, CompileOptions{})
 		require.NoError(t, err)
 		assert.NotNil(t, source)
 	})
@@ -105,7 +105,7 @@ func TestCompile(t *testing.T) {
 		require.NoError(t, err)
 
 		mt := &config.MockTransform{JSONFile: "data.json"}
-		source, err := Compile(mt, dir)
+		source, err := Compile(mt, CompileOptions{ConfigDir: dir})
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil)
@@ -117,7 +117,7 @@ func TestCompile(t *testing.T) {
 	t.Run("JSONL inline", func(t *testing.T) {
 		mt := &config.MockTransform{JSONL: `{"id": 1}
 {"id": 2}`}
-		source, err := Compile(mt, "")
+		source, err := Compile(mt, CompileOptions{})
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil)
@@ -134,7 +134,7 @@ func TestCompile(t *testing.T) {
 		require.NoError(t, err)
 
 		mt := &config.MockTransform{JSONLFile: "data.jsonl"}
-		source, err := Compile(mt, dir)
+		source, err := Compile(mt, CompileOptions{ConfigDir: dir})
 		require.NoError(t, err)
 
 		result, _, err := source.Data(nil, "", nil)
@@ -145,7 +145,7 @@ func TestCompile(t *testing.T) {
 
 	t.Run("empty MockTransform", func(t *testing.T) {
 		mt := &config.MockTransform{}
-		_, err := Compile(mt, "")
+		_, err := Compile(mt, CompileOptions{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no source specified")
 	})
@@ -155,50 +155,50 @@ func TestCompile(t *testing.T) {
 			JS:  `return {}`,
 			CSV: "id\n42",
 		}
-		_, err := Compile(mt, "")
+		_, err := Compile(mt, CompileOptions{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "only one source type can be specified")
 	})
 
 	t.Run("JS compile error", func(t *testing.T) {
 		mt := &config.MockTransform{JS: `return { invalid`}
-		_, err := Compile(mt, "")
+		_, err := Compile(mt, CompileOptions{})
 		require.Error(t, err)
 	})
 
 	t.Run("JS file not found", func(t *testing.T) {
 		mt := &config.MockTransform{JSFile: "nonexistent.js"}
-		_, err := Compile(mt, "/tmp")
+		_, err := Compile(mt, CompileOptions{ConfigDir: "/tmp"})
 		require.Error(t, err)
 	})
 
 	t.Run("CSV parse error", func(t *testing.T) {
 		mt := &config.MockTransform{CSV: ""} // Empty CSV
-		_, err := Compile(mt, "")
+		_, err := Compile(mt, CompileOptions{})
 		require.Error(t, err)
 	})
 
 	t.Run("CSV file not found", func(t *testing.T) {
 		mt := &config.MockTransform{CSVFile: "nonexistent.csv"}
-		_, err := Compile(mt, "/tmp")
+		_, err := Compile(mt, CompileOptions{ConfigDir: "/tmp"})
 		require.Error(t, err)
 	})
 
 	t.Run("JSON file not found", func(t *testing.T) {
 		mt := &config.MockTransform{JSONFile: "nonexistent.json"}
-		_, err := Compile(mt, "/tmp")
+		_, err := Compile(mt, CompileOptions{ConfigDir: "/tmp"})
 		require.Error(t, err)
 	})
 
 	t.Run("JSONL parse error", func(t *testing.T) {
 		mt := &config.MockTransform{JSONL: `{invalid json}`}
-		_, err := Compile(mt, "")
+		_, err := Compile(mt, CompileOptions{})
 		require.Error(t, err)
 	})
 
 	t.Run("JSONL file not found", func(t *testing.T) {
 		mt := &config.MockTransform{JSONLFile: "nonexistent.jsonl"}
-		_, err := Compile(mt, "/tmp")
+		_, err := Compile(mt, CompileOptions{ConfigDir: "/tmp"})
 		require.Error(t, err)
 	})
 }

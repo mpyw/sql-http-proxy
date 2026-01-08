@@ -4,6 +4,9 @@ package server
 import (
 	"errors"
 	"net/http"
+
+	"github.com/mpyw/sql-http-proxy/internal/js"
+	"github.com/mpyw/sql-http-proxy/internal/mock"
 )
 
 // QueryRecord represents an executed query record.
@@ -20,8 +23,10 @@ type QueryRecorder func(record QueryRecord)
 
 // HandlerOptions contains optional settings for CreateHandler.
 type HandlerOptions struct {
-	Recorder  QueryRecorder
-	ConfigDir string // Directory of config file for resolving relative paths
+	Recorder    QueryRecorder
+	ConfigDir   string              // Directory of config file for resolving relative paths
+	Helpers     *js.CompiledHelpers // Global JavaScript helpers
+	ValueParser *mock.ValueParser   // Global CSV value parser
 }
 
 // CreateNotFoundHandler creates a 404 handler.

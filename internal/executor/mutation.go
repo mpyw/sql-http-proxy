@@ -26,9 +26,8 @@ type MutationExecutor struct {
 }
 
 // NewMutationExecutor creates a new MutationExecutor with pre-compiled transforms.
-// configDir is the directory of the YAML config file (for resolving relative paths in mock).
-func NewMutationExecutor(db *sqlx.DB, mutation config.Mutation, configDir string) (*MutationExecutor, error) {
-	transforms, err := CompileTransforms(mutation.Transform, configDir)
+func NewMutationExecutor(db *sqlx.DB, mutation config.Mutation, opts CompileTransformOptions) (*MutationExecutor, error) {
+	transforms, err := CompileTransforms(mutation.Transform, opts)
 	if err != nil {
 		return nil, err
 	}

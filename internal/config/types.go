@@ -269,3 +269,90 @@ func (p *PostTransform) UnmarshalYAML(value *yaml.Node) error {
 	*p = PostTransform(raw)
 	return nil
 }
+
+// GlobalHelpers defines global JavaScript helpers available in all JS contexts.
+// Can be a simple string (js code) or an object with js and/or js_files.
+type GlobalHelpers struct {
+	JS      string   `yaml:"js,omitempty"`
+	JSFiles []string `yaml:"js_files,omitempty"`
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling for GlobalHelpers.
+// Accepts either a string (shorthand for js:) or an object.
+func (g *GlobalHelpers) UnmarshalYAML(value *yaml.Node) error {
+	// Try as string first (shorthand: string → js)
+	if value.Kind == yaml.ScalarNode {
+		var s string
+		if err := value.Decode(&s); err != nil {
+			return err
+		}
+		g.JS = s
+		return nil
+	}
+
+	// Try as object
+	type globalHelpersRaw GlobalHelpers
+	var raw globalHelpersRaw
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+	*g = GlobalHelpers(raw)
+	return nil
+}
+
+// IsEmpty returns true if no helpers are configured.
+func (g *GlobalHelpers) IsEmpty() bool {
+	return g == nil || (g.JS == "" && len(g.JSFiles) == 0)
+}
+
+// CSVConfig defines global CSV parsing options.
+type CSVConfig struct {
+	ValueParser *JSCode `yaml:"value_parser,omitempty"`
+}
+
+// JSCode represents JavaScript code from inline or file.
+// Only one of JS or JSFile should be set.
+// Can be unmarshaled from a string (shorthand for js:) or an object.
+type JSCode struct {
+	JS     string `yaml:"js,omitempty"`
+	JSFile string `yaml:"js_file,omitempty"`
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling for JSCode.
+// Accepts either a string (shorthand for js:) or an object.
+func (j *JSCode) UnmarshalYAML(value *yaml.Node) error {
+	// Try as string first (shorthand: string → js)
+	if value.Kind == yaml.ScalarNode {
+		var s string
+		if err := value.Decode(&s); err != nil {
+			return err
+		}
+		j.JS = s
+		return nil
+	}
+
+	// Try as object
+	type jsCodeRaw JSCode
+	var raw jsCodeRaw
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+	*j = JSCode(raw)
+	return nil
+}
+
+// Validate checks that only one of js or js_file is specified.
+func (j *JSCode) Validate() error {
+	if j.JS != "" && j.JSFile != "" {
+		return errors.New("only one of 'js' or 'js_file' can be specified")
+	}
+	if j.JS == "" && j.JSFile == "" {
+		return errors.New("one of 'js' or 'js_file' must be specified")
+	}
+	return nil
+}
+
+// IsEmpty returns true if no code is configured.
+func (j *JSCode) IsEmpty() bool {
+	return j == nil || (j.JS == "" && j.JSFile == "")
+}

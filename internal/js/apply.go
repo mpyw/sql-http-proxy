@@ -24,6 +24,11 @@ type MockResult struct {
 func (t *Transformer) ApplyPre(ctx map[string]any, sql string, input map[string]any) (*PreTransformResult, error) {
 	vm := goja.New()
 
+	// Inject helpers first
+	if err := t.helpers.InjectInto(vm); err != nil {
+		return nil, fmt.Errorf("failed to inject helpers: %w", err)
+	}
+
 	// Set free variables on globalThis
 	globalThis := vm.GlobalObject()
 	if err := globalThis.Set("ctx", ctx); err != nil {
@@ -82,6 +87,11 @@ func (t *Transformer) ApplyPre(ctx map[string]any, sql string, input map[string]
 func (t *Transformer) ApplyMock(ctx map[string]any, sql string, input map[string]any) (*MockResult, error) {
 	vm := goja.New()
 
+	// Inject helpers first
+	if err := t.helpers.InjectInto(vm); err != nil {
+		return nil, fmt.Errorf("failed to inject helpers: %w", err)
+	}
+
 	// Set free variables on globalThis
 	globalThis := vm.GlobalObject()
 	if err := globalThis.Set("ctx", ctx); err != nil {
@@ -130,6 +140,11 @@ type PostTransformResult struct {
 // Returns the transformed output and updated context.
 func (t *Transformer) ApplyPost(ctx map[string]any, input map[string]any, output any) (*PostTransformResult, error) {
 	vm := goja.New()
+
+	// Inject helpers first
+	if err := t.helpers.InjectInto(vm); err != nil {
+		return nil, fmt.Errorf("failed to inject helpers: %w", err)
+	}
 
 	// Set free variable on globalThis
 	globalThis := vm.GlobalObject()

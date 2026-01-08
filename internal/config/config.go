@@ -28,9 +28,11 @@ var configSchema = func() *jsonschema.Schema {
 
 // Config represents the application configuration.
 type Config struct {
-	DSN       string     `yaml:"dsn"`
-	Queries   []Query    `yaml:"queries"`
-	Mutations []Mutation `yaml:"mutations"`
+	GlobalHelpers *GlobalHelpers `yaml:"global_helpers,omitempty"`
+	CSV           *CSVConfig     `yaml:"csv,omitempty"`
+	DSN           string         `yaml:"dsn"`
+	Queries       []Query        `yaml:"queries"`
+	Mutations     []Mutation     `yaml:"mutations"`
 }
 
 // Driver returns the database driver name from the DSN.
@@ -62,8 +64,30 @@ func (cfg *Config) RequiresDB() bool {
 // Note: type-specific constraints (each for many, handle_not_found for one)
 // are now enforced by JSON Schema via separate queryOne/queryMany definitions.
 func (cfg *Config) validate() error {
-	// Reserved for future semantic validations
-	return nil
+	var errs []error
+
+	// Validate global_helpers JS compilation
+	if cfg.GlobalHelpers != nil && cfg.GlobalHelpers.JS != "" {
+		if _, err := js.CompilePre(cfg.GlobalHelpers.JS); err != nil {
+			errs = append(errs, fmt.Errorf("global_helpers.js: %w", err))
+		}
+	}
+
+	// Validate csv.value_parser
+	if cfg.CSV != nil && cfg.CSV.ValueParser != nil {
+		vp := cfg.CSV.ValueParser
+		if err := vp.Validate(); err != nil {
+			errs = append(errs, fmt.Errorf("csv.value_parser: %w", err))
+		}
+		// Validate JS compilation
+		if vp.JS != "" {
+			if _, err := js.CompilePre(vp.JS); err != nil {
+				errs = append(errs, fmt.Errorf("csv.value_parser.js: %w", err))
+			}
+		}
+	}
+
+	return errors.Join(errs...)
 }
 
 // ValidateTransforms validates all transforms are valid.

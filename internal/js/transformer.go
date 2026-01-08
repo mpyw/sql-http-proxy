@@ -11,6 +11,12 @@ import (
 // Transformer applies JavaScript transformations.
 type Transformer struct {
 	program *goja.Program
+	helpers *CompiledHelpers
+}
+
+// SetHelpers sets the compiled helpers for this transformer.
+func (t *Transformer) SetHelpers(h *CompiledHelpers) {
+	t.helpers = h
 }
 
 // Compile creates a new Transformer with the given JavaScript code and argument names.

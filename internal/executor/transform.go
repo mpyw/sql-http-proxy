@@ -22,9 +22,15 @@ func (t *Transforms) IsMock() bool {
 	return t.Mock != nil
 }
 
+// CompileTransformOptions contains options for compiling transforms.
+type CompileTransformOptions struct {
+	ConfigDir   string
+	Helpers     *js.CompiledHelpers
+	ValueParser *mock.ValueParser
+}
+
 // CompileTransforms compiles all transforms from a config.Transform.
-// configDir is the directory of the YAML config file (for resolving relative paths in mock).
-func CompileTransforms(t *config.Transform, configDir string) (*Transforms, error) {
+func CompileTransforms(t *config.Transform, opts CompileTransformOptions) (*Transforms, error) {
 	if t == nil {
 		return &Transforms{}, nil
 	}
@@ -38,13 +44,19 @@ func CompileTransforms(t *config.Transform, configDir string) (*Transforms, erro
 		if err != nil {
 			errs = append(errs, fmt.Errorf("pre-transform: %w", err))
 		} else {
+			pre.SetHelpers(opts.Helpers)
 			transforms.Pre = pre
 		}
 	}
 
 	// Compile mock source
 	if t.Mock != nil && !t.Mock.IsEmpty() {
-		mockSource, err := mock.Compile(t.Mock, configDir)
+		mockOpts := mock.CompileOptions{
+			ConfigDir:   opts.ConfigDir,
+			Helpers:     opts.Helpers,
+			ValueParser: opts.ValueParser,
+		}
+		mockSource, err := mock.Compile(t.Mock, mockOpts)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("mock: %w", err))
 		} else {
@@ -54,20 +66,22 @@ func CompileTransforms(t *config.Transform, configDir string) (*Transforms, erro
 
 	// Compile post.each transform
 	if t.Post.Each != "" {
-		postEach, err := compilePost(t.Post.Each)
+		postEach, err := js.CompilePost(t.Post.Each)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("post.each: %w", err))
 		} else {
+			postEach.SetHelpers(opts.Helpers)
 			transforms.PostEach = postEach
 		}
 	}
 
 	// Compile post.all transform
 	if t.Post.All != "" {
-		postAll, err := compilePost(t.Post.All)
+		postAll, err := js.CompilePost(t.Post.All)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("post.all: %w", err))
 		} else {
+			postAll.SetHelpers(opts.Helpers)
 			transforms.PostAll = postAll
 		}
 	}
@@ -76,8 +90,4 @@ func CompileTransforms(t *config.Transform, configDir string) (*Transforms, erro
 		return nil, errors.Join(errs...)
 	}
 	return transforms, nil
-}
-
-func compilePost(code string) (*js.Transformer, error) {
-	return js.CompilePost(code)
 }

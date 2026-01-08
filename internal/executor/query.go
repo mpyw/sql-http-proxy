@@ -20,9 +20,8 @@ type QueryExecutor struct {
 }
 
 // NewQueryExecutor creates a new QueryExecutor with pre-compiled transforms.
-// configDir is the directory of the YAML config file (for resolving relative paths in mock).
-func NewQueryExecutor(db *sqlx.DB, query config.Query, configDir string) (*QueryExecutor, error) {
-	transforms, err := CompileTransforms(query.Transform, configDir)
+func NewQueryExecutor(db *sqlx.DB, query config.Query, opts CompileTransformOptions) (*QueryExecutor, error) {
+	transforms, err := CompileTransforms(query.Transform, opts)
 	if err != nil {
 		return nil, err
 	}
