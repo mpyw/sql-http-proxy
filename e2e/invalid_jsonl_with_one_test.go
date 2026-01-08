@@ -12,6 +12,6 @@ import (
 func TestInvalidJSONLWithOne(t *testing.T) {
 	_, err := config.ParseFile("invalid_jsonl_with_one_test.yaml")
 	require.Error(t, err)
-	// jsonl is not allowed for type: one (mockTransformOne only allows js/json)
-	assert.Contains(t, err.Error(), "additional properties 'jsonl' not allowed")
+	// jsonl requires filter for type: one
+	assert.Contains(t, err.Error(), "type 'one' with 'jsonl' requires 'filter'")
 }

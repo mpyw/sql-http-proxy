@@ -101,3 +101,90 @@ func TestIsQueryOrMutationPath(t *testing.T) {
 		})
 	}
 }
+
+func TestIsMockPath(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"/queries/0/mock", true},
+		{"/mutations/0/mock", true},
+		{"/queries/10/mock", true},
+		{"/queries/0", false},
+		{"/queries/0/mock/array", false},
+		{"/mock", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := isMockPath(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestIsObjectSource(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"object", true},
+		{"object_json", true},
+		{"object_json_file", true},
+		{"object_js", true},
+		{"array", false},
+		{"csv", false},
+		{"unknown", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := isObjectSource(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestIsArraySource(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"array", true},
+		{"array_json", true},
+		{"array_json_file", true},
+		{"array_js", true},
+		{"csv", true},
+		{"csv_file", true},
+		{"jsonl", true},
+		{"jsonl_file", true},
+		{"object", false},
+		{"object_js", false},
+		{"unknown", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := isArraySource(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetParentPath(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"/queries/0/mock", "/queries/0"},
+		{"/queries/0", "/queries"},
+		{"/dsn", "/dsn"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := getParentPath(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

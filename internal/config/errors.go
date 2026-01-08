@@ -9,28 +9,38 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 )
 
+// Mock source categories
+var (
+	objectSources = []string{"object", "object_json", "object_json_file", "object_js"}
+	arraySources  = []string{"array", "array_json", "array_json_file", "array_js", "csv", "csv_file", "jsonl", "jsonl_file"}
+)
+
 // formatValidationError converts a jsonschema ValidationError into a user-friendly message.
-// It focuses on improving sql/mock exclusivity errors while preserving other error messages.
 func formatValidationError(err *jsonschema.ValidationError) string {
-	// Try to find sql/mock specific errors (our main improvement target)
-	if msg := findSqlMockError(err); msg != "" {
+	// Collect all errors
+	errors := collectErrors(err)
+
+	// Priority 1: sql/mock both present
+	if msg := findBothSqlMockError(errors); msg != "" {
 		return msg
 	}
 
-	// Fall back to default error formatting for all other cases
+	// Priority 2: mock source errors (type mismatch, missing filter, multiple sources)
+	if msg := findMockSourceError(errors); msg != "" {
+		return msg
+	}
+
+	// Priority 3: missing sql/mock
+	if msg := findMissingSqlMockError(errors); msg != "" {
+		return msg
+	}
+
+	// Fall back to default
 	return err.Error()
 }
 
-// findSqlMockError looks for sql/mock exclusivity errors and formats them nicely.
-func findSqlMockError(err *jsonschema.ValidationError) string {
-	if err == nil {
-		return ""
-	}
-
-	// Collect all errors with their paths
-	errors := collectErrors(err)
-
-	// Look for sql/mock both present (oneOf with 2 matches at query/mutation level)
+// findBothSqlMockError detects when both sql and mock are present.
+func findBothSqlMockError(errors []errorWithPath) string {
 	for _, e := range errors {
 		if oneOf, ok := e.err.ErrorKind.(*kind.OneOf); ok {
 			if len(oneOf.Subschemas) >= 2 && isQueryOrMutationPath(e.path) {
@@ -38,16 +48,88 @@ func findSqlMockError(err *jsonschema.ValidationError) string {
 			}
 		}
 	}
+	return ""
+}
 
-	// Look for missing sql/mock (oneOf with 0 matches at query/mutation level)
-	// But only if the error specifically mentions sql or mock
+// findMissingSqlMockError detects when neither sql nor mock is present.
+func findMissingSqlMockError(errors []errorWithPath) string {
 	for _, e := range errors {
 		if oneOf, ok := e.err.ErrorKind.(*kind.OneOf); ok {
 			if len(oneOf.Subschemas) == 0 && isQueryOrMutationPath(e.path) {
-				// Check if this is really about sql/mock by looking at direct children
 				if isSqlMockOneOfError(e.err) {
 					return fmt.Sprintf("at '%s': must have either 'sql' or 'mock'", formatPath(e.path))
 				}
+			}
+		}
+	}
+	return ""
+}
+
+// findMockSourceError detects mock-related errors and provides helpful messages.
+func findMockSourceError(errors []errorWithPath) string {
+	// First check for type: none with mock (detected at mutation level, not mock level)
+	for _, e := range errors {
+		if !isQueryOrMutationPath(e.path) {
+			continue
+		}
+
+		if addl, ok := e.err.ErrorKind.(*kind.AdditionalProperties); ok {
+			// Check if mock is in the additional properties and type is none
+			if containsString(addl.Properties, "mock") {
+				// Check if this is type: none by looking for const errors
+				if isTypeNone(errors, e.path) {
+					return fmt.Sprintf("at '%s': type 'none' does not support mock - use 'sql' instead",
+						formatPath(e.path))
+				}
+			}
+		}
+	}
+
+	// Look for mock path errors
+	for _, e := range errors {
+		if !isMockPath(e.path) {
+			continue
+		}
+
+		// Get parent query/mutation path to understand context
+		parentPath := getParentPath(e.path)
+		typeName := findTypeValue(errors, parentPath)
+
+		// Check for additional properties error (wrong source type)
+		if addl, ok := e.err.ErrorKind.(*kind.AdditionalProperties); ok {
+			return formatMockSourceMismatchError(parentPath, typeName, addl.Properties)
+		}
+	}
+
+	// Look for missing filter error (array source with type: one without filter)
+	for _, e := range errors {
+		if !isMockPath(e.path) {
+			continue
+		}
+
+		if req, ok := e.err.ErrorKind.(*kind.Required); ok {
+			if containsString(req.Missing, "filter") {
+				parentPath := getParentPath(e.path)
+				usedSource := findUsedArraySource(errors, e.path)
+				if usedSource != "" {
+					return fmt.Sprintf("at '%s': type 'one' with '%s' source requires 'filter' to select a single row",
+						formatPath(parentPath), usedSource)
+				}
+			}
+		}
+	}
+
+	// Look for multiple sources error
+	for _, e := range errors {
+		if !isMockPath(e.path) {
+			continue
+		}
+
+		if addl, ok := e.err.ErrorKind.(*kind.AdditionalProperties); ok {
+			if len(addl.Properties) > 1 {
+				parentPath := getParentPath(e.path)
+				return fmt.Sprintf("at '%s': mock must have exactly one source, found multiple: %s",
+					formatPath(parentPath), strings.Join(addl.Properties, ", "))
 			}
 		}
 	}
@@ -55,14 +137,120 @@ func findSqlMockError(err *jsonschema.ValidationError) string {
 	return ""
 }
 
+// formatMockSourceMismatchError creates a helpful message for source/type mismatches.
+func formatMockSourceMismatchError(parentPath string, typeName string, invalidSources []string) string {
+	if len(invalidSources) == 0 {
+		return ""
+	}
+
+	source := invalidSources[0]
+
+	// Check if multiple sources
+	if len(invalidSources) > 1 {
+		return fmt.Sprintf("at '%s': mock must have exactly one source, found: %s",
+			formatPath(parentPath), strings.Join(invalidSources, ", "))
+	}
+
+	// type: one with array source (without filter - but we should have caught this above)
+	if typeName == "one" && isArraySource(source) {
+		return fmt.Sprintf("at '%s': type 'one' with '%s' requires 'filter' to select a single row, or use object/object_js for a single object",
+			formatPath(parentPath), source)
+	}
+
+	// type: many with object source
+	if typeName == "many" && isObjectSource(source) {
+		return fmt.Sprintf("at '%s': type 'many' does not support '%s' - use array, csv, or jsonl sources",
+			formatPath(parentPath), source)
+	}
+
+	// type: none with mock
+	if typeName == "none" {
+		return fmt.Sprintf("at '%s': type 'none' does not support mock - use 'sql' instead",
+			formatPath(parentPath))
+	}
+
+	// Generic message
+	return fmt.Sprintf("at '%s': invalid mock source '%s' for type '%s'",
+		formatPath(parentPath), source, typeName)
+}
+
+// findTypeValue extracts the type value from errors at the given query/mutation path.
+func findTypeValue(errors []errorWithPath, parentPath string) string {
+	typePath := parentPath + "/type"
+
+	// Look for const errors at the type path to infer what type was expected
+	for _, e := range errors {
+		if e.path == typePath {
+			if constErr, ok := e.err.ErrorKind.(*kind.Const); ok {
+				// The expected value tells us what type is NOT the current one
+				// If "value must be 'many'" then current type is 'one' (or invalid)
+				if s, ok := constErr.Want.(string); ok {
+					// Return the opposite
+					if s == "many" {
+						return "one"
+					}
+					if s == "one" {
+						return "many"
+					}
+				}
+			}
+		}
+	}
+
+	// Default - couldn't determine
+	return ""
+}
+
+// isTypeNone checks if the type at the given path is 'none'.
+// This is determined by looking for const errors expecting 'one' or 'many' (meaning the actual is 'none').
+func isTypeNone(errors []errorWithPath, parentPath string) bool {
+	typePath := parentPath + "/type"
+
+	// Count how many different const errors we have for the type
+	// If we see both 'one' and 'many' as expected values, the actual must be 'none'
+	foundOne := false
+	foundMany := false
+
+	for _, e := range errors {
+		if e.path == typePath {
+			if constErr, ok := e.err.ErrorKind.(*kind.Const); ok {
+				if s, ok := constErr.Want.(string); ok {
+					if s == "one" {
+						foundOne = true
+					}
+					if s == "many" {
+						foundMany = true
+					}
+				}
+			}
+		}
+	}
+
+	return foundOne && foundMany
+}
+
+// findUsedArraySource finds which array source was used from error messages.
+func findUsedArraySource(errors []errorWithPath, mockPath string) string {
+	for _, e := range errors {
+		if e.path == mockPath {
+			if addl, ok := e.err.ErrorKind.(*kind.AdditionalProperties); ok {
+				for _, prop := range addl.Properties {
+					if isArraySource(prop) {
+						return prop
+					}
+				}
+			}
+		}
+	}
+	return ""
+}
+
 // isSqlMockOneOfError checks if the oneOf error is specifically about sql/mock.
-// This is determined by looking at the direct causes for missing sql/mock properties.
 func isSqlMockOneOfError(err *jsonschema.ValidationError) bool {
 	if err == nil {
 		return false
 	}
 
-	// Check direct causes for missing sql or mock
 	for _, cause := range err.Causes {
 		if req, ok := cause.ErrorKind.(*kind.Required); ok {
 			for _, missing := range req.Missing {
@@ -71,7 +259,6 @@ func isSqlMockOneOfError(err *jsonschema.ValidationError) bool {
 				}
 			}
 		}
-		// Recursively check nested causes (for oneOf within oneOf)
 		if isSqlMockOneOfError(cause) {
 			return true
 		}
@@ -79,13 +266,13 @@ func isSqlMockOneOfError(err *jsonschema.ValidationError) bool {
 	return false
 }
 
-// errorWithPath holds an error and its path for easier processing.
+// Helper types and functions
+
 type errorWithPath struct {
 	path string
 	err  *jsonschema.ValidationError
 }
 
-// collectErrors flattens the error tree into a list.
 func collectErrors(err *jsonschema.ValidationError) []errorWithPath {
 	var result []errorWithPath
 	collectErrorsRecursive(err, &result)
@@ -96,43 +283,63 @@ func collectErrorsRecursive(err *jsonschema.ValidationError, result *[]errorWith
 	if err == nil {
 		return
 	}
-
 	path := "/" + strings.Join(err.InstanceLocation, "/")
 	*result = append(*result, errorWithPath{path: path, err: err})
-
 	for _, cause := range err.Causes {
 		collectErrorsRecursive(cause, result)
 	}
 }
 
-// isQueryOrMutationPath checks if path matches /queries/N or /mutations/N.
 func isQueryOrMutationPath(path string) bool {
 	matched, _ := regexp.MatchString(`^/(queries|mutations)/\d+$`, path)
 	return matched
 }
 
-// formatPath converts JSON pointer path to a more readable format.
-// e.g., "/queries/0/mock" -> "queries[0].mock"
+func isMockPath(path string) bool {
+	matched, _ := regexp.MatchString(`^/(queries|mutations)/\d+/mock$`, path)
+	return matched
+}
+
+func getParentPath(path string) string {
+	lastSlash := strings.LastIndex(path, "/")
+	if lastSlash > 0 {
+		return path[:lastSlash]
+	}
+	return path
+}
+
+func isObjectSource(source string) bool {
+	return containsString(objectSources, source)
+}
+
+func isArraySource(source string) bool {
+	return containsString(arraySources, source)
+}
+
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
 func formatPath(path string) string {
 	if path == "" || path == "/" {
 		return "(root)"
 	}
 
-	// Remove leading slash
 	path = strings.TrimPrefix(path, "/")
-
-	// Split by /
 	parts := strings.Split(path, "/")
 	var result strings.Builder
 
 	for i, part := range parts {
-		// Check if part is a number (array index)
 		if isNumeric(part) {
 			result.WriteString("[")
 			result.WriteString(part)
 			result.WriteString("]")
 		} else {
-			// Add dot separator if not first element
 			if i > 0 {
 				result.WriteString(".")
 			}
@@ -143,7 +350,6 @@ func formatPath(path string) string {
 	return result.String()
 }
 
-// isNumeric checks if a string is a numeric value.
 func isNumeric(s string) bool {
 	for _, c := range s {
 		if c < '0' || c > '9' {

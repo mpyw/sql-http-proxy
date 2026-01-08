@@ -12,6 +12,6 @@ import (
 func TestInvalidCSVWithOne(t *testing.T) {
 	_, err := config.ParseFile("invalid_csv_with_one_test.yaml")
 	require.Error(t, err)
-	// csv is not allowed for type: one (mockTransformOne only allows js/json)
-	assert.Contains(t, err.Error(), "additional properties 'csv' not allowed")
+	// csv requires filter for type: one
+	assert.Contains(t, err.Error(), "type 'one' with 'csv' requires 'filter'")
 }
