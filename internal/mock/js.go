@@ -1,6 +1,8 @@
 package mock
 
 import (
+	"fmt"
+
 	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
@@ -16,9 +18,9 @@ func (s *JSSource) SetHelpers(h *js.CompiledHelpers) {
 
 // CompileJS compiles JavaScript code into a JSSource.
 func CompileJS(code string) (*JSSource, error) {
-	t, err := js.CompilePre(code)
+	t, err := js.CompileMockJS(code)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to compile mock: %w", err)
 	}
 	return &JSSource{transformer: t}, nil
 }

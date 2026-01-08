@@ -23,14 +23,14 @@ type CompileOptions struct {
 	ValueParser *ValueParser // Global CSV value parser
 }
 
-// Compile compiles a MockTransform into a Source.
-func Compile(mt *config.MockTransform, opts CompileOptions) (Source, error) {
-	if mt == nil {
+// Compile compiles a Mock into a Source.
+func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
+	if m == nil {
 		return nil, nil
 	}
 
 	// Validate mutual exclusivity
-	if err := mt.Validate(); err != nil {
+	if err := m.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -47,33 +47,67 @@ func Compile(mt *config.MockTransform, opts CompileOptions) (Source, error) {
 
 	var source Source
 	var err error
+	var filterJS string
 
 	switch {
-	case mt.JS != "":
-		src, err := CompileJS(mt.JS)
+	// Object sources (type: one only)
+	case m.Object != nil:
+		source, err = NewJSON(m.Object)
+
+	case m.ObjectJSON != "":
+		source, err = ParseJSONString(m.ObjectJSON)
+
+	case m.ObjectJSONFile != "":
+		source, err = ParseJSONFile(resolvePath(m.ObjectJSONFile))
+
+	case m.ObjectJS != "":
+		src, err := CompileJS(m.ObjectJS)
 		if err != nil {
 			return nil, err
 		}
 		src.SetHelpers(opts.Helpers)
-		return src, nil // JS handles its own filtering
+		return src, nil // JS handles its own execution
 
-	case mt.CSV != "":
-		source, err = ParseCSVWithOptions(mt.CSV, csvOpts)
+	// Array sources
+	case m.Array != nil:
+		source, err = NewJSON(m.Array)
+		filterJS = m.Filter
 
-	case mt.CSVFile != "":
-		source, err = ParseCSVFileWithOptions(resolvePath(mt.CSVFile), csvOpts)
+	case m.ArrayJSON != "":
+		source, err = ParseJSONString(m.ArrayJSON)
+		filterJS = m.Filter
 
-	case mt.JSON != nil:
-		source, err = NewJSON(mt.JSON)
+	case m.ArrayJSONFile != "":
+		source, err = ParseJSONFile(resolvePath(m.ArrayJSONFile))
+		filterJS = m.Filter
 
-	case mt.JSONFile != "":
-		source, err = ParseJSONFile(resolvePath(mt.JSONFile))
+	case m.ArrayJS != "":
+		src, err := CompileJS(m.ArrayJS)
+		if err != nil {
+			return nil, err
+		}
+		src.SetHelpers(opts.Helpers)
+		// For array_js with filter, wrap with JSFilteredSource
+		if m.Filter != "" {
+			return NewJSFilteredSource(src, m.Filter, opts.Helpers)
+		}
+		return src, nil
 
-	case mt.JSONL != "":
-		source, err = ParseJSONL(mt.JSONL)
+	case m.CSV != "":
+		source, err = ParseCSVWithOptions(m.CSV, csvOpts)
+		filterJS = m.Filter
 
-	case mt.JSONLFile != "":
-		source, err = ParseJSONLFile(resolvePath(mt.JSONLFile))
+	case m.CSVFile != "":
+		source, err = ParseCSVFileWithOptions(resolvePath(m.CSVFile), csvOpts)
+		filterJS = m.Filter
+
+	case m.JSONL != "":
+		source, err = ParseJSONL(m.JSONL)
+		filterJS = m.Filter
+
+	case m.JSONLFile != "":
+		source, err = ParseJSONLFile(resolvePath(m.JSONLFile))
+		filterJS = m.Filter
 
 	default:
 		return nil, fmt.Errorf("mock: no source specified")
@@ -83,9 +117,9 @@ func Compile(mt *config.MockTransform, opts CompileOptions) (Source, error) {
 		return nil, err
 	}
 
-	// Wrap with FilteredSource if filter_by is specified
-	if mt.FilterBy == "input" {
-		return NewFilteredSource(source), nil
+	// Wrap with JSFilteredSource if filter is specified
+	if filterJS != "" {
+		return NewJSFilteredSource(source, filterJS, opts.Helpers)
 	}
 
 	return source, nil

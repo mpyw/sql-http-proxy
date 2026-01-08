@@ -33,13 +33,9 @@ dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}
 
 ## Global Helpers
 
-JavaScript functions available in all `pre`, `mock`, `post` transforms and `csv.value_parser`.
+JavaScript functions available in all `pre`, `post` transforms, mock JS sources, `filter`, and `csv.value_parser`.
 
 ```yaml
-# Shorthand (inline JS)
-global_helpers: |
-  function validate(x) { ... }
-
 # Full form
 global_helpers:
   js: |
@@ -74,28 +70,29 @@ The `value_parser` function receives `value` (string) and should return the pars
 
 ## Queries
 
-Query endpoints for SELECT operations.
+Query endpoints for SELECT operations. Each query must have either `sql` OR `mock`, not both.
 
 ```yaml
 queries:
   - type: one|many
     path: /endpoint
-    sql: SELECT ...
-    method: GET           # optional
-    accepts: json         # optional
-    handle_not_found: true  # optional
-    transform: { ... }    # optional
+    sql: SELECT ...         # OR mock: { ... }
+    method: GET             # optional
+    accepts: json           # optional
+    handle_not_found: true  # optional (type: one only)
+    transform: { ... }      # optional
 ```
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `type` | `one` \| `many` | - | **Required.** `one`: single row, `many`: array |
 | `path` | string | - | **Required.** Endpoint path (must start with `/`) |
-| `sql` | string | - | **Required.** SQL query with `:name` placeholders |
+| `sql` | string | - | SQL query with `:name` placeholders (required if no mock) |
+| `mock` | object | - | Mock data source (required if no sql) |
 | `method` | string | `GET` | HTTP method |
 | `accepts` | string/array | `[json, form]` | Accepted Content-Types |
 | `handle_not_found` | boolean | `false` | Pass `null` to post instead of 404 (type: one only) |
-| `transform` | object | - | Pre/mock/post transforms |
+| `transform` | object | - | Pre/post transforms |
 
 ### Type Behavior
 
@@ -106,14 +103,14 @@ queries:
 
 ## Mutations
 
-Mutation endpoints for INSERT/UPDATE/DELETE operations.
+Mutation endpoints for INSERT/UPDATE/DELETE operations. Each mutation (type: one/many) must have either `sql` OR `mock`, not both. Type: none requires `sql`.
 
 ```yaml
 mutations:
   - type: one|many|none
     method: POST
     path: /endpoint
-    sql: INSERT ... RETURNING *
+    sql: INSERT ... RETURNING *  # OR mock: { ... } for type: one/many
     accepts: json
     transform: { ... }
 ```
@@ -123,9 +120,12 @@ mutations:
 | `type` | `one` \| `many` \| `none` | - | **Required.** Return type |
 | `method` | string | `POST` | HTTP method |
 | `path` | string | - | **Required.** Endpoint path |
-| `sql` | string | - | **Required.** SQL (use `RETURNING *` for one/many) |
+| `sql` | string | - | SQL (use `RETURNING *` for one/many) |
+| `mock` | object | - | Mock data source (type: one/many only) |
 | `accepts` | string/array | `[json, form]` | Accepted Content-Types |
-| `transform` | object | - | Pre/mock/post transforms |
+| `transform` | object | - | Pre/post transforms |
+
+> Note: `type: none` requires `sql` - mock is not supported for type: none.
 
 ### Type Behavior
 
@@ -156,6 +156,121 @@ mutations:
 
 > For PostgreSQL, SQLite, and SQL Server, use `RETURNING *` clause instead to get inserted data directly.
 
+## Mock
+
+Mock allows returning data without a database connection. Useful for testing, prototyping, or static data endpoints.
+
+Mock is specified at the query/mutation level (same level as `sql`). Use either `sql` OR `mock`, not both.
+
+### Mock Sources
+
+**Only one source type can be specified per mock.**
+
+#### Object Sources (type: one only)
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `object` | object | YAML object |
+| `object_json` | string | JSON string containing object |
+| `object_json_file` | string | Path to JSON file containing object |
+| `object_js` | string | JavaScript returning object |
+
+```yaml
+# YAML object
+mock:
+  object: { id: 1, name: Alice }
+
+# JSON string
+mock:
+  object_json: '{"id": 1, "name": "Alice"}'
+
+# JSON file
+mock:
+  object_json_file: ./data/user.json
+
+# JavaScript
+mock:
+  object_js: |
+    return { id: parseInt(input.id), name: "User " + input.id };
+```
+
+#### Array Sources (type: many, or type: one with filter)
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `array` | array | YAML array of objects |
+| `array_json` | string | JSON string containing array |
+| `array_json_file` | string | Path to JSON file containing array |
+| `array_js` | string | JavaScript returning array |
+| `csv` | string | Inline CSV data with header row |
+| `csv_file` | string | Path to CSV file |
+| `jsonl` | string | Inline JSONL (one JSON object per line) |
+| `jsonl_file` | string | Path to JSONL file |
+
+```yaml
+# YAML array
+mock:
+  array:
+    - { id: 1, name: Alice }
+    - { id: 2, name: Bob }
+
+# JSON string
+mock:
+  array_json: '[{"id": 1}, {"id": 2}]'
+
+# CSV
+mock:
+  csv: |
+    id,name,role
+    1,Alice,admin
+    2,Bob,user
+
+# JavaScript
+mock:
+  array_js: |
+    return [{ id: 1 }, { id: 2 }];
+```
+
+### Filter
+
+The `filter` option allows filtering array data using JavaScript. For `type: one` with array sources, `filter` is **required** to select which row to return.
+
+**Filter variables:**
+- `row` (parameter): Current row being evaluated
+- `input` (parameter): Request parameters
+- `ctx` (free variable): Shared state
+
+**Returns:** Boolean (true to include the row)
+
+```yaml
+# type: one with filter - returns first matching row (or 404)
+- type: one
+  path: /user
+  mock:
+    array:
+      - { id: 1, name: Alice }
+      - { id: 2, name: Bob }
+    filter: return row.id == parseInt(input.id)
+
+# type: many with filter - returns all matching rows
+- type: many
+  path: /users
+  mock:
+    array:
+      - { id: 1, name: Alice, role: admin }
+      - { id: 2, name: Bob, role: user }
+      - { id: 3, name: Charlie, role: admin }
+    filter: return row.role === input.role
+```
+
+### Mock JS Variables
+
+For `object_js` and `array_js`:
+
+- `input` (parameter): Request parameters
+- `ctx` (free variable): Shared state
+- `sql` (free variable): SQL string (read-only)
+
 ## Transform
 
 JavaScript processing at different stages.
@@ -163,96 +278,28 @@ JavaScript processing at different stages.
 ```yaml
 transform:
   pre: |
-    # Before SQL
-  mock: { ... }
-    # Replace SQL with mock
+    # Before SQL/mock
   post: |
-    # After SQL
+    # After SQL/mock
 ```
 
 ### Pre-Transform
 
-Validates and transforms input before SQL execution.
+Validates and transforms input before SQL/mock execution.
 
 **Variables:**
 - `input` (parameter): Request parameters
 - `ctx` (free variable): Shared state (persists to post)
-- `sql` (free variable): SQL string (modifiable)
+- `sql` (free variable): SQL string (modifiable, only meaningful when using sql)
 
-**Returns:** Object with parameters for SQL
+**Returns:** Object with parameters for SQL/mock
 
 ```yaml
 pre: |
   ctx.startTime = Date.now();
-  sql += ' WHERE active = true';
+  if (sql) sql += ' WHERE active = true';
   return { id: parseInt(input.id) };
 ```
-
-### Mock
-
-Returns mock data without database. **Only one data format can be specified.**
-
-| Format | type: one | type: many | Description |
-|--------|-----------|------------|-------------|
-| `js` | Yes | Yes | Inline JavaScript |
-| `json` | Yes* | Yes | YAML/JSON object or array |
-| `json_file` | Yes* | Yes | JSON file |
-| `csv` | with filter_by | Yes | Inline CSV |
-| `csv_file` | with filter_by | Yes | CSV file |
-| `jsonl` | with filter_by | Yes | Inline JSON Lines |
-| `jsonl_file` | with filter_by | Yes | JSON Lines file |
-
-> \* For `type: one` with array data, use `filter_by: input` to filter and return the first match.
-
-**filter_by option:**
-
-Use `filter_by: input` to automatically filter array data based on request parameters:
-
-```yaml
-# type: one with filter_by - filters array and returns first match (or 404)
-mock:
-  filter_by: input
-  json:
-    - { id: 1, name: Alice }
-    - { id: 2, name: Bob }
-
-# type: many with filter_by - filters and returns all matches
-mock:
-  filter_by: input
-  csv: |
-    id,name,role
-    1,Alice,admin
-    2,Bob,user
-    3,Charlie,admin
-```
-
-With `filter_by: input`, rows are filtered to match all provided input parameters. For `type: one`, the first matching row is returned (or 404 if none match).
-
-**Shorthand syntax:**
-
-```yaml
-# String → JavaScript
-mock: |
-  return { id: 1 };
-
-# Array → JSON (type: many)
-mock:
-  - { id: 1, name: Alice }
-  - { id: 2, name: Bob }
-
-# Object → JSON (type: one)
-mock: { id: 1, name: Alice }
-
-# Explicit format
-mock:
-  json:
-    - { id: 1 }
-```
-
-**Mock JS variables:**
-- `input` (parameter): Request parameters
-- `ctx` (free variable): Shared state
-- `sql` (free variable): SQL string (read-only)
 
 ### Post-Transform
 

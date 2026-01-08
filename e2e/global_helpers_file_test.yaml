@@ -7,9 +7,8 @@ global_helpers:
 queries:
   - type: one
     path: /calc
-    sql: SELECT 1
-    transform:
-      mock: |
+    mock:
+      object_js: |
         return {
           doubled: double(parseInt(input.n)),
           tripled: triple(parseInt(input.n)),

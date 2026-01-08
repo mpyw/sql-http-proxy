@@ -3,34 +3,29 @@ dsn: postgres://localhost/test
 mutations:
   - type: one
     path: /post-default
-    sql: SELECT 1
-    transform:
-      mock: { default_post: true }
+    mock:
+      object: { default_post: true }
 
   - type: one
     method: POST
     path: /post-explicit
-    sql: SELECT 1
-    transform:
-      mock: { explicit_post: true }
+    mock:
+      object: { explicit_post: true }
 
   - type: one
     method: PUT
     path: /put
-    sql: SELECT 1
-    transform:
-      mock: { success: true }
+    mock:
+      object: { success: true }
 
   - type: one
     method: DELETE
     path: /delete
-    sql: SELECT 1
-    transform:
-      mock: { deleted: true }
+    mock:
+      object: { deleted: true }
 
   - type: one
     method: PATCH
     path: /patch
-    sql: SELECT 1
-    transform:
-      mock: { patched: true }
+    mock:
+      object: { patched: true }

@@ -47,3 +47,33 @@ func CompilePost(code string) (*Transformer, error) {
 
 	return &Transformer{program: program}, nil
 }
+
+// CompileFilter creates a filter function with free variable (ctx) and parameters (row, input).
+// Returns boolean indicating whether the row should be included.
+func CompileFilter(code string) (*Transformer, error) {
+	// Wrap code in a function that takes row and input as parameters
+	// ctx is set as a global variable before execution
+	wrapped := fmt.Sprintf(`(function(row, input) { %s })`, code)
+
+	program, err := goja.Compile("filter", wrapped, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile filter: %w", err)
+	}
+
+	return &Transformer{program: program}, nil
+}
+
+// CompileMockJS creates a mock JS function with free variables (ctx, sql) and parameter (input).
+// Same signature as CompilePre but returns raw error (no wrapping).
+func CompileMockJS(code string) (*Transformer, error) {
+	// Wrap code in a function that takes input as parameter
+	// ctx and sql are set as global variables before execution
+	wrapped := fmt.Sprintf(`(function(input) { %s })`, code)
+
+	program, err := goja.Compile("mock", wrapped, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Transformer{program: program}, nil
+}

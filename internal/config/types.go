@@ -66,7 +66,8 @@ type Query struct {
 	Type           QueryType   `yaml:"type"`
 	Method         string      `yaml:"method,omitempty"` // HTTP method (default: GET)
 	Path           string      `yaml:"path"`
-	SQL            string      `yaml:"sql"`
+	SQL            string      `yaml:"sql,omitempty"`
+	Mock           *Mock       `yaml:"mock,omitempty"` // Mock data source (alternative to SQL)
 	Accepts        AcceptTypes `yaml:"accepts,omitempty"`          // Accepted content types for body (default: [json, form])
 	HandleNotFound bool        `yaml:"handle_not_found,omitempty"` // Pass null to post-transform instead of 404 (type: one only)
 	Transform      *Transform  `yaml:"transform,omitempty"`
@@ -88,12 +89,18 @@ func (q Query) GetAccepts() AcceptTypes {
 	return q.Accepts
 }
 
+// HasMock returns true if this query uses mock data.
+func (q Query) HasMock() bool {
+	return q.Mock != nil && !q.Mock.IsEmpty()
+}
+
 // Mutation represents a single mutation configuration.
 type Mutation struct {
 	Type      MutationType `yaml:"type"`
 	Method    string       `yaml:"method,omitempty"` // HTTP method (default: POST)
 	Path      string       `yaml:"path"`
-	SQL       string       `yaml:"sql"`
+	SQL       string       `yaml:"sql,omitempty"`
+	Mock      *Mock        `yaml:"mock,omitempty"` // Mock data source (alternative to SQL)
 	Accepts   AcceptTypes  `yaml:"accepts,omitempty"` // Accepted content types for body (default: [json, form])
 	Transform *Transform   `yaml:"transform,omitempty"`
 }
@@ -114,96 +121,102 @@ func (m Mutation) GetAccepts() AcceptTypes {
 	return m.Accepts
 }
 
+// HasMock returns true if this mutation uses mock data.
+func (m Mutation) HasMock() bool {
+	return m.Mock != nil && !m.Mock.IsEmpty()
+}
+
 // Transform defines pre/post JavaScript transformations.
+// Note: mock is now at query/mutation level, not inside transform.
 type Transform struct {
-	Pre  string         `yaml:"pre,omitempty"`
-	Mock *MockTransform `yaml:"mock,omitempty"` // Mock DB response (replaces actual query)
-	Post PostTransform  `yaml:"post,omitempty"`
+	Pre  string        `yaml:"pre,omitempty"`
+	Post PostTransform `yaml:"post,omitempty"`
 }
 
-// MockTransform represents mock data source configuration.
+// Mock represents mock data source configuration.
+// Contains all possible data source fields for both type: one and type: many.
 // Only one data source field should be set (mutually exclusive).
-type MockTransform struct {
-	JS        string `yaml:"js,omitempty"`
-	CSV       string `yaml:"csv,omitempty"`
-	CSVFile   string `yaml:"csv_file,omitempty"`
-	JSON      any    `yaml:"json,omitempty"`
-	JSONFile  string `yaml:"json_file,omitempty"`
-	JSONL     string `yaml:"jsonl,omitempty"`
-	JSONLFile string `yaml:"jsonl_file,omitempty"`
-	FilterBy  string `yaml:"filter_by,omitempty"` // Filter data by input parameters (only "input" supported)
-}
+type Mock struct {
+	// Object sources (for type: one - returns single object directly)
+	Object         map[string]any `yaml:"object,omitempty"`
+	ObjectJSON     string         `yaml:"object_json,omitempty"`
+	ObjectJSONFile string         `yaml:"object_json_file,omitempty"`
+	ObjectJS       string         `yaml:"object_js,omitempty"`
 
-// UnmarshalYAML implements custom YAML unmarshaling for MockTransform.
-// Accepts:
-// - string → mock.js (JS code)
-// - array → mock.json (JSON array shorthand)
-// - object with known key (js, json, csv, etc.) → use as-is
-// - object without known keys → mock.json (JSON object shorthand)
-func (m *MockTransform) UnmarshalYAML(value *yaml.Node) error {
-	// String → JS code
-	if value.Kind == yaml.ScalarNode {
-		var s string
-		if err := value.Decode(&s); err != nil {
-			return err
-		}
-		m.JS = s
-		return nil
-	}
+	// Array sources (for type: many, or type: one with filter)
+	Array         []any  `yaml:"array,omitempty"`
+	ArrayJSON     string `yaml:"array_json,omitempty"`
+	ArrayJSONFile string `yaml:"array_json_file,omitempty"`
+	ArrayJS       string `yaml:"array_js,omitempty"`
+	CSV           string `yaml:"csv,omitempty"`
+	CSVFile       string `yaml:"csv_file,omitempty"`
+	JSONL         string `yaml:"jsonl,omitempty"`
+	JSONLFile     string `yaml:"jsonl_file,omitempty"`
 
-	// Array → JSON array shorthand
-	if value.Kind == yaml.SequenceNode {
-		var arr []any
-		if err := value.Decode(&arr); err != nil {
-			return err
-		}
-		m.JSON = arr
-		return nil
-	}
-
-	// Object: check if it has known keys
-	if value.Kind == yaml.MappingNode {
-		// First, try to decode as MockTransform with known keys
-		type mockTransformRaw MockTransform
-		var raw mockTransformRaw
-		if err := value.Decode(&raw); err != nil {
-			return err
-		}
-
-		// If any known field is set, use the decoded result
-		if raw.JS != "" ||
-			raw.CSV != "" || raw.CSVFile != "" ||
-			raw.JSON != nil || raw.JSONFile != "" ||
-			raw.JSONL != "" || raw.JSONLFile != "" ||
-			raw.FilterBy != "" {
-			*m = MockTransform(raw)
-			return nil
-		}
-
-		// No known keys found → treat as JSON object shorthand
-		var obj map[string]any
-		if err := value.Decode(&obj); err != nil {
-			return err
-		}
-		m.JSON = obj
-		return nil
-	}
-
-	return nil
+	// Filter for array sources (JS code: receives row, input params, ctx free var; returns boolean)
+	// Required for type: one with array sources, optional for type: many
+	Filter string `yaml:"filter,omitempty"`
 }
 
 // IsEmpty returns true if no mock source is configured.
-func (m *MockTransform) IsEmpty() bool {
-	return m.JS == "" &&
+func (m *Mock) IsEmpty() bool {
+	return m.Object == nil && m.ObjectJSON == "" && m.ObjectJSONFile == "" && m.ObjectJS == "" &&
+		m.Array == nil && m.ArrayJSON == "" && m.ArrayJSONFile == "" && m.ArrayJS == "" &&
 		m.CSV == "" && m.CSVFile == "" &&
-		m.JSON == nil && m.JSONFile == "" &&
 		m.JSONL == "" && m.JSONLFile == ""
 }
 
+// IsArraySource returns true if this mock uses an array source.
+func (m *Mock) IsArraySource() bool {
+	return m.Array != nil || m.ArrayJSON != "" || m.ArrayJSONFile != "" || m.ArrayJS != "" ||
+		m.CSV != "" || m.CSVFile != "" ||
+		m.JSONL != "" || m.JSONLFile != ""
+}
+
+// IsObjectSource returns true if this mock uses an object source.
+func (m *Mock) IsObjectSource() bool {
+	return m.Object != nil || m.ObjectJSON != "" || m.ObjectJSONFile != "" || m.ObjectJS != ""
+}
+
+// HasJS returns true if this mock uses a JavaScript source.
+func (m *Mock) HasJS() bool {
+	return m.ObjectJS != "" || m.ArrayJS != ""
+}
+
+// GetJS returns the JavaScript code if present.
+func (m *Mock) GetJS() string {
+	if m.ObjectJS != "" {
+		return m.ObjectJS
+	}
+	return m.ArrayJS
+}
+
 // Validate checks that only one mock source is specified.
-func (m *MockTransform) Validate() error {
+// Does NOT check filter requirement - that depends on query type and is validated elsewhere.
+func (m *Mock) Validate() error {
 	count := 0
-	if m.JS != "" {
+	if m.Object != nil {
+		count++
+	}
+	if m.ObjectJSON != "" {
+		count++
+	}
+	if m.ObjectJSONFile != "" {
+		count++
+	}
+	if m.ObjectJS != "" {
+		count++
+	}
+	if m.Array != nil {
+		count++
+	}
+	if m.ArrayJSON != "" {
+		count++
+	}
+	if m.ArrayJSONFile != "" {
+		count++
+	}
+	if m.ArrayJS != "" {
 		count++
 	}
 	if m.CSV != "" {
@@ -212,20 +225,45 @@ func (m *MockTransform) Validate() error {
 	if m.CSVFile != "" {
 		count++
 	}
-	if m.JSON != nil {
-		count++
-	}
-	if m.JSONFile != "" {
-		count++
-	}
 	if m.JSONL != "" {
 		count++
 	}
 	if m.JSONLFile != "" {
 		count++
 	}
+
 	if count > 1 {
-		return errors.New("mock: only one source type can be specified (js, csv, csv_file, json, json_file, jsonl, jsonl_file)")
+		return errors.New("mock: only one source type can be specified")
+	}
+
+	return nil
+}
+
+// ValidateForTypeOne validates mock configuration for type: one.
+// Array sources require filter.
+func (m *Mock) ValidateForTypeOne() error {
+	if err := m.Validate(); err != nil {
+		return err
+	}
+
+	// Array sources require filter for type: one
+	if m.IsArraySource() && m.Filter == "" {
+		return errors.New("mock: filter is required for array sources with type: one")
+	}
+
+	return nil
+}
+
+// ValidateForTypeMany validates mock configuration for type: many.
+// Object sources are not allowed.
+func (m *Mock) ValidateForTypeMany() error {
+	if err := m.Validate(); err != nil {
+		return err
+	}
+
+	// Object sources are not allowed for type: many
+	if m.IsObjectSource() {
+		return errors.New("mock: object sources are not allowed for type: many (use array sources)")
 	}
 
 	return nil

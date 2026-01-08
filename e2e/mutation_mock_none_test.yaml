@@ -4,7 +4,4 @@ mutations:
   - type: none
     path: /user
     method: DELETE
-    sql: DELETE FROM users WHERE id = :id
-    transform:
-      mock: |
-        return null
+    sql: SELECT 1

@@ -4,8 +4,8 @@ mutations:
   - type: one
     method: POST
     path: /multipart
-    sql: SELECT 1
+    mock:
+      object: { received: true }
     transform:
-      mock: { received: true }
       post: |
         return { name: input.name }

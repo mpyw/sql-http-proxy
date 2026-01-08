@@ -13,14 +13,14 @@ import (
 )
 
 func TestMutationNoneWithOutput(t *testing.T) {
+	db := setupTestDB(t)
 	cfg, err := config.ParseFile("mutation_none_with_output_test.yaml")
 	require.NoError(t, err)
 
-	mux, err := server.NewServeMux(nil, cfg, ".")
+	mux, err := server.NewServeMux(db, cfg, ".")
 	require.NoError(t, err)
 
-	// This should succeed but log a warning because mock returns a value
-	// for a "none" type mutation
+	// type: none returns 204 No Content regardless of SQL result
 	req := httptest.NewRequest(http.MethodPost, "/execute", strings.NewReader(`{}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

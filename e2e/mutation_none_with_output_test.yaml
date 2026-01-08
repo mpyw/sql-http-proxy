@@ -1,9 +1,7 @@
-dsn: postgres://localhost/test
+dsn: "sqlite::memory:"
 
 mutations:
   - type: none
     method: POST
     path: /execute
-    sql: INSERT INTO test VALUES (1)
-    transform:
-      mock: { id: 1 }
+    sql: SELECT 1

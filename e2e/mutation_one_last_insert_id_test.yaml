@@ -4,8 +4,8 @@ mutations:
   - type: one
     method: POST
     path: /create
-    sql: INSERT INTO users (name) VALUES (:name)
+    mock:
+      object: { name: "Alice" }
     transform:
-      mock: { name: "Alice" }
       post: |
         return { id: ctx.lastInsertId, name: output.name, hasLastInsertId: ctx.lastInsertId !== undefined, hasRowsAffected: ctx.rowsAffected !== undefined }

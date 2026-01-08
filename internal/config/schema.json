@@ -39,7 +39,7 @@
           "additionalProperties": false
         }
       ],
-      "description": "Global JavaScript helpers available in all JS contexts (pre, mock, post, csv.value_parser)"
+      "description": "Global JavaScript helpers available in all JS contexts (pre, post, mock JS, filter, csv.value_parser)"
     },
     "csv": {
       "title": "CSV Config",
@@ -49,7 +49,7 @@
           "title": "Value Parser",
           "type": "string",
           "minLength": 1,
-          "description": "JavaScript code to parse CSV cell values. Signature: function(value) { return parsed }"
+          "description": "JavaScript code to parse CSV cell values. Receives: value. Returns: parsed value"
         }
       },
       "additionalProperties": false,
@@ -139,263 +139,348 @@
     "preTransform": {
       "title": "Pre-Transform",
       "type": "string",
-      "description": "JavaScript to transform parameters. Free vars: ctx, sql. Param: input"
+      "minLength": 1,
+      "description": "JavaScript to transform input before SQL/mock. Receives: input (param), ctx, sql (free vars). Returns: transformed input object"
     },
-    "filterBy": {
-      "title": "Filter By",
+    "postTransformOne": {
+      "title": "Post-Transform (type: one)",
       "type": "string",
-      "enum": ["input"],
-      "description": "Filter data by input parameters. When set, data is filtered to match input keys."
+      "minLength": 1,
+      "description": "JavaScript to transform result. Receives: input, output (params), ctx (free var). Returns: transformed output"
     },
-    "mockTransformOne": {
-      "title": "Mock Transform (type: one)",
+    "postTransformMany": {
+      "title": "Post-Transform (type: many)",
       "oneOf": [
         {
-          "title": "JavaScript Code (string)",
+          "title": "Post-Transform (all)",
           "type": "string",
-          "description": "JavaScript code (shorthand for mock.js)"
+          "minLength": 1,
+          "description": "JavaScript to transform all rows. Receives: input, output (params), ctx (free var). Returns: transformed output"
         },
         {
-          "title": "JavaScript Code (object)",
-          "type": "object",
-          "properties": { "js": { "type": "string" } },
-          "required": ["js"],
-          "additionalProperties": false,
-          "description": "JavaScript code. Free vars: ctx, sql. Param: input"
-        },
-        {
-          "title": "Inline JSON",
+          "title": "Post-Transform (each/all)",
           "type": "object",
           "properties": {
-            "json": {
-              "oneOf": [
-                { "type": "object" },
-                { "type": "string", "minLength": 1 }
-              ]
+            "each": {
+              "title": "Post-Transform (each)",
+              "type": "string",
+              "minLength": 1,
+              "description": "JavaScript to transform each row. Receives: input, output (params), ctx (free var). Returns: transformed row"
+            },
+            "all": {
+              "title": "Post-Transform (all)",
+              "type": "string",
+              "minLength": 1,
+              "description": "JavaScript to transform all rows after each. Receives: input, output (params), ctx (free var). Returns: transformed output"
             }
           },
-          "required": ["json"],
-          "additionalProperties": false,
-          "description": "Inline JSON data (object or JSON string for type: one without filter_by)"
-        },
-        {
-          "title": "Inline JSON with filter_by",
-          "type": "object",
-          "properties": {
-            "json": {
-              "oneOf": [
-                { "type": "array", "items": { "type": "object" } },
-                { "type": "string", "minLength": 1 }
-              ]
-            },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
-          },
-          "required": ["json", "filter_by"],
-          "additionalProperties": false,
-          "description": "Inline JSON array with filter_by (filters to single result)"
-        },
-        {
-          "title": "JSON File",
-          "type": "object",
-          "properties": {
-            "json_file": { "type": "string", "minLength": 1 }
-          },
-          "required": ["json_file"],
-          "additionalProperties": false,
-          "description": "Path to JSON file (for type: one without filter_by)"
-        },
-        {
-          "title": "JSON File with filter_by",
-          "type": "object",
-          "properties": {
-            "json_file": { "type": "string", "minLength": 1 },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
-          },
-          "required": ["json_file", "filter_by"],
-          "additionalProperties": false,
-          "description": "Path to JSON file with filter_by (filters to single result)"
-        },
-        {
-          "title": "Inline CSV with filter_by",
-          "type": "object",
-          "properties": {
-            "csv": { "type": "string" },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
-          },
-          "required": ["csv", "filter_by"],
-          "additionalProperties": false,
-          "description": "Inline CSV data with filter_by (required for type: one)"
-        },
-        {
-          "title": "CSV File with filter_by",
-          "type": "object",
-          "properties": {
-            "csv_file": { "type": "string" },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
-          },
-          "required": ["csv_file", "filter_by"],
-          "additionalProperties": false,
-          "description": "CSV file with filter_by (required for type: one)"
-        },
-        {
-          "title": "Inline JSONL with filter_by",
-          "type": "object",
-          "properties": {
-            "jsonl": { "type": "string" },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
-          },
-          "required": ["jsonl", "filter_by"],
-          "additionalProperties": false,
-          "description": "Inline JSONL data with filter_by (required for type: one)"
-        },
-        {
-          "title": "JSONL File with filter_by",
-          "type": "object",
-          "properties": {
-            "jsonl_file": { "type": "string" },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
-          },
-          "required": ["jsonl_file", "filter_by"],
-          "additionalProperties": false,
-          "description": "JSONL file with filter_by (required for type: one)"
-        },
-        {
-          "title": "Plain Object Shorthand",
-          "type": "object",
-          "not": {
-            "anyOf": [
-              { "required": ["js"] },
-              { "required": ["json"] },
-              { "required": ["json_file"] },
-              { "required": ["csv"] },
-              { "required": ["csv_file"] },
-              { "required": ["jsonl"] },
-              { "required": ["jsonl_file"] },
-              { "required": ["filter_by"] }
-            ]
-          },
-          "description": "Plain object shorthand for JSON data (e.g., { id: 1, name: 'Alice' })"
+          "additionalProperties": false
         }
+      ],
+      "description": "JavaScript to transform results"
+    },
+    "filter": {
+      "title": "Filter",
+      "type": "string",
+      "minLength": 1,
+      "description": "JavaScript to filter array data. Receives: row, input (params), ctx (free var). Returns: boolean (true to include)"
+    },
+    "mockOneObject": {
+      "title": "Mock (type: one, object sources)",
+      "type": "object",
+      "oneOf": [
+        {
+          "title": "YAML Object",
+          "properties": {
+            "object": {
+              "type": "object",
+              "description": "Inline YAML object"
+            }
+          },
+          "required": ["object"],
+          "additionalProperties": false
+        },
+        {
+          "title": "JSON String (object)",
+          "properties": {
+            "object_json": {
+              "type": "string",
+              "minLength": 1,
+              "description": "JSON string containing object"
+            }
+          },
+          "required": ["object_json"],
+          "additionalProperties": false
+        },
+        {
+          "title": "JSON File (object)",
+          "properties": {
+            "object_json_file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path to JSON file containing object"
+            }
+          },
+          "required": ["object_json_file"],
+          "additionalProperties": false
+        },
+        {
+          "title": "JavaScript (object)",
+          "properties": {
+            "object_js": {
+              "type": "string",
+              "minLength": 1,
+              "description": "JavaScript code returning object. Receives: input (param), ctx, sql (free vars)"
+            }
+          },
+          "required": ["object_js"],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Mock data source returning single object for type: one"
+    },
+    "mockOneArray": {
+      "title": "Mock (type: one, array sources with filter)",
+      "type": "object",
+      "oneOf": [
+        {
+          "title": "YAML Array with filter",
+          "properties": {
+            "array": {
+              "type": "array",
+              "items": { "type": "object" },
+              "description": "Inline YAML array of objects"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
+          },
+          "required": ["array", "filter"],
+          "additionalProperties": false
+        },
+        {
+          "title": "JSON String (array) with filter",
+          "properties": {
+            "array_json": {
+              "type": "string",
+              "minLength": 1,
+              "description": "JSON string containing array of objects"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
+          },
+          "required": ["array_json", "filter"],
+          "additionalProperties": false
+        },
+        {
+          "title": "JSON File (array) with filter",
+          "properties": {
+            "array_json_file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path to JSON file containing array of objects"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
+          },
+          "required": ["array_json_file", "filter"],
+          "additionalProperties": false
+        },
+        {
+          "title": "CSV with filter",
+          "properties": {
+            "csv": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inline CSV data with header row"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
+          },
+          "required": ["csv", "filter"],
+          "additionalProperties": false
+        },
+        {
+          "title": "CSV File with filter",
+          "properties": {
+            "csv_file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path to CSV file"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
+          },
+          "required": ["csv_file", "filter"],
+          "additionalProperties": false
+        },
+        {
+          "title": "JSONL with filter",
+          "properties": {
+            "jsonl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inline JSONL data (one JSON object per line)"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
+          },
+          "required": ["jsonl", "filter"],
+          "additionalProperties": false
+        },
+        {
+          "title": "JSONL File with filter",
+          "properties": {
+            "jsonl_file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path to JSONL file"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
+          },
+          "required": ["jsonl_file", "filter"],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Mock data source using array with required filter for type: one"
+    },
+    "mockOne": {
+      "title": "Mock (type: one)",
+      "oneOf": [
+        { "$ref": "#/$defs/mockOneObject" },
+        { "$ref": "#/$defs/mockOneArray" }
       ],
       "description": "Mock data source for type: one"
     },
-    "mockTransformMany": {
-      "title": "Mock Transform (type: many)",
+    "mockMany": {
+      "title": "Mock (type: many)",
+      "type": "object",
       "oneOf": [
         {
-          "title": "JavaScript Code (string)",
-          "type": "string",
-          "description": "JavaScript code (shorthand for mock.js)"
-        },
-        {
-          "title": "JavaScript Code (object)",
-          "type": "object",
-          "properties": { "js": { "type": "string" } },
-          "required": ["js"],
-          "additionalProperties": false,
-          "description": "JavaScript code. Free vars: ctx, sql. Param: input"
-        },
-        {
-          "title": "Inline CSV",
-          "type": "object",
+          "title": "YAML Array",
           "properties": {
-            "csv": { "type": "string" },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
+            "array": {
+              "type": "array",
+              "items": { "type": "object" },
+              "description": "Inline YAML array of objects"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
+          },
+          "required": ["array"],
+          "additionalProperties": false
+        },
+        {
+          "title": "JSON String (array)",
+          "properties": {
+            "array_json": {
+              "type": "string",
+              "minLength": 1,
+              "description": "JSON string containing array of objects"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
+          },
+          "required": ["array_json"],
+          "additionalProperties": false
+        },
+        {
+          "title": "JSON File (array)",
+          "properties": {
+            "array_json_file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path to JSON file containing array of objects"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
+          },
+          "required": ["array_json_file"],
+          "additionalProperties": false
+        },
+        {
+          "title": "JavaScript (array)",
+          "properties": {
+            "array_js": {
+              "type": "string",
+              "minLength": 1,
+              "description": "JavaScript code returning array. Receives: input (param), ctx, sql (free vars)"
+            }
+          },
+          "required": ["array_js"],
+          "additionalProperties": false
+        },
+        {
+          "title": "CSV",
+          "properties": {
+            "csv": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inline CSV data with header row"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["csv"],
-          "additionalProperties": false,
-          "description": "Inline CSV data with header row"
+          "additionalProperties": false
         },
         {
           "title": "CSV File",
-          "type": "object",
           "properties": {
-            "csv_file": { "type": "string" },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
+            "csv_file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path to CSV file"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["csv_file"],
-          "additionalProperties": false,
-          "description": "Path to CSV file (relative to config file)"
+          "additionalProperties": false
         },
         {
-          "title": "Inline JSON",
-          "type": "object",
+          "title": "JSONL",
           "properties": {
-            "json": {
-              "oneOf": [
-                { "type": "array", "items": { "type": "object" } },
-                { "type": "string", "minLength": 1 }
-              ]
+            "jsonl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inline JSONL data (one JSON object per line)"
             },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
-          },
-          "required": ["json"],
-          "additionalProperties": false,
-          "description": "Inline JSON data (array or JSON string)"
-        },
-        {
-          "title": "JSON File",
-          "type": "object",
-          "properties": {
-            "json_file": { "type": "string", "minLength": 1 },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
-          },
-          "required": ["json_file"],
-          "additionalProperties": false,
-          "description": "Path to JSON file (relative to config file)"
-        },
-        {
-          "title": "Inline JSONL",
-          "type": "object",
-          "properties": {
-            "jsonl": { "type": "string", "minLength": 1 },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
+            "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["jsonl"],
-          "additionalProperties": false,
-          "description": "Inline JSONL data (one JSON object per line)"
+          "additionalProperties": false
         },
         {
           "title": "JSONL File",
-          "type": "object",
           "properties": {
-            "jsonl_file": { "type": "string", "minLength": 1 },
-            "filter_by": { "$ref": "#/$defs/filterBy" }
+            "jsonl_file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path to JSONL file"
+            },
+            "filter": { "$ref": "#/$defs/filter" }
           },
           "required": ["jsonl_file"],
-          "additionalProperties": false,
-          "description": "Path to JSONL file (relative to config file)"
-        },
-        {
-          "title": "Array Shorthand",
-          "type": "array",
-          "items": { "type": "object" },
-          "description": "Array shorthand for JSON data (e.g., [{ id: 1 }, { id: 2 }])"
-        },
-        {
-          "title": "Plain Object Shorthand",
-          "type": "object",
-          "not": {
-            "anyOf": [
-              { "required": ["js"] },
-              { "required": ["csv"] },
-              { "required": ["csv_file"] },
-              { "required": ["json"] },
-              { "required": ["json_file"] },
-              { "required": ["jsonl"] },
-              { "required": ["jsonl_file"] },
-              { "required": ["filter_by"] }
-            ]
-          },
-          "description": "Plain object shorthand for JSON data (e.g., { id: 1, name: 'Alice' })"
+          "additionalProperties": false
         }
       ],
-      "description": "Mock data source for type: many (all formats supported)"
+      "description": "Mock data source for type: many (filter is optional)"
     },
-    "postTransformAll": {
-      "title": "Post-Transform (all)",
-      "type": "string",
-      "description": "Transform result. Signature: function(ctx, input, output)"
+    "transformOne": {
+      "title": "Transform (type: one)",
+      "type": "object",
+      "properties": {
+        "pre": { "$ref": "#/$defs/preTransform" },
+        "post": { "$ref": "#/$defs/postTransformOne" }
+      },
+      "additionalProperties": false
+    },
+    "transformMany": {
+      "title": "Transform (type: many)",
+      "type": "object",
+      "properties": {
+        "pre": { "$ref": "#/$defs/preTransform" },
+        "post": { "$ref": "#/$defs/postTransformMany" }
+      },
+      "additionalProperties": false
+    },
+    "transformNone": {
+      "title": "Transform (type: none)",
+      "type": "object",
+      "properties": {
+        "pre": { "$ref": "#/$defs/preTransform" }
+      },
+      "additionalProperties": false,
+      "description": "Transform for mutations with no return value (pre only, no post)"
     },
     "queryOne": {
       "title": "Query (type: one)",
@@ -408,16 +493,19 @@
         "method": { "$ref": "#/$defs/queryMethod" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
+        "mock": { "$ref": "#/$defs/mockOne" },
         "accepts": { "$ref": "#/$defs/accepts" },
         "handle_not_found": {
           "type": "boolean",
           "description": "Pass null to post-transform instead of returning 404"
         },
-        "transform": {
-          "$ref": "#/$defs/transformOne"
-        }
+        "transform": { "$ref": "#/$defs/transformOne" }
       },
-      "required": ["type", "path", "sql"],
+      "required": ["type", "path"],
+      "oneOf": [
+        { "required": ["sql"] },
+        { "required": ["mock"] }
+      ],
       "additionalProperties": false
     },
     "queryMany": {
@@ -431,12 +519,15 @@
         "method": { "$ref": "#/$defs/queryMethod" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
+        "mock": { "$ref": "#/$defs/mockMany" },
         "accepts": { "$ref": "#/$defs/accepts" },
-        "transform": {
-          "$ref": "#/$defs/transformMany"
-        }
+        "transform": { "$ref": "#/$defs/transformMany" }
       },
-      "required": ["type", "path", "sql"],
+      "required": ["type", "path"],
+      "oneOf": [
+        { "required": ["sql"] },
+        { "required": ["mock"] }
+      ],
       "additionalProperties": false
     },
     "mutationOne": {
@@ -450,12 +541,15 @@
         "method": { "$ref": "#/$defs/method" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
+        "mock": { "$ref": "#/$defs/mockOne" },
         "accepts": { "$ref": "#/$defs/accepts" },
-        "transform": {
-          "$ref": "#/$defs/transformOne"
-        }
+        "transform": { "$ref": "#/$defs/transformOne" }
       },
-      "required": ["type", "path", "sql"],
+      "required": ["type", "path"],
+      "oneOf": [
+        { "required": ["sql"] },
+        { "required": ["mock"] }
+      ],
       "additionalProperties": false
     },
     "mutationMany": {
@@ -469,12 +563,15 @@
         "method": { "$ref": "#/$defs/method" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
+        "mock": { "$ref": "#/$defs/mockMany" },
         "accepts": { "$ref": "#/$defs/accepts" },
-        "transform": {
-          "$ref": "#/$defs/transformMany"
-        }
+        "transform": { "$ref": "#/$defs/transformMany" }
       },
-      "required": ["type", "path", "sql"],
+      "required": ["type", "path"],
+      "oneOf": [
+        { "required": ["sql"] },
+        { "required": ["mock"] }
+      ],
       "additionalProperties": false
     },
     "mutationNone": {
@@ -489,65 +586,10 @@
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
         "accepts": { "$ref": "#/$defs/accepts" },
-        "transform": {
-          "$ref": "#/$defs/transformNone"
-        }
+        "transform": { "$ref": "#/$defs/transformNone" }
       },
       "required": ["type", "path", "sql"],
       "additionalProperties": false
-    },
-    "transformOne": {
-      "title": "Transform (type: one)",
-      "type": "object",
-      "properties": {
-        "pre": { "$ref": "#/$defs/preTransform" },
-        "mock": { "$ref": "#/$defs/mockTransformOne" },
-        "post": {
-          "title": "Post-Transform",
-          "type": "string",
-          "description": "JavaScript to transform result. Signature: function(ctx, input, output)"
-        }
-      },
-      "additionalProperties": false
-    },
-    "transformMany": {
-      "title": "Transform (type: many)",
-      "type": "object",
-      "properties": {
-        "pre": { "$ref": "#/$defs/preTransform" },
-        "mock": { "$ref": "#/$defs/mockTransformMany" },
-        "post": {
-          "title": "Post-Transform",
-          "oneOf": [
-            { "$ref": "#/$defs/postTransformAll" },
-            {
-              "title": "Post-Transform (each/all)",
-              "type": "object",
-              "properties": {
-                "each": {
-                  "title": "Post-Transform (each)",
-                  "type": "string",
-                  "description": "Transform each row individually. Signature: function(ctx, input, output)"
-                },
-                "all": { "$ref": "#/$defs/postTransformAll" }
-              },
-              "additionalProperties": false
-            }
-          ],
-          "description": "JavaScript to transform results"
-        }
-      },
-      "additionalProperties": false
-    },
-    "transformNone": {
-      "title": "Transform (type: none)",
-      "type": "object",
-      "properties": {
-        "pre": { "$ref": "#/$defs/preTransform" },
-        "mock": { "$ref": "#/$defs/mockTransformOne" }
-      },
-      "additionalProperties": false,
-      "description": "Transform for mutations with no return value (pre only, no post)"
     }
   }
 }

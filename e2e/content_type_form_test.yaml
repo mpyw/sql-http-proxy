@@ -5,7 +5,6 @@ mutations:
     path: /user
     method: POST
     accepts: form
-    sql: SELECT :name as name, :age as age
-    transform:
-      mock: |
+    mock:
+      object_js: |
         return input

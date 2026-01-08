@@ -22,10 +22,8 @@ csv:
 queries:
   - type: many
     path: /data
-    sql: SELECT 1
-    transform:
-      mock:
-        csv: |
-          id,name,active,score,date,empty
-          1,Alice,true,95.5,2024-01-15,
-          2,Bob,false,87,2024-02-20,null
+    mock:
+      csv: |
+        id,name,active,score,date,empty
+        1,Alice,true,95.5,2024-01-15,
+        2,Bob,false,87,2024-02-20,null

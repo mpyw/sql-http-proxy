@@ -10,6 +10,7 @@ import (
 
 	"github.com/mpyw/sql-http-proxy/internal/config"
 	"github.com/mpyw/sql-http-proxy/internal/db"
+	"github.com/mpyw/sql-http-proxy/internal/mock"
 )
 
 // QueryExecutor executes queries (mock or DB).
@@ -17,6 +18,7 @@ type QueryExecutor struct {
 	db         *sqlx.DB
 	query      config.Query
 	transforms *Transforms
+	mockSource mock.Source
 }
 
 // NewQueryExecutor creates a new QueryExecutor with pre-compiled transforms.
@@ -26,10 +28,17 @@ func NewQueryExecutor(db *sqlx.DB, query config.Query, opts CompileTransformOpti
 		return nil, err
 	}
 
+	// Compile mock from query level
+	mockSource, err := CompileMock(query.Mock, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	return &QueryExecutor{
 		db:         db,
 		query:      query,
 		transforms: transforms,
+		mockSource: mockSource,
 	}, nil
 }
 
@@ -57,7 +66,7 @@ func (e *QueryExecutor) Execute(reqCtx context.Context, params map[string]any, o
 	}
 
 	// Execute mock or DB
-	if e.transforms.Mock != nil {
+	if e.mockSource != nil {
 		return e.executeMock(ctx, currentSQL, params, originalParams, opts)
 	}
 	return e.executeDB(reqCtx, ctx, currentSQL, params, originalParams, opts)
@@ -75,7 +84,7 @@ func (e *QueryExecutor) executeMock(ctx map[string]any, sqlStr string, params, o
 		})
 	}
 
-	mockOutput, newCtx, err := e.transforms.Mock.Data(ctx, sqlStr, params)
+	mockOutput, newCtx, err := e.mockSource.Data(ctx, sqlStr, params)
 	if err != nil {
 		return nil, WrapMockError(err)
 	}
@@ -146,7 +155,7 @@ func (e *QueryExecutor) processOneResult(ctx, originalParams map[string]any, out
 	case map[string]any:
 		entry = v
 	case []any:
-		// For filter_by: take first element or nil
+		// For filter: take first element or nil
 		if len(v) == 0 {
 			if !e.query.HandleNotFound {
 				return nil, ErrNotFound

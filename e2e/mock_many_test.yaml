@@ -3,9 +3,8 @@ dsn: file::memory:?cache=shared
 queries:
   - type: many
     path: /users
-    sql: SELECT * FROM users
-    transform:
-      mock: |
+    mock:
+      array_js: |
         return [
           { id: 1, name: "User 1" },
           { id: 2, name: "User 2" },

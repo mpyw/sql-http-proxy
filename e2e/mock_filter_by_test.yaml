@@ -1,36 +1,30 @@
 dsn: postgres://localhost/test
 
 queries:
-  # type: one with filter_by - returns first matching row or 404
+  # type: one with filter - returns first matching row or 404
   - type: one
     path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      mock:
-        filter_by: input
-        json:
-          - { id: 1, name: Alice }
-          - { id: 2, name: Bob }
-          - { id: 3, name: Charlie }
+    mock:
+      filter: return row.id == parseInt(input.id)
+      array:
+        - { id: 1, name: Alice }
+        - { id: 2, name: Bob }
+        - { id: 3, name: Charlie }
 
-  # type: many with filter_by - returns all matching rows
+  # type: many with filter - returns all matching rows
   - type: many
     path: /users
-    sql: SELECT * FROM users WHERE role = :role
-    transform:
-      mock:
-        filter_by: input
-        json:
-          - { id: 1, name: Alice, role: admin }
-          - { id: 2, name: Bob, role: user }
-          - { id: 3, name: Charlie, role: admin }
+    mock:
+      filter: return row.role == input.role
+      array:
+        - { id: 1, name: Alice, role: admin }
+        - { id: 2, name: Bob, role: user }
+        - { id: 3, name: Charlie, role: admin }
 
   # type: many without filter - returns all rows
   - type: many
     path: /all-users
-    sql: SELECT * FROM users
-    transform:
-      mock:
-        json:
-          - { id: 1, name: Alice }
-          - { id: 2, name: Bob }
+    mock:
+      array:
+        - { id: 1, name: Alice }
+        - { id: 2, name: Bob }

@@ -4,9 +4,8 @@ mutations:
   - type: many
     path: /users
     method: POST
-    sql: UPDATE users SET email = UPPER(email) RETURNING *
-    transform:
-      mock: |
+    mock:
+      array_js: |
         return [
           { id: 1, email: "mock1@example.com" },
           { id: 2, email: "mock2@example.com" }

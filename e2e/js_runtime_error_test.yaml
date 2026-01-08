@@ -3,23 +3,22 @@ dsn: postgres://localhost/test
 queries:
   - type: one
     path: /pre-error
-    sql: SELECT 1
+    mock:
+      object: { id: 1 }
     transform:
-      mock: { id: 1 }
       pre: |
         throw new Error("pre error")
 
   - type: one
     path: /mock-error
-    sql: SELECT 1
-    transform:
-      mock: |
+    mock:
+      object_js: |
         throw new Error("mock error")
 
   - type: one
     path: /post-error
-    sql: SELECT 1
+    mock:
+      object: { id: 1 }
     transform:
-      mock: { id: 1 }
       post: |
         throw new Error("post error")

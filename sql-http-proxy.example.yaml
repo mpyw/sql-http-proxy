@@ -8,8 +8,7 @@
 # -----------------------------------------------------------------------------
 # Global Helpers
 # -----------------------------------------------------------------------------
-# JavaScript functions available in all JS contexts (pre, mock, post, csv.value_parser)
-# Can use shorthand: `global_helpers: |` for inline JS only
+# JavaScript functions available in all JS contexts (pre, post, mock JS, filter, csv.value_parser)
 
 global_helpers:
   js: |
@@ -62,7 +61,7 @@ global_helpers:
 # -----------------------------------------------------------------------------
 # CSV Value Parser
 # -----------------------------------------------------------------------------
-# Custom parsing for CSV cell values (used in mock.csv and mock.csv_file)
+# Custom parsing for CSV cell values (used in mock csv and csv_file)
 # Has access to global_helpers functions
 
 csv:
@@ -316,17 +315,19 @@ queries:
   # ===========================================================================
   # Mock allows returning data without database connection
   # Useful for testing, prototyping, or static data endpoints
+  # Mock is at the same level as sql - use one or the other, not both
 
   # ---------------------------------------------------------------------------
-  # Mock: JavaScript (inline)
+  # Mock: object_js (type: one)
   # ---------------------------------------------------------------------------
-  # Shorthand: `mock: |` is equivalent to `mock: { js: | }`
+  # JavaScript returning a single object
+  # Free variables: ctx, sql
+  # Parameter: input (request params)
 
   - type: one
     path: /mock/user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      mock: |
+    mock:
+      object_js: |
         if (input.id === '404') {
           return null;  // Returns 404 for type: one
         }
@@ -337,138 +338,140 @@ queries:
           created_at: new Date().toISOString()
         };
 
+  # ---------------------------------------------------------------------------
+  # Mock: array_js (type: many)
+  # ---------------------------------------------------------------------------
+  # JavaScript returning an array
+
   - type: many
     path: /mock/users
-    sql: SELECT * FROM users
-    transform:
-      mock:
-        js: |
-          const count = parseInt(input.count) || 3;
-          const users = [];
-          for (let i = 1; i <= count; i++) {
-            users.push({
-              id: i,
-              name: 'User ' + i,
-              email: 'user' + i + '@example.com'
-            });
-          }
-          return users;
+    mock:
+      array_js: |
+        const count = parseInt(input.count) || 3;
+        const users = [];
+        for (let i = 1; i <= count; i++) {
+          users.push({
+            id: i,
+            name: 'User ' + i,
+            email: 'user' + i + '@example.com'
+          });
+        }
+        return users;
 
   # ---------------------------------------------------------------------------
-  # Mock: CSV (inline)
+  # Mock: csv (inline)
   # ---------------------------------------------------------------------------
   # CSV is parsed using csv.value_parser if configured
 
   - type: many
     path: /mock/products
-    sql: SELECT * FROM products
-    transform:
-      mock:
-        csv: |
-          id,name,price,in_stock,created_at
-          1,Widget,19.99,true,2024-01-15
-          2,Gadget,29.99,true,2024-02-20
-          3,Gizmo,9.99,false,2024-03-10
+    mock:
+      csv: |
+        id,name,price,in_stock,created_at
+        1,Widget,19.99,true,2024-01-15
+        2,Gadget,29.99,true,2024-02-20
+        3,Gizmo,9.99,false,2024-03-10
 
   # ---------------------------------------------------------------------------
-  # Mock: CSV (file)
+  # Mock: csv_file (file)
   # ---------------------------------------------------------------------------
 
   # - type: many
   #   path: /mock/products-from-file
-  #   sql: SELECT * FROM products
-  #   transform:
-  #     mock:
-  #       csv_file: ./mocks/products.csv
+  #   mock:
+  #     csv_file: ./mocks/products.csv
 
   # ---------------------------------------------------------------------------
-  # Mock: JSON (inline)
+  # Mock: array (YAML array)
   # ---------------------------------------------------------------------------
 
   - type: many
     path: /mock/categories
-    sql: SELECT * FROM categories
-    transform:
-      mock:
-        json:
-          - id: 1
-            name: Electronics
-            description: Electronic devices and accessories
-          - id: 2
-            name: Clothing
-            description: Apparel and fashion items
-          - id: 3
-            name: Books
-            description: Physical and digital books
+    mock:
+      array:
+        - id: 1
+          name: Electronics
+          description: Electronic devices and accessories
+        - id: 2
+          name: Clothing
+          description: Apparel and fashion items
+        - id: 3
+          name: Books
+          description: Physical and digital books
+
+  # ---------------------------------------------------------------------------
+  # Mock: object (YAML object, type: one)
+  # ---------------------------------------------------------------------------
 
   - type: one
     path: /mock/config
-    sql: SELECT * FROM config WHERE key = :key
-    transform:
-      mock:
-        json:
-          key: app_settings
-          value: { theme: dark, language: en }
-          updated_at: "2024-01-01T00:00:00Z"
+    mock:
+      object:
+        key: app_settings
+        value: { theme: dark, language: en }
+        updated_at: "2024-01-01T00:00:00Z"
 
   # ---------------------------------------------------------------------------
-  # Mock: JSON Shorthand (object/array without explicit json: key)
-  # ---------------------------------------------------------------------------
-  # Plain objects and arrays are automatically treated as JSON data
-
-  # Array shorthand (for type: many)
-  - type: many
-    path: /mock/tags
-    sql: SELECT * FROM tags
-    transform:
-      mock:
-        - { id: 1, name: feature }
-        - { id: 2, name: bug }
-        - { id: 3, name: enhancement }
-
-  # Object shorthand (for type: one)
-  - type: one
-    path: /mock/status
-    sql: SELECT * FROM status WHERE id = 1
-    transform:
-      mock: { healthy: true, uptime: 99.9, version: "1.0.0" }
-
-  # ---------------------------------------------------------------------------
-  # Mock: JSON (file)
+  # Mock: array_json_file (file)
   # ---------------------------------------------------------------------------
 
   # - type: many
   #   path: /mock/categories-from-file
-  #   sql: SELECT * FROM categories
-  #   transform:
-  #     mock:
-  #       json_file: ./mocks/categories.json
+  #   mock:
+  #     array_json_file: ./mocks/categories.json
 
   # ---------------------------------------------------------------------------
-  # Mock: JSONL (inline)
+  # Mock: jsonl (inline)
   # ---------------------------------------------------------------------------
   # JSON Lines format - one JSON object per line
 
   - type: many
     path: /mock/logs
-    sql: SELECT * FROM logs
-    transform:
-      mock:
-        jsonl: |
-          {"id": 1, "level": "info", "message": "Server started"}
-          {"id": 2, "level": "warn", "message": "High memory usage"}
-          {"id": 3, "level": "error", "message": "Connection timeout"}
+    mock:
+      jsonl: |
+        {"id": 1, "level": "info", "message": "Server started"}
+        {"id": 2, "level": "warn", "message": "High memory usage"}
+        {"id": 3, "level": "error", "message": "Connection timeout"}
 
   # ---------------------------------------------------------------------------
-  # Mock: JSONL (file)
+  # Mock: jsonl_file (file)
   # ---------------------------------------------------------------------------
 
   # - type: many
   #   path: /mock/logs-from-file
-  #   sql: SELECT * FROM logs
-  #   transform:
-  #     mock:
-  #       jsonl_file: ./mocks/logs.jsonl
+  #   mock:
+  #     jsonl_file: ./mocks/logs.jsonl
+
+  # ---------------------------------------------------------------------------
+  # Mock with filter (type: one using array source)
+  # ---------------------------------------------------------------------------
+  # filter is required when using array sources with type: one
+  # Free variables: ctx
+  # Parameters: row (current item), input (request params)
+  # Returns: boolean (true to include)
+
+  - type: one
+    path: /mock/user-by-email
+    mock:
+      array:
+        - { id: 1, name: Alice, email: alice@example.com }
+        - { id: 2, name: Bob, email: bob@example.com }
+        - { id: 3, name: Charlie, email: charlie@example.com }
+      filter: return row.email === input.email
+
+  # ---------------------------------------------------------------------------
+  # Mock with filter (type: many)
+  # ---------------------------------------------------------------------------
+  # filter is optional for type: many
+
+  - type: many
+    path: /mock/users-by-role
+    mock:
+      array:
+        - { id: 1, name: Alice, role: admin }
+        - { id: 2, name: Bob, role: user }
+        - { id: 3, name: Charlie, role: admin }
+      filter: return !input.role || row.role === input.role
 
   # ---------------------------------------------------------------------------
   # Mock with Post-Transform
@@ -477,13 +480,12 @@ queries:
 
   - type: many
     path: /mock/users-transformed
-    sql: SELECT * FROM users
+    mock:
+      csv: |
+        id,first_name,last_name,email
+        1,John,Doe,john@example.com
+        2,Jane,Smith,jane@example.com
     transform:
-      mock:
-        csv: |
-          id,first_name,last_name,email
-          1,John,Doe,john@example.com
-          2,Jane,Smith,jane@example.com
       post:
         each: |
           return {
@@ -592,9 +594,8 @@ mutations:
   - type: one
     method: POST
     path: /mock/user
-    sql: INSERT INTO users (name, email) VALUES (:name, :email) RETURNING *
-    transform:
-      mock: |
+    mock:
+      object_js: |
         return {
           id: Math.floor(Math.random() * 10000),
           name: input.name,
@@ -605,12 +606,11 @@ mutations:
   - type: none
     method: DELETE
     path: /mock/user
-    sql: DELETE FROM users WHERE id = :id
+    sql: SELECT 1  # type: none requires sql (mock not supported)
     transform:
-      mock: |
-        // type: none ignores return value
-        // Just validate the request
+      pre: |
+        // Validate the request
         if (!input.id) {
           throw { status: 400, body: { error: 'id is required' } };
         }
-        return null;
+        return { id: input.id };

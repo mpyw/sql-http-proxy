@@ -4,6 +4,5 @@ mutations:
   - type: one
     method: POST
     path: /json
-    sql: SELECT 1
-    transform:
-      mock: { received: true }
+    mock:
+      object: { received: true }

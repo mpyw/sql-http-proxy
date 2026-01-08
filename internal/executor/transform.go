@@ -12,7 +12,6 @@ import (
 // Transforms holds pre-compiled transforms.
 type Transforms struct {
 	Pre      *js.Transformer
-	Mock     mock.Source
 	PostEach *js.Transformer
 	PostAll  *js.Transformer
 }
@@ -25,6 +24,7 @@ type CompileTransformOptions struct {
 }
 
 // CompileTransforms compiles all transforms from a config.Transform.
+// Note: mock is now compiled separately via CompileMock.
 func CompileTransforms(t *config.Transform, opts CompileTransformOptions) (*Transforms, error) {
 	if t == nil {
 		return &Transforms{}, nil
@@ -41,21 +41,6 @@ func CompileTransforms(t *config.Transform, opts CompileTransformOptions) (*Tran
 		} else {
 			pre.SetHelpers(opts.Helpers)
 			transforms.Pre = pre
-		}
-	}
-
-	// Compile mock source
-	if t.Mock != nil && !t.Mock.IsEmpty() {
-		mockOpts := mock.CompileOptions{
-			ConfigDir:   opts.ConfigDir,
-			Helpers:     opts.Helpers,
-			ValueParser: opts.ValueParser,
-		}
-		mockSource, err := mock.Compile(t.Mock, mockOpts)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("mock: %w", err))
-		} else {
-			transforms.Mock = mockSource
 		}
 	}
 
@@ -85,4 +70,19 @@ func CompileTransforms(t *config.Transform, opts CompileTransformOptions) (*Tran
 		return nil, errors.Join(errs...)
 	}
 	return transforms, nil
+}
+
+// CompileMock compiles a mock source from config.Mock.
+func CompileMock(m *config.Mock, opts CompileTransformOptions) (mock.Source, error) {
+	if m == nil || m.IsEmpty() {
+		return nil, nil
+	}
+
+	mockOpts := mock.CompileOptions{
+		ConfigDir:   opts.ConfigDir,
+		Helpers:     opts.Helpers,
+		ValueParser: opts.ValueParser,
+	}
+
+	return mock.Compile(m, mockOpts)
 }

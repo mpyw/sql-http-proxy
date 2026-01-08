@@ -6,43 +6,39 @@ queries:
   # Test global helper in pre-transform
   - type: one
     path: /pre
-    sql: SELECT 1
+    mock:
+      object: { result: "from mock" }
     transform:
       pre: |
         ctx.doubled = double(parseInt(input.n));
         return input;
-      mock:
-        json: { result: "from mock" }
       post: |
         return { ...output, input_doubled: ctx.doubled };
 
   # Test global helper in mock
   - type: one
     path: /mock
-    sql: SELECT 1
-    transform:
-      mock: |
+    mock:
+      object_js: |
         return { value: double(10) };
 
   # Test global helper in post-transform
   - type: one
     path: /post
-    sql: SELECT 1
+    mock:
+      object: { first: "John", last: "Doe" }
     transform:
-      mock:
-        json: { first: "John", last: "Doe" }
       post: |
         return { fullName: formatName(output.first, output.last) };
 
   # Test global helper in post.each
   - type: many
     path: /each
-    sql: SELECT 1
+    mock:
+      array:
+        - { value: 5 }
+        - { value: 10 }
     transform:
-      mock:
-        json:
-          - { value: 5 }
-          - { value: 10 }
       post:
         each: |
           return { ...output, doubled: double(output.value) };

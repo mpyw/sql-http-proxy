@@ -4,7 +4,6 @@ dsn: null
 queries:
   - type: one
     path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      mock: |
+    mock:
+      object_js: |
         return { id: parseInt(input.id), name: "Mock User" };

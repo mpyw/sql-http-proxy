@@ -4,15 +4,14 @@ queries:
   - type: one
     method: POST
     path: /search
-    sql: SELECT 1
+    mock:
+      object: { id: 1 }
     transform:
-      mock: { id: 1 }
       post: |
         return { query: input.query, result: output }
 
   - type: one
     method: GET
     path: /get-only
-    sql: SELECT 1
-    transform:
-      mock: { id: 1 }
+    mock:
+      object: { id: 1 }

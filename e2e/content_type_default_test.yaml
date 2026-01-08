@@ -4,7 +4,6 @@ mutations:
   - type: one
     path: /user
     method: POST
-    sql: SELECT :name as name
-    transform:
-      mock: |
+    mock:
+      object_js: |
         return input

@@ -3,14 +3,14 @@ dsn: file::memory:?cache=shared
 queries:
   - type: one
     path: /user
-    sql: SELECT * FROM users WHERE id = :id
     handle_not_found: true
-    transform:
-      mock: |
+    mock:
+      object_js: |
         if (input.id === "999") {
           return null;
         }
         return { id: parseInt(input.id), name: "Mock User" };
+    transform:
       post: |
         if (output === null) {
           return { found: false, default: "guest" };

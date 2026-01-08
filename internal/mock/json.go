@@ -28,6 +28,15 @@ func NewJSON(data any) (*JSONSource, error) {
 	return &JSONSource{data: data}, nil
 }
 
+// ParseJSONString parses a JSON string into a JSONSource.
+func ParseJSONString(jsonStr string) (*JSONSource, error) {
+	var parsed any
+	if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
+		return nil, err
+	}
+	return &JSONSource{data: parsed}, nil
+}
+
 // ParseJSONFile parses a JSON file into a JSONSource.
 func ParseJSONFile(path string) (*JSONSource, error) {
 	f, err := os.Open(path)

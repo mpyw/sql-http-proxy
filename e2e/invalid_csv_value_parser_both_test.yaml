@@ -6,6 +6,5 @@ csv:
 queries:
   - type: one
     path: /test
-    sql: SELECT 1
-    transform:
-      mock: { id: 1 }
+    mock:
+      object: { id: 1 }

@@ -2,7 +2,6 @@ mutations:
   - type: one
     method: POST
     path: /user
-    sql: INSERT INTO users (first_name, last_name, email) VALUES (:first_name, :last_name, :email) RETURNING *
-    transform:
-      mock: |
+    mock:
+      object_js: |
         return { id: 999, first_name: input.first_name, last_name: input.last_name, email: input.email };

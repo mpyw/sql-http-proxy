@@ -10,8 +10,9 @@ import (
 )
 
 func TestMutationMockNone(t *testing.T) {
+	db := setupTestDB(t)
 	cfg := loadConfig(t, "mutation_mock_none_test.yaml")
-	handler := createMutationHandler(t, nil, cfg)
+	handler := createMutationHandler(t, db, cfg)
 
 	body := `{"id": 1}`
 	req := httptest.NewRequest("DELETE", "/user", strings.NewReader(body))

@@ -2,8 +2,7 @@ queries:
   - type: one
     method: POST
     path: /user
-    sql: SELECT 1
     accepts: form
-    transform:
-      mock: |
+    mock:
+      object_js: |
         return { id: parseInt(input.id), name: input.name };

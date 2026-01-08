@@ -10,6 +10,7 @@ import (
 
 	"github.com/mpyw/sql-http-proxy/internal/config"
 	"github.com/mpyw/sql-http-proxy/internal/db"
+	"github.com/mpyw/sql-http-proxy/internal/mock"
 )
 
 // MutationResult holds the result of a mutation execution.
@@ -23,6 +24,7 @@ type MutationExecutor struct {
 	db         *sqlx.DB
 	mutation   config.Mutation
 	transforms *Transforms
+	mockSource mock.Source
 }
 
 // NewMutationExecutor creates a new MutationExecutor with pre-compiled transforms.
@@ -32,10 +34,17 @@ func NewMutationExecutor(db *sqlx.DB, mutation config.Mutation, opts CompileTran
 		return nil, err
 	}
 
+	// Compile mock from mutation level
+	mockSource, err := CompileMock(mutation.Mock, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	return &MutationExecutor{
 		db:         db,
 		mutation:   mutation,
 		transforms: transforms,
+		mockSource: mockSource,
 	}, nil
 }
 
@@ -62,7 +71,7 @@ func (e *MutationExecutor) Execute(reqCtx context.Context, params map[string]any
 	}
 
 	// Execute mock or DB
-	if e.transforms.Mock != nil {
+	if e.mockSource != nil {
 		return e.executeMock(ctx, currentSQL, params, originalParams, opts)
 	}
 	return e.executeDB(reqCtx, ctx, currentSQL, params, originalParams, opts)
@@ -80,7 +89,7 @@ func (e *MutationExecutor) executeMock(ctx map[string]any, sqlStr string, params
 		})
 	}
 
-	mockOutput, newCtx, err := e.transforms.Mock.Data(ctx, sqlStr, params)
+	mockOutput, newCtx, err := e.mockSource.Data(ctx, sqlStr, params)
 	if err != nil {
 		return nil, WrapMockError(err)
 	}
@@ -191,7 +200,7 @@ func (e *MutationExecutor) processOneResult(ctx, originalParams map[string]any, 
 	case map[string]any:
 		entry = v
 	case []any:
-		// For filter_by: take first element or nil
+		// For filter: take first element or nil
 		if len(v) == 0 {
 			entry = nil
 		} else if m, ok := v[0].(map[string]any); ok {

@@ -55,9 +55,9 @@ func (cfg *Config) Driver() (string, error) {
 // RequiresDB returns true if any query or mutation requires a database connection.
 func (cfg *Config) RequiresDB() bool {
 	return lo.SomeBy(cfg.Queries, func(q Query) bool {
-		return q.Transform == nil || q.Transform.Mock == nil || q.Transform.Mock.IsEmpty()
+		return !q.HasMock()
 	}) || lo.SomeBy(cfg.Mutations, func(m Mutation) bool {
-		return m.Transform == nil || m.Transform.Mock == nil || m.Transform.Mock.IsEmpty()
+		return !m.HasMock()
 	})
 }
 
@@ -84,7 +84,7 @@ func (cfg *Config) validate() error {
 	return errors.Join(errs...)
 }
 
-// ValidateTransforms validates all transforms are valid.
+// ValidateTransforms validates all transforms and mocks are valid.
 // Returns all errors joined, not just the first one.
 func (cfg *Config) ValidateTransforms() error {
 	var errs []error
@@ -97,18 +97,6 @@ func (cfg *Config) ValidateTransforms() error {
 		if t.Pre != "" {
 			if _, err := js.CompilePre(t.Pre); err != nil {
 				errs = append(errs, fmt.Errorf("%s pre: %w", location, err))
-			}
-		}
-		// Validate mock mutual exclusivity and JS compilation
-		if t.Mock != nil {
-			if err := t.Mock.Validate(); err != nil {
-				errs = append(errs, fmt.Errorf("%s %w", location, err))
-			}
-			// Compile JS mock if specified
-			if t.Mock.JS != "" {
-				if _, err := js.CompilePre(t.Mock.JS); err != nil {
-					errs = append(errs, fmt.Errorf("%s mock.js: %w", location, err))
-				}
 			}
 		}
 		// Validate post.each JS
@@ -125,11 +113,44 @@ func (cfg *Config) ValidateTransforms() error {
 		}
 	}
 
+	validateMock := func(m *Mock, isTypeOne bool, location string) {
+		if m == nil || m.IsEmpty() {
+			return
+		}
+		// Validate type-specific constraints
+		if isTypeOne {
+			if err := m.ValidateForTypeOne(); err != nil {
+				errs = append(errs, fmt.Errorf("%s %w", location, err))
+			}
+		} else {
+			if err := m.ValidateForTypeMany(); err != nil {
+				errs = append(errs, fmt.Errorf("%s %w", location, err))
+			}
+		}
+		// Compile JS mock if specified
+		if m.HasJS() {
+			if _, err := js.CompilePre(m.GetJS()); err != nil {
+				errs = append(errs, fmt.Errorf("%s mock js: %w", location, err))
+			}
+		}
+		// Compile filter JS if specified
+		if m.Filter != "" {
+			if _, err := js.CompileFilter(m.Filter); err != nil {
+				errs = append(errs, fmt.Errorf("%s mock.filter: %w", location, err))
+			}
+		}
+	}
+
 	for i, q := range cfg.Queries {
-		validateTransform(q.Transform, fmt.Sprintf("queries[%d] (%s)", i, q.Path))
+		location := fmt.Sprintf("queries[%d] (%s)", i, q.Path)
+		validateTransform(q.Transform, location)
+		validateMock(q.Mock, q.Type == QueryTypeOne, location)
 	}
 	for i, m := range cfg.Mutations {
-		validateTransform(m.Transform, fmt.Sprintf("mutations[%d] (%s)", i, m.Path))
+		location := fmt.Sprintf("mutations[%d] (%s)", i, m.Path)
+		validateTransform(m.Transform, location)
+		isTypeOne := m.Type == MutationTypeOne || m.Type == MutationTypeNone
+		validateMock(m.Mock, isTypeOne, location)
 	}
 	return errors.Join(errs...)
 }

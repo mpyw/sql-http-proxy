@@ -10,10 +10,8 @@ csv:
 queries:
   - type: many
     path: /data
-    sql: SELECT 1
-    transform:
-      mock:
-        csv: |
-          id,name,active
-          1,alice,true
-          2,bob,false
+    mock:
+      csv: |
+        id,name,active
+        1,alice,true
+        2,bob,false
