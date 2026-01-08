@@ -21,11 +21,13 @@ This document describes all configuration options for sql-http-proxy. For usage 
     - [Object Sources](#object-sources-type-one-only)
     - [Array Sources](#array-sources-type-many-or-type-one-with-filter)
   - [Filter](#filter)
+  - [Delay](#delay)
   - [Mock JS Variables](#mock-js-variables)
 - [Transform](#transform)
   - [Pre-Transform](#pre-transform)
   - [Post-Transform](#post-transform)
 - [Error Handling](#error-handling)
+- [Path Parameters](#path-parameters)
 - [Named Placeholders](#named-placeholders)
 - [Accepts](#accepts)
 
@@ -115,7 +117,7 @@ queries:
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `type` | `one` \| `many` | - | **Required.** `one`: single row, `many`: array |
-| `path` | string | - | **Required.** Endpoint path (must start with `/`) |
+| `path` | string | - | **Required.** Endpoint path. Supports [path parameters](#path-parameters) (e.g., `/users/:id`) |
 | `sql` | string | - | SQL query with [`:name` placeholders](#named-placeholders) (required if no mock) |
 | `mock` | object | - | [Mock data source](#mock) (required if no sql) |
 | `method` | string | `GET` | HTTP method |
@@ -158,7 +160,7 @@ mutations:
 |----------|------|---------|-------------|
 | `type` | `one` \| `many` \| `none` | - | **Required.** Return type |
 | `method` | string | `POST` | HTTP method |
-| `path` | string | - | **Required.** Endpoint path |
+| `path` | string | - | **Required.** Endpoint path. Supports [path parameters](#path-parameters) (e.g., `/users/:id`) |
 | `sql` | string | - | SQL (use `RETURNING *` for one/many) |
 | `mock` | object | - | [Mock data source](#mock) (type: one/many only) |
 | `accepts` | string/array | `[json, form]` | [Accepted Content-Types](#accepts) |
@@ -311,6 +313,39 @@ The `filter` option allows filtering array data using JavaScript. For `type: one
     filter: return row.role === input.role
 ```
 
+### Delay
+
+Add artificial latency to mock responses. Useful for testing loading states and timeouts.
+
+```yaml
+mock:
+  object: { id: 1, name: Alice }
+  delay: 500ms
+```
+
+| Value | Description |
+|-------|-------------|
+| `delay` | Duration string (e.g., `100ms`, `1s`, `500µs`) |
+
+**Supported units:** `ns`, `us`/`µs`, `ms`, `s`, `m`, `h`
+
+```yaml
+# With array source
+mock:
+  array:
+    - { id: 1, name: Alice }
+    - { id: 2, name: Bob }
+  delay: 1s
+
+# With filter
+mock:
+  array:
+    - { id: 1, name: Alice }
+    - { id: 2, name: Bob }
+  filter: return row.id == parseInt(input.id)
+  delay: 200ms
+```
+
 ### Mock JS Variables
 
 For `object_js` and `array_js`:
@@ -405,6 +440,41 @@ pre: |
 | [`mock`](#mock) | 500 Internal Server Error |
 | [`post`](#post-transform) | 500 Internal Server Error |
 
+## Path Parameters
+
+Use `:param` syntax in paths to capture URL segments as parameters.
+
+```yaml
+queries:
+  - type: one
+    path: /users/:id
+    sql: SELECT * FROM users WHERE id = :id
+
+  - type: many
+    path: /users/:user_id/posts
+    sql: SELECT * FROM posts WHERE user_id = :user_id
+```
+
+**Priority:** Path parameters take precedence over query string and body parameters.
+
+```yaml
+# Request: GET /users/42?id=999
+# Result: id = "42" (path parameter wins)
+- type: one
+  path: /users/:id
+  mock:
+    object_js: |
+      return { received_id: input.id };  // "42"
+```
+
+**Multiple path parameters:**
+
+```yaml
+- type: one
+  path: /users/:user_id/posts/:post_id
+  sql: SELECT * FROM posts WHERE user_id = :user_id AND id = :post_id
+```
+
 ## Named Placeholders
 
 Use `:name` syntax for SQL parameters:
@@ -413,9 +483,10 @@ Use `:name` syntax for SQL parameters:
 sql: SELECT * FROM users WHERE id = :id AND status = :status
 ```
 
-Parameters come from:
-- **GET:** Query string (`?id=1&status=active`)
-- **POST/PUT/PATCH/DELETE:** Request body (JSON or form-urlencoded, see [Accepts](#accepts))
+Parameters come from (in order of priority):
+1. **[Path parameters](#path-parameters):** URL segments (e.g., `/users/:id` → `id`)
+2. **Query string:** URL parameters (`?status=active`)
+3. **Request body:** JSON or form-urlencoded (see [Accepts](#accepts))
 
 ## Accepts
 
