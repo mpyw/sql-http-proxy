@@ -21,9 +21,9 @@ go install github.com/mpyw/sql-http-proxy/cmd/sql-http-proxy@latest
 Use build tags for smaller binaries:
 
 ```bash
-go build -tags postgres ./cmd/sql-http-proxy  # PostgreSQL only
-go build -tags sqlite ./cmd/sql-http-proxy    # SQLite only
-go build -tags mock ./cmd/sql-http-proxy      # Mock only (no database)
+go install -tags postgres github.com/mpyw/sql-http-proxy/cmd/sql-http-proxy@latest  # PostgreSQL only
+go install -tags sqlite github.com/mpyw/sql-http-proxy/cmd/sql-http-proxy@latest    # SQLite only
+go install -tags mock github.com/mpyw/sql-http-proxy/cmd/sql-http-proxy@latest      # Mock only (no database)
 ```
 
 # Quick Start
