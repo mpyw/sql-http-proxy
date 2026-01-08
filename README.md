@@ -60,31 +60,37 @@ curl http://localhost:8080/user?id=1  # Get single user
 
 # Mock Mode
 
-Run without a database using mock data:
+Run without a database using mock data. Use `mock` instead of `sql`:
 
 ```yaml
 queries:
+  # Array source for type: many
   - type: many
     path: /users
-    sql: SELECT * FROM users
-    transform:
-      mock:
+    mock:
+      array:
         - { id: 1, name: Alice }
         - { id: 2, name: Bob }
 
+  # JavaScript for dynamic data
   - type: one
     path: /user
-    sql: SELECT * FROM users WHERE id = :id
-    transform:
-      mock: |
-        const users = [
-          { id: 1, name: 'Alice' },
-          { id: 2, name: 'Bob' },
-        ];
-        return users.find(u => u.id === parseInt(input.id));
+    mock:
+      object_js: |
+        if (input.id === '404') return null;
+        return { id: parseInt(input.id), name: 'User ' + input.id };
+
+  # Array with filter for type: one
+  - type: one
+    path: /user-by-email
+    mock:
+      array:
+        - { id: 1, name: Alice, email: alice@example.com }
+        - { id: 2, name: Bob, email: bob@example.com }
+      filter: return row.email === input.email
 ```
 
-> Returning `null` or `undefined` from mock results in 404 Not Found for `type: one`.
+> Returning `null` or `undefined` from mock JS results in 404 Not Found for `type: one`.
 
 # Configuration Overview
 
@@ -100,18 +106,20 @@ dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/mydb
 
 ## Queries & Mutations
 
+Each endpoint uses either `sql` OR `mock`, not both:
+
 ```yaml
 queries:
   - type: one|many
     path: /endpoint
-    sql: SELECT * FROM table WHERE id = :id
+    sql: SELECT * FROM table WHERE id = :id  # OR mock: { ... }
     transform: { ... }
 
 mutations:
   - type: one|many|none
     method: POST
     path: /endpoint
-    sql: INSERT INTO table (...) RETURNING *
+    sql: INSERT INTO table (...) RETURNING *  # OR mock: { ... }
     transform: { ... }
 ```
 
@@ -123,10 +131,6 @@ transform:
     # Validate input, modify SQL
     return { id: parseInt(input.id) };
 
-  mock:
-    # Return mock data (skip database)
-    - { id: 1, name: Alice }
-
   post: |
     # Transform output
     return { ...output, formatted: true };
@@ -137,12 +141,13 @@ transform:
 Reusable JavaScript functions for all transforms:
 
 ```yaml
-global_helpers: |
-  function requireInt(val, name) {
-    const n = parseInt(val);
-    if (isNaN(n)) throw { status: 400, body: { error: name + ' required' } };
-    return n;
-  }
+global_helpers:
+  js: |
+    function requireInt(val, name) {
+      const n = parseInt(val);
+      if (isNaN(n)) throw { status: 400, body: { error: name + ' required' } };
+      return n;
+    }
 
 queries:
   - type: one
@@ -153,16 +158,18 @@ queries:
         return { id: requireInt(input.id, 'id') };
 ```
 
-## Mock Formats
+## Mock Sources
 
-| Format | Example |
-|--------|---------|
-| **JS** | `mock: \| return { id: 1 };` |
-| **Object** | `mock: { id: 1, name: Alice }` |
-| **Array** | `mock: [{ id: 1 }, { id: 2 }]` |
-| **JSON** | `mock: { json: [...] }` |
-| **CSV** | `mock: { csv: \| id,name \n 1,Alice }` |
-| **JSONL** | `mock: { jsonl: \| {"id":1} \n {"id":2} }` |
+| Source | Type | Example |
+|--------|------|---------|
+| `object` | one | `mock: { object: { id: 1, name: Alice } }` |
+| `object_js` | one | `mock: { object_js: \| return { id: 1 }; }` |
+| `array` | many | `mock: { array: [{ id: 1 }, { id: 2 }] }` |
+| `array_js` | many | `mock: { array_js: \| return [{ id: 1 }]; }` |
+| `csv` | many | `mock: { csv: \| id,name \n 1,Alice }` |
+| `jsonl` | many | `mock: { jsonl: \| {"id":1} \n {"id":2} }` |
+
+For `type: one` with array sources, use `filter` to select the matching row.
 
 # License
 
