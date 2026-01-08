@@ -1,0 +1,9 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      pre: |
+        throw { status: 422, body: [{ field: "id", message: "required" }, { field: "name", message: "too short" }] };

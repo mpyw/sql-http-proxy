@@ -1,0 +1,9 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: many
+    path: /users
+    sql: SELECT * FROM users ORDER BY id LIMIT :limit
+    transform:
+      pre: |
+        return { ...input, limit: input.limit || '2' }

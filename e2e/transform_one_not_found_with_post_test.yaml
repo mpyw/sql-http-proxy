@@ -1,0 +1,13 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    handle_not_found: true
+    transform:
+      post: |
+        if (output === null) {
+          return { found: false, default: "guest" };
+        }
+        return { found: true, ...output };

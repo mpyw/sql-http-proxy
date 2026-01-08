@@ -1,0 +1,9 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      pre: |
+        throw { status: 400, body: 42 };

@@ -1,0 +1,12 @@
+dsn: file::memory:?cache=shared
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      mock: |
+        if (!input.id) {
+          throw { status: 400, body: { message: "id is required" } };
+        }
+        return { id: parseInt(input.id), name: "Mock User" };

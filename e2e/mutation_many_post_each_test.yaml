@@ -1,0 +1,15 @@
+dsn: "sqlite::memory:"
+
+mutations:
+  - type: many
+    method: POST
+    path: /users
+    sql: SELECT * FROM users WHERE id <= :max_id
+    transform:
+      post:
+        each: |
+          return {
+            id: output.id,
+            fullName: output.first_name + " " + output.last_name,
+            emailUpper: output.email.toUpperCase()
+          };

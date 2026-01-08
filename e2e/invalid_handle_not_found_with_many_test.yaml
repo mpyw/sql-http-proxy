@@ -1,0 +1,7 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: many
+    path: /users
+    sql: SELECT * FROM users
+    handle_not_found: true

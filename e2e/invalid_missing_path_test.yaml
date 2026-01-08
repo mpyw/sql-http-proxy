@@ -1,0 +1,5 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: many
+    sql: SELECT * FROM users

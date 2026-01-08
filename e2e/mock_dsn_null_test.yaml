@@ -1,0 +1,10 @@
+# Explicit dsn: null when all queries use mock
+dsn: null
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      mock: |
+        return { id: parseInt(input.id), name: "Mock User" };

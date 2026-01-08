@@ -1,0 +1,15 @@
+dsn: file::memory:?cache=shared
+
+queries:
+  - type: many
+    path: /users
+    sql: SELECT * FROM users
+    transform:
+      mock: |
+        return [
+          { id: 1, name: "alice" },
+          { id: 2, name: "bob" }
+        ];
+      post:
+        each: |
+          return { ...output, name: output.name.toUpperCase() };

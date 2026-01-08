@@ -1,0 +1,6 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: many
+    path: /users
+    sql: SELECT * FROM users ORDER BY id

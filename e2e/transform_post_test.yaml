@@ -1,0 +1,9 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      post: |
+        return { id: output.id, fullName: output.first_name + ' ' + output.last_name }

@@ -1,0 +1,9 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /post-error
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      post: |
+        throw new Error("post error");

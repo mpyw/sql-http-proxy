@@ -1,0 +1,30 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  default: standard
+  settings:
+    cyclop:
+      max-complexity: 30
+    funlen:
+      lines: 200
+      statements: 100
+    gocognit:
+      min-complexity: 60
+    exhaustive:
+      default-signifies-exhaustive: true
+
+formatters:
+  enable:
+    - gci
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/mpyw/sql-http-proxy)
+      custom-order: true

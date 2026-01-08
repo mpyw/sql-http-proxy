@@ -1,0 +1,9 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /obj-error
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      pre: |
+        throw { foo: "bar", message: "custom object" };

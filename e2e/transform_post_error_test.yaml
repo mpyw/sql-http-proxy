@@ -1,0 +1,12 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      post: |
+        if (output.email && output.email.includes("john")) {
+          throw { status: 403, body: { message: "access denied" } };
+        }
+        return output;

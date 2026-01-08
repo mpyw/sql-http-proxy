@@ -1,0 +1,15 @@
+dsn: file::memory:?cache=shared
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      pre: |
+        ctx.requestedId = input.id;
+        return input;
+      mock: |
+        ctx.mockTime = Date.now();
+        return { id: parseInt(input.id), name: "Mock User" };
+      post: |
+        return { ...output, requestedId: ctx.requestedId, hadMockTime: ctx.mockTime !== undefined };

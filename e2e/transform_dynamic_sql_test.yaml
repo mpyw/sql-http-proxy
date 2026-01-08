@@ -1,0 +1,26 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: many
+    path: /search
+    sql: SELECT * FROM users WHERE 1=1
+    transform:
+      pre: |
+        // Helper: escape LIKE special characters (_, %, \)
+        function escapeLike(s) {
+          return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+        }
+
+        // Split keywords by whitespace
+        const keywords = (input.q || '').trim().split(/\s+/).filter(k => k);
+        const params = {};
+
+        // Build dynamic WHERE clause
+        keywords.forEach((kw, i) => {
+          const paramName = 'kw' + i;
+          sql = sql + ' AND (first_name LIKE :' + paramName + ' OR last_name LIKE :' + paramName + ' OR email LIKE :' + paramName + ')';
+          params[paramName] = '%' + escapeLike(kw) + '%';
+        });
+
+        ctx.keywordCount = keywords.length;
+        return params;

@@ -1,0 +1,200 @@
+dsn: postgres://user:pass@localhost:5432/mydb?sslmode=disable
+
+queries:
+  # Simple query - returns single row or 404
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+
+  # With handle_not_found - returns default value instead of 404
+  - type: one
+    path: /user-safe
+    sql: SELECT * FROM users WHERE id = :id
+    handle_not_found: true
+    transform:
+      post: |
+        if (output === null) {
+          return { found: false, id: input.id, name: "Unknown" };
+        }
+        return { found: true, ...output };
+
+  # Pre-transform with validation and default values
+  - type: many
+    path: /users
+    sql: SELECT * FROM users ORDER BY id LIMIT :limit OFFSET :offset
+    transform:
+      pre: |
+        const limit = parseInt(input.limit) || 10;
+        const offset = parseInt(input.offset) || 0;
+        if (limit > 100) {
+          throw { status: 400, body: { message: "limit must be <= 100" } };
+        }
+        return { limit, offset };
+
+  # Post-transform with each mode - transform each row
+  - type: many
+    path: /users-formatted
+    sql: SELECT * FROM users
+    transform:
+      post:
+        each: |
+          return {
+            id: output.id,
+            fullName: output.first_name + " " + output.last_name,
+            email: output.email.toLowerCase()
+          };
+
+  # Post-transform with all mode - wrap results
+  - type: many
+    path: /users-paginated
+    sql: SELECT * FROM users LIMIT :limit OFFSET :offset
+    transform:
+      pre: |
+        ctx.limit = parseInt(input.limit) || 10;
+        ctx.offset = parseInt(input.offset) || 0;
+        return { limit: ctx.limit, offset: ctx.offset };
+      post:
+        all: |
+          return {
+            data: output,
+            pagination: {
+              limit: ctx.limit,
+              offset: ctx.offset,
+              count: output.length
+            }
+          };
+
+  # Combined each + all - normalize then wrap
+  - type: many
+    path: /users-full
+    sql: SELECT * FROM users LIMIT :limit
+    transform:
+      pre: |
+        return { limit: parseInt(input.limit) || 10 };
+      post:
+        each: |
+          return {
+            ...output,
+            email: output.email.toUpperCase()
+          };
+        all: |
+          return {
+            total: output.length,
+            items: output
+          };
+
+  # Access control with error handling
+  - type: one
+    path: /admin/user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      pre: |
+        if (!input.token) {
+          throw { status: 401, body: { message: "unauthorized" } };
+        }
+        ctx.isAdmin = input.token === "admin-secret";
+        return { id: input.id };
+      post: |
+        if (!ctx.isAdmin && output.role === "admin") {
+          throw { status: 403, body: { message: "access denied" } };
+        }
+        return output;
+
+  # Dynamic SQL - keyword search with LIKE
+  - type: many
+    path: /search
+    sql: SELECT * FROM users WHERE 1=1
+    transform:
+      pre: |
+        // Helper: escape LIKE special characters (_, %, \)
+        function escapeLike(s) {
+          return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+        }
+
+        // Split keywords by whitespace
+        const keywords = (input.q || '').trim().split(/\s+/).filter(k => k);
+        const params = {};
+
+        // Build dynamic WHERE clause
+        keywords.forEach((kw, i) => {
+          const paramName = 'kw' + i;
+          sql = sql + ' AND (first_name LIKE :' + paramName + ' OR last_name LIKE :' + paramName + ' OR email LIKE :' + paramName + ')';
+          params[paramName] = '%' + escapeLike(kw) + '%';
+        });
+
+        ctx.keywordCount = keywords.length;
+        return params;
+
+  # Mock - return mock data without database
+  - type: one
+    path: /mock/user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      mock: |
+        if (input.id === "404") {
+          return null;
+        }
+        return {
+          id: parseInt(input.id),
+          name: "Mock User " + input.id,
+          email: "user" + input.id + "@mock.example.com"
+        };
+      post: |
+        return { ...output, isMock: true };
+
+mutations:
+  # Simple INSERT with RETURNING - returns created row
+  - type: one
+    method: POST
+    path: /user
+    sql: INSERT INTO users (first_name, last_name, email) VALUES (:first_name, :last_name, :email) RETURNING *
+
+  # UPDATE with RETURNING - returns updated row
+  - type: one
+    method: PUT
+    path: /user
+    sql: UPDATE users SET first_name = :first_name, last_name = :last_name, email = :email WHERE id = :id RETURNING *
+
+  # DELETE without RETURNING - returns 204 No Content
+  - type: none
+    method: DELETE
+    path: /user
+    sql: DELETE FROM users WHERE id = :id
+
+  # Bulk operation with RETURNING - returns multiple rows
+  - type: many
+    method: POST
+    path: /users/bulk-update
+    sql: UPDATE users SET status = :status WHERE department = :department RETURNING *
+
+  # Mutation with pre-transform for validation
+  - type: one
+    method: POST
+    path: /user-validated
+    sql: INSERT INTO users (first_name, last_name, email) VALUES (:first_name, :last_name, :email) RETURNING *
+    transform:
+      pre: |
+        if (!input.email || !input.email.includes('@')) {
+          throw { status: 400, body: { message: "invalid email" } };
+        }
+        if (!input.first_name || input.first_name.length < 2) {
+          throw { status: 400, body: { message: "first_name must be at least 2 characters" } };
+        }
+        return input;
+      post: |
+        return { ...output, created: true };
+
+  # Mock mutation - return mock data without database
+  - type: one
+    method: POST
+    path: /mock/user
+    sql: INSERT INTO users (first_name, last_name, email) VALUES (:first_name, :last_name, :email) RETURNING *
+    transform:
+      mock: |
+        return {
+          id: 999,
+          first_name: input.first_name,
+          last_name: input.last_name,
+          email: input.email,
+          created_at: new Date().toISOString()
+        };

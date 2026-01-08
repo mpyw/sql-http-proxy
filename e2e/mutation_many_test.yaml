@@ -1,0 +1,7 @@
+dsn: "sqlite::memory:"
+
+mutations:
+  - type: many
+    method: POST
+    path: /users
+    sql: SELECT * FROM users WHERE id <= :max_id

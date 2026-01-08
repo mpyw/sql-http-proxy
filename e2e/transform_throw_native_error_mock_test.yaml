@@ -1,0 +1,7 @@
+queries:
+  - type: one
+    path: /mock-error
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      mock: |
+        throw new Error("mock error");

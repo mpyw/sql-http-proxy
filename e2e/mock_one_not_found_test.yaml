@@ -1,0 +1,12 @@
+dsn: file::memory:?cache=shared
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      mock: |
+        if (input.id === "999") {
+          return null;
+        }
+        return { id: parseInt(input.id), name: "Mock User" };

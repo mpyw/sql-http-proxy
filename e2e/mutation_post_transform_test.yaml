@@ -1,0 +1,15 @@
+dsn: "sqlite::memory:"
+
+mutations:
+  - type: one
+    method: POST
+    path: /user
+    sql: INSERT INTO users (first_name, last_name, email) VALUES (:first_name, :last_name, :email) RETURNING *
+    transform:
+      post: |
+        return {
+          id: output.id,
+          fullName: output.first_name + " " + output.last_name,
+          email: output.email,
+          created: true
+        };

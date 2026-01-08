@@ -1,0 +1,12 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      pre: |
+        if (!input.id) {
+          throw { status: 400, body: { message: "id is required" } };
+        }
+        return input;

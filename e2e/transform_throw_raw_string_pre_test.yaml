@@ -1,0 +1,9 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /string-error
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      pre: |
+        throw "string error";

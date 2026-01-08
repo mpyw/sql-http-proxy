@@ -1,0 +1,9 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: many
+    path: /users
+    sql: SELECT * FROM users ORDER BY id LIMIT 2
+    transform:
+      post: |
+        return output.map(row => ({ id: row.id, email: row.email.toUpperCase() }))

@@ -1,0 +1,11 @@
+dsn: "sqlite::memory:"
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      pre: |
+        ctx.requestedId = input.id; return input
+      post: |
+        return { ...output, requestedId: ctx.requestedId }

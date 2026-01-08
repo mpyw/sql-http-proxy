@@ -1,0 +1,11 @@
+dsn: file::memory:?cache=shared
+
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      mock: |
+        return { id: parseInt(input.id), first_name: "Mock", last_name: "User" };
+      post: |
+        return { ...output, fullName: output.first_name + " " + output.last_name };

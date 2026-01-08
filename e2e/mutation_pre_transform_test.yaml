@@ -1,0 +1,17 @@
+dsn: "sqlite::memory:"
+
+mutations:
+  - type: one
+    method: POST
+    path: /user
+    sql: INSERT INTO users (first_name, last_name, email) VALUES (:first_name, :last_name, :email) RETURNING *
+    transform:
+      pre: |
+        if (!input.email || !input.email.includes('@')) {
+          throw { status: 400, body: { message: "invalid email" } };
+        }
+        return {
+          first_name: input.first_name.trim(),
+          last_name: input.last_name.trim(),
+          email: input.email.toLowerCase()
+        };
