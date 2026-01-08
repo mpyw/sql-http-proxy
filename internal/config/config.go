@@ -140,9 +140,6 @@ func (cfg *Config) ValidateTransforms() error {
 	return errors.Join(errs...)
 }
 
-// Getenv is a variable for testing purposes.
-var Getenv = os.Getenv
-
 // Parse parses configuration from YAML bytes.
 func Parse(data []byte) (Config, error) {
 	// Parse YAML to generic interface for schema validation
@@ -167,13 +164,12 @@ func Parse(data []byte) (Config, error) {
 		return Config{}, err
 	}
 
-	if cfg.DSN == "" {
-		cfg.DSN = Getenv("SQL_PROXY_DSN")
-	}
+	// Expand environment variables in DSN (e.g., ${DB_PASSWORD}, $DB_HOST)
+	cfg.DSN = os.ExpandEnv(cfg.DSN)
 
 	// DSN is required only if any query needs a database connection
 	if cfg.DSN == "" && cfg.RequiresDB() {
-		return Config{}, errors.New("missing DSN: YAML config \"dsn\" or environment variable \"SQL_PROXY_DSN\" must be passed")
+		return Config{}, errors.New("missing dsn: set dsn in YAML config (supports ${VAR} env expansion)")
 	}
 	return cfg, nil
 }

@@ -1,0 +1,31 @@
+global_helpers: |
+  function parseCustomDate(s) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      return { type: 'date', value: s };
+    }
+    return s;
+  }
+
+csv:
+  value_parser: |
+    // Parse numbers
+    if (/^-?\d+$/.test(value)) return parseInt(value, 10);
+    if (/^-?\d+\.\d+$/.test(value)) return parseFloat(value);
+    // Parse booleans
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    // Parse null
+    if (value === '' || value === 'null') return null;
+    // Use global helper for custom date parsing
+    return parseCustomDate(value);
+
+queries:
+  - type: many
+    path: /data
+    sql: SELECT 1
+    transform:
+      mock:
+        csv: |
+          id,name,active,score,date,empty
+          1,Alice,true,95.5,2024-01-15,
+          2,Bob,false,87,2024-02-20,null

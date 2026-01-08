@@ -71,7 +71,7 @@
     },
     "dsn": {
       "type": ["string", "null"],
-      "description": "Database connection string. Required unless all operations use mock. Can also be set via SQL_PROXY_DSN environment variable"
+      "description": "Database connection string. Supports ${VAR} or $VAR environment variable expansion. Required unless all operations use mock"
     },
     "queries": {
       "type": "array",
@@ -177,6 +177,22 @@
           "required": ["json_file"],
           "additionalProperties": false,
           "description": "Path to JSON file (relative to config file)"
+        },
+        {
+          "type": "object",
+          "not": {
+            "anyOf": [
+              { "required": ["js"] },
+              { "required": ["js_file"] },
+              { "required": ["json"] },
+              { "required": ["json_file"] },
+              { "required": ["csv"] },
+              { "required": ["csv_file"] },
+              { "required": ["jsonl"] },
+              { "required": ["jsonl_file"] }
+            ]
+          },
+          "description": "Plain object shorthand for JSON data (e.g., { id: 1, name: 'Alice' })"
         }
       ],
       "description": "Mock data source for type: one (js, json only - no csv/jsonl)"
@@ -242,6 +258,26 @@
           "required": ["jsonl_file"],
           "additionalProperties": false,
           "description": "Path to JSONL file (relative to config file)"
+        },
+        {
+          "type": "array",
+          "description": "Array shorthand for JSON data (e.g., [{ id: 1 }, { id: 2 }])"
+        },
+        {
+          "type": "object",
+          "not": {
+            "anyOf": [
+              { "required": ["js"] },
+              { "required": ["js_file"] },
+              { "required": ["csv"] },
+              { "required": ["csv_file"] },
+              { "required": ["json"] },
+              { "required": ["json_file"] },
+              { "required": ["jsonl"] },
+              { "required": ["jsonl_file"] }
+            ]
+          },
+          "description": "Plain object shorthand for JSON data (e.g., { id: 1, name: 'Alice' })"
         }
       ],
       "description": "Mock data source for type: many (all formats supported)"

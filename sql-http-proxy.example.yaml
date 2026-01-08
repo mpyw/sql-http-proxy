@@ -83,10 +83,10 @@ csv:
 # -----------------------------------------------------------------------------
 # Database Connection
 # -----------------------------------------------------------------------------
-# Can also be set via SQL_PROXY_DSN environment variable
+# Supports ${VAR} or $VAR environment variable expansion
 # Not required if all endpoints use mock
 
-dsn: postgres://user:pass@localhost:5432/mydb?sslmode=disable
+dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/mydb?sslmode=disable
 
 # =============================================================================
 # QUERIES (SELECT operations)
@@ -423,6 +423,28 @@ queries:
           key: app_settings
           value: { theme: dark, language: en }
           updated_at: "2024-01-01T00:00:00Z"
+
+  # ---------------------------------------------------------------------------
+  # Mock: JSON Shorthand (object/array without explicit json: key)
+  # ---------------------------------------------------------------------------
+  # Plain objects and arrays are automatically treated as JSON data
+
+  # Array shorthand (for type: many)
+  - type: many
+    path: /mock/tags
+    sql: SELECT * FROM tags
+    transform:
+      mock:
+        - { id: 1, name: feature }
+        - { id: 2, name: bug }
+        - { id: 3, name: enhancement }
+
+  # Object shorthand (for type: one)
+  - type: one
+    path: /mock/status
+    sql: SELECT * FROM status WHERE id = 1
+    transform:
+      mock: { healthy: true, uptime: 99.9, version: "1.0.0" }
 
   # ---------------------------------------------------------------------------
   # Mock: JSON (file)

@@ -135,9 +135,13 @@ type MockTransform struct {
 }
 
 // UnmarshalYAML implements custom YAML unmarshaling for MockTransform.
-// Accepts either a string (shorthand for js:) or an object with source type.
+// Accepts:
+// - string → mock.js (JS code)
+// - array → mock.json (JSON array shorthand)
+// - object with known key (js, json, csv, etc.) → use as-is
+// - object without known keys → mock.json (JSON object shorthand)
 func (m *MockTransform) UnmarshalYAML(value *yaml.Node) error {
-	// Try as string first (backward compatibility: mock: "code" → mock.js: "code")
+	// String → JS code
 	if value.Kind == yaml.ScalarNode {
 		var s string
 		if err := value.Decode(&s); err != nil {
@@ -147,13 +151,43 @@ func (m *MockTransform) UnmarshalYAML(value *yaml.Node) error {
 		return nil
 	}
 
-	// Try as object
-	type mockTransformRaw MockTransform
-	var raw mockTransformRaw
-	if err := value.Decode(&raw); err != nil {
-		return err
+	// Array → JSON array shorthand
+	if value.Kind == yaml.SequenceNode {
+		var arr []any
+		if err := value.Decode(&arr); err != nil {
+			return err
+		}
+		m.JSON = arr
+		return nil
 	}
-	*m = MockTransform(raw)
+
+	// Object: check if it has known keys
+	if value.Kind == yaml.MappingNode {
+		// First, try to decode as MockTransform with known keys
+		type mockTransformRaw MockTransform
+		var raw mockTransformRaw
+		if err := value.Decode(&raw); err != nil {
+			return err
+		}
+
+		// If any known field is set, use the decoded result
+		if raw.JS != "" || raw.JSFile != "" ||
+			raw.CSV != "" || raw.CSVFile != "" ||
+			raw.JSON != nil || raw.JSONFile != "" ||
+			raw.JSONL != "" || raw.JSONLFile != "" {
+			*m = MockTransform(raw)
+			return nil
+		}
+
+		// No known keys found → treat as JSON object shorthand
+		var obj map[string]any
+		if err := value.Decode(&obj); err != nil {
+			return err
+		}
+		m.JSON = obj
+		return nil
+	}
+
 	return nil
 }
 

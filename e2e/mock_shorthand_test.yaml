@@ -1,0 +1,16 @@
+queries:
+  # Array shorthand for type: many
+  - type: many
+    path: /users
+    sql: SELECT 1
+    transform:
+      mock:
+        - { id: 1, name: Alice }
+        - { id: 2, name: Bob }
+
+  # Object shorthand for type: one
+  - type: one
+    path: /user
+    sql: SELECT 1
+    transform:
+      mock: { id: 42, name: Charlie }
