@@ -41,7 +41,7 @@ queries:
     sql: SELECT * FROM users
 
   - type: one
-    path: /user
+    path: /users/:id
     sql: SELECT * FROM users WHERE id = :id
 ```
 
@@ -54,8 +54,8 @@ sql-http-proxy -l :8080
 ## 3. Make Requests
 
 ```bash
-curl http://localhost:8080/users      # List all users
-curl http://localhost:8080/user?id=1  # Get single user
+curl http://localhost:8080/users    # List all users
+curl http://localhost:8080/users/1  # Get user by ID (path parameter)
 ```
 
 # Mock Mode
@@ -122,6 +122,29 @@ mutations:
     sql: INSERT INTO table (...) RETURNING *  # OR mock: { ... }
     transform: { ... }
 ```
+
+## Path Parameters
+
+Use `:param` syntax in paths to capture URL segments:
+
+```yaml
+queries:
+  - type: one
+    path: /users/:id
+    sql: SELECT * FROM users WHERE id = :id
+
+  - type: many
+    path: /users/:user_id/posts
+    sql: SELECT * FROM posts WHERE user_id = :user_id
+
+mutations:
+  - type: one
+    method: PUT
+    path: /users/:id
+    sql: UPDATE users SET name = :name WHERE id = :id RETURNING *
+```
+
+Path parameters take priority over query string and body parameters.
 
 ## Transform Pipeline
 
