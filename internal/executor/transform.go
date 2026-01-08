@@ -17,11 +17,6 @@ type Transforms struct {
 	PostAll  *js.Transformer
 }
 
-// IsMock returns true if mock is configured.
-func (t *Transforms) IsMock() bool {
-	return t.Mock != nil
-}
-
 // CompileTransformOptions contains options for compiling transforms.
 type CompileTransformOptions struct {
 	ConfigDir   string

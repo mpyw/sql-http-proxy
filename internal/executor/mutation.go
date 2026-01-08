@@ -39,11 +39,6 @@ func NewMutationExecutor(db *sqlx.DB, mutation config.Mutation, opts CompileTran
 	}, nil
 }
 
-// IsMock returns true if this executor uses mock instead of DB.
-func (e *MutationExecutor) IsMock() bool {
-	return e.transforms.IsMock()
-}
-
 // Execute runs the mutation with the given parameters.
 func (e *MutationExecutor) Execute(reqCtx context.Context, params map[string]any, opts Options) (*MutationResult, error) {
 	// Shared context for pre/mock/post transforms (mutable)

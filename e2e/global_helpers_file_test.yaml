@@ -1,0 +1,17 @@
+global_helpers:
+  js: |
+    function double(n) { return n * 2; }
+  js_files:
+    - testdata/helpers.js
+
+queries:
+  - type: one
+    path: /calc
+    sql: SELECT 1
+    transform:
+      mock: |
+        return {
+          doubled: double(parseInt(input.n)),
+          tripled: triple(parseInt(input.n)),
+          greeting: greet(input.name || "World")
+        };

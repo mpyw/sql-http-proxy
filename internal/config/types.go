@@ -199,43 +199,6 @@ func (m *MockTransform) IsEmpty() bool {
 		m.JSONL == "" && m.JSONLFile == ""
 }
 
-// Type returns the mock source type ("js", "csv", "json", "jsonl", or "" if empty).
-func (m *MockTransform) Type() string {
-	switch {
-	case m.JS != "" || m.JSFile != "":
-		return "js"
-	case m.CSV != "" || m.CSVFile != "":
-		return "csv"
-	case m.JSON != nil || m.JSONFile != "":
-		return "json"
-	case m.JSONL != "" || m.JSONLFile != "":
-		return "jsonl"
-	default:
-		return ""
-	}
-}
-
-// IsFile returns true if this mock uses an external file.
-func (m *MockTransform) IsFile() bool {
-	return m.JSFile != "" || m.CSVFile != "" || m.JSONFile != "" || m.JSONLFile != ""
-}
-
-// FilePath returns the file path if IsFile() is true, otherwise empty string.
-func (m *MockTransform) FilePath() string {
-	switch {
-	case m.JSFile != "":
-		return m.JSFile
-	case m.CSVFile != "":
-		return m.CSVFile
-	case m.JSONFile != "":
-		return m.JSONFile
-	case m.JSONLFile != "":
-		return m.JSONLFile
-	default:
-		return ""
-	}
-}
-
 // Validate checks that only one mock source is specified.
 func (m *MockTransform) Validate() error {
 	count := 0
@@ -274,11 +237,6 @@ func (m *MockTransform) Validate() error {
 type PostTransform struct {
 	Each string `yaml:"each,omitempty"` // Transform each row individually
 	All  string `yaml:"all,omitempty"`  // Transform entire result array (default for many)
-}
-
-// IsEmpty returns true if no post-transform is configured.
-func (p PostTransform) IsEmpty() bool {
-	return p.Each == "" && p.All == ""
 }
 
 // UnmarshalYAML implements custom YAML unmarshaling for PostTransform.
@@ -334,11 +292,6 @@ func (g *GlobalHelpers) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// IsEmpty returns true if no helpers are configured.
-func (g *GlobalHelpers) IsEmpty() bool {
-	return g == nil || (g.JS == "" && len(g.JSFiles) == 0)
-}
-
 // CSVConfig defines global CSV parsing options.
 type CSVConfig struct {
 	ValueParser *JSCode `yaml:"value_parser,omitempty"`
@@ -384,9 +337,4 @@ func (j *JSCode) Validate() error {
 		return errors.New("one of 'js' or 'js_file' must be specified")
 	}
 	return nil
-}
-
-// IsEmpty returns true if no code is configured.
-func (j *JSCode) IsEmpty() bool {
-	return j == nil || (j.JS == "" && j.JSFile == "")
 }

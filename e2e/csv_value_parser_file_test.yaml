@@ -1,0 +1,14 @@
+csv:
+  value_parser:
+    js_file: testdata/value_parser.js
+
+queries:
+  - type: many
+    path: /data
+    sql: SELECT 1
+    transform:
+      mock:
+        csv: |
+          id,name,active
+          1,alice,true
+          2,bob,false

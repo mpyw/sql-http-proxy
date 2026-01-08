@@ -33,11 +33,6 @@ func NewQueryExecutor(db *sqlx.DB, query config.Query, opts CompileTransformOpti
 	}, nil
 }
 
-// IsMock returns true if this executor uses mock instead of DB.
-func (e *QueryExecutor) IsMock() bool {
-	return e.transforms.IsMock()
-}
-
 // Execute runs the query with the given parameters.
 // Returns ErrNotFound for "one" type queries when no row is found and handle_not_found is false.
 func (e *QueryExecutor) Execute(reqCtx context.Context, params map[string]any, opts Options) (any, error) {

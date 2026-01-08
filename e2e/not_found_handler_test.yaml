@@ -1,0 +1,6 @@
+queries:
+  - type: one
+    path: /user
+    sql: SELECT 1
+    transform:
+      mock: { id: 1, name: Alice }

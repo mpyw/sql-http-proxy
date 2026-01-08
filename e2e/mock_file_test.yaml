@@ -1,0 +1,32 @@
+queries:
+  # JS file
+  - type: many
+    path: /js
+    sql: SELECT 1
+    transform:
+      mock:
+        js_file: testdata/users.js
+
+  # CSV file
+  - type: many
+    path: /csv
+    sql: SELECT 1
+    transform:
+      mock:
+        csv_file: testdata/users.csv
+
+  # JSON file
+  - type: many
+    path: /json
+    sql: SELECT 1
+    transform:
+      mock:
+        json_file: testdata/users.json
+
+  # JSONL file
+  - type: many
+    path: /jsonl
+    sql: SELECT 1
+    transform:
+      mock:
+        jsonl_file: testdata/users.jsonl
