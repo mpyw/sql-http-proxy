@@ -1,0 +1,18 @@
+dsn: file::memory:?cache=shared
+
+queries:
+  # type: many with JSON array string
+  - type: many
+    path: /users
+    sql: SELECT * FROM users
+    transform:
+      mock:
+        json: '[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]'
+
+  # type: one with JSON object string
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+    transform:
+      mock:
+        json: '{"id": 42, "name": "Charlie"}'
