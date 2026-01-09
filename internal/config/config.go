@@ -102,22 +102,27 @@ func (cfg *Config) Driver() (string, error) {
 	if dsn == "" {
 		return "", errors.New("no database configured")
 	}
-	// Handle SQLite special cases: :memory: or file paths without scheme
+	// Try to parse as URL and use scheme if present
+	u, parseErr := url.Parse(dsn)
+	if parseErr == nil && u.Scheme != "" {
+		switch u.Scheme {
+		case "postgres", "postgresql":
+			return "pgx", nil
+		case "file", "sqlite":
+			return "sqlite", nil
+		default:
+			return u.Scheme, nil
+		}
+	}
+	// No scheme or parse error - fallback to SQLite special cases
 	if dsn == ":memory:" || strings.HasSuffix(dsn, ".db") || strings.HasSuffix(dsn, ".sqlite") {
 		return "sqlite", nil
 	}
-	u, err := url.Parse(dsn)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse DSN: %w", err)
+	// Return the original parse error if available
+	if parseErr != nil {
+		return "", fmt.Errorf("failed to parse DSN: %w", parseErr)
 	}
-	switch u.Scheme {
-	case "postgres", "postgresql":
-		return "pgx", nil
-	case "file", "sqlite":
-		return "sqlite", nil
-	default:
-		return u.Scheme, nil
-	}
+	return "", errors.New("failed to parse DSN: missing protocol scheme")
 }
 
 // CORSEnabled returns true if CORS is configured.
