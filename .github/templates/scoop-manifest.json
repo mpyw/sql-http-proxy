@@ -1,0 +1,17 @@
+{
+  "version": "${VERSION}",
+  "description": "YAML configuration-based HTTP to SQL proxy server",
+  "homepage": "https://github.com/mpyw/sql-http-proxy",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/mpyw/sql-http-proxy/releases/download/v${VERSION}/sql-http-proxy_${VERSION}_windows_amd64.zip",
+      "hash": "${SHA256_WINDOWS_AMD64}"
+    },
+    "arm64": {
+      "url": "https://github.com/mpyw/sql-http-proxy/releases/download/v${VERSION}/sql-http-proxy_${VERSION}_windows_arm64.zip",
+      "hash": "${SHA256_WINDOWS_ARM64}"
+    }
+  },
+  "bin": "sql-http-proxy.exe"
+}

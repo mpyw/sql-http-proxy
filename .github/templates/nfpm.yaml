@@ -1,0 +1,37 @@
+# nfpm configuration for generating .deb and .rpm packages
+# https://nfpm.goreleaser.com/configuration/
+
+name: sql-http-proxy
+arch: "${GOARCH}"
+platform: linux
+version: "${VERSION}"
+release: "1"
+maintainer: "mpyw <mpyw628@gmail.com>"
+description: |
+  YAML configuration-based HTTP to SQL proxy server
+  .
+  Define SQL queries in a YAML config file and expose them as HTTP endpoints.
+  Supports PostgreSQL, MySQL, SQLite, and SQL Server.
+homepage: "https://github.com/mpyw/sql-http-proxy"
+license: "MIT"
+
+vendor: "mpyw"
+section: "utils"
+priority: "optional"
+
+rpm:
+  group: "Applications/System"
+
+depends: []
+recommends: []
+
+contents:
+  - src: ./sql-http-proxy
+    dst: /usr/bin/sql-http-proxy
+    file_info:
+      mode: 0755
+
+  - src: ./LICENSE
+    dst: /usr/share/doc/sql-http-proxy/copyright
+    file_info:
+      mode: 0644

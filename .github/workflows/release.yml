@@ -1,0 +1,256 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., v1.2.3) - tag must already exist"
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to release (e.g., v1.2.3) - tag must already exist"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  # ===========================================================================
+  # Validate that tag exists before build
+  # ===========================================================================
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate version format
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Invalid version format '$VERSION'"
+            echo "Expected format: vX.Y.Z (e.g., v1.2.3)"
+            exit 1
+          fi
+          echo "Version format valid: $VERSION"
+
+      - name: Check tag exists
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! git ls-remote --tags https://github.com/${{ github.repository }} | grep -q "refs/tags/${VERSION}$"; then
+            echo "Error: Tag '$VERSION' does not exist"
+            echo "Please create the tag first using the 'Tag' workflow"
+            exit 1
+          fi
+          echo "Tag exists: $VERSION"
+
+  # ===========================================================================
+  # Build: All platforms (no CGO required)
+  # ===========================================================================
+  build:
+    needs: [validate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build all platforms
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: build --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  # ===========================================================================
+  # Release: Create packages and publish
+  # ===========================================================================
+  release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: List dist contents
+        run: find dist -type f | sort
+
+      - name: Create archives
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          VERSION="${VERSION#v}"
+          mkdir -p releases
+
+          for dir in dist/*/; do
+            [[ -d "$dir" ]] || continue
+            build_name=$(basename "$dir")
+            goos=$(echo "$build_name" | cut -d'_' -f2)
+            goarch=$(echo "$build_name" | cut -d'_' -f3)
+
+            staging="staging_${build_name}"
+            mkdir -p "$staging"
+
+            if [[ "$goos" == "windows" ]]; then
+              archive_name="sql-http-proxy_${VERSION}_${goos}_${goarch}.zip"
+              cp "$dir/sql-http-proxy.exe" "$staging/"
+              cp README.md LICENSE SCHEMA.md "$staging/"
+              (cd "$staging" && zip -r "../releases/${archive_name}" .)
+            else
+              archive_name="sql-http-proxy_${VERSION}_${goos}_${goarch}.tar.gz"
+              cp "$dir/sql-http-proxy" "$staging/"
+              cp README.md LICENSE SCHEMA.md "$staging/"
+              tar -czvf "releases/${archive_name}" -C "$staging" .
+            fi
+            rm -rf "$staging"
+          done
+
+          ls -la releases/
+
+      - name: Create Linux packages (.deb, .rpm)
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          VERSION="${VERSION#v}"
+
+          # Install nfpm
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.1
+          export PATH="$(go env GOPATH)/bin:$PATH"
+
+          for arch in amd64 arm64; do
+            case "$arch" in
+              amd64) deb_arch="amd64"; rpm_arch="x86_64" ;;
+              arm64) deb_arch="arm64"; rpm_arch="aarch64" ;;
+            esac
+
+            export VERSION="${VERSION}"
+            export GOARCH="${arch}"
+
+            # Find the binary
+            bin_dir=$(find dist -maxdepth 1 -type d -name "sql-http-proxy_linux_${arch}*" | head -1)
+            if [[ -z "$bin_dir" || ! -d "$bin_dir" ]]; then
+              echo "Error: Binary directory not found for ${arch}"
+              find dist -maxdepth 1 -type d
+              exit 1
+            fi
+            cp "${bin_dir}/sql-http-proxy" ./sql-http-proxy
+
+            echo "=== Generating packages for ${arch} ==="
+            nfpm pkg --config .github/templates/nfpm.yaml --packager deb --target "releases/sql-http-proxy_${VERSION}-1_${deb_arch}.deb"
+            nfpm pkg --config .github/templates/nfpm.yaml --packager rpm --target "releases/sql-http-proxy-${VERSION}-1.${rpm_arch}.rpm"
+            rm ./sql-http-proxy
+          done
+
+          echo "=== Generated packages ==="
+          ls -la releases/*.deb releases/*.rpm
+
+      - name: Generate checksums
+        run: |
+          cd releases
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.version }}
+        run: |
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --generate-notes \
+            releases/*
+
+      - name: Update Homebrew formula
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ inputs.version }}
+        run: |
+          if [[ -z "$HOMEBREW_TAP_TOKEN" ]]; then
+            echo "HOMEBREW_TAP_TOKEN not set, skipping Homebrew update"
+            exit 0
+          fi
+
+          export VERSION="${TAG#v}"
+          export SHA256_DARWIN_AMD64=$(grep "darwin_amd64.tar.gz" releases/checksums.txt | cut -d' ' -f1)
+          export SHA256_DARWIN_ARM64=$(grep "darwin_arm64.tar.gz" releases/checksums.txt | cut -d' ' -f1)
+          export SHA256_LINUX_AMD64=$(grep -E "sql-http-proxy_[0-9.]+_linux_amd64\.tar\.gz$" releases/checksums.txt | cut -d' ' -f1)
+          export SHA256_LINUX_ARM64=$(grep -E "sql-http-proxy_[0-9.]+_linux_arm64\.tar\.gz$" releases/checksums.txt | cut -d' ' -f1)
+
+          envsubst < .github/templates/homebrew-formula.rb > sql-http-proxy.rb
+          echo "=== sql-http-proxy.rb ===" && cat sql-http-proxy.rb
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/mpyw/homebrew-tap.git"
+          mkdir -p homebrew-tap/Formula
+          cp sql-http-proxy.rb homebrew-tap/Formula/
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/sql-http-proxy.rb
+          git commit -m "Update sql-http-proxy to ${VERSION}"
+          git push
+
+      - name: Update Scoop manifest
+        env:
+          SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+          TAG: ${{ inputs.version }}
+        run: |
+          if [[ -z "$SCOOP_BUCKET_TOKEN" ]]; then
+            echo "SCOOP_BUCKET_TOKEN not set, skipping Scoop update"
+            exit 0
+          fi
+
+          export VERSION="${TAG#v}"
+          export SHA256_WINDOWS_AMD64=$(grep "windows_amd64.zip" releases/checksums.txt | cut -d' ' -f1)
+          export SHA256_WINDOWS_ARM64=$(grep "windows_arm64.zip" releases/checksums.txt | cut -d' ' -f1)
+
+          if [[ -z "$SHA256_WINDOWS_AMD64" || -z "$SHA256_WINDOWS_ARM64" ]]; then
+            echo "Error: Could not find SHA256 checksums for Windows builds"
+            cat releases/checksums.txt
+            exit 1
+          fi
+
+          envsubst < .github/templates/scoop-manifest.json > sql-http-proxy.json
+          cat sql-http-proxy.json
+
+          git clone "https://x-access-token:${SCOOP_BUCKET_TOKEN}@github.com/mpyw/scoop-bucket.git"
+          cp sql-http-proxy.json scoop-bucket/
+          cd scoop-bucket
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sql-http-proxy.json
+          git commit -m "Update sql-http-proxy to ${VERSION}"
+          git push

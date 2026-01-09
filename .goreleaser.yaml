@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: sql-http-proxy
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  # All builds include all database drivers (no build tags = all drivers)
+  # Pure Go, no CGO required
+  - id: sql-http-proxy
+    main: ./cmd/sql-http-proxy
+    binary: sql-http-proxy
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/mpyw/sql-http-proxy/internal/cli/commands.Version={{.Version}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+      - SCHEMA.md
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: mpyw
+    name: sql-http-proxy
+  draft: false
+  prerelease: auto
+  name_template: "v{{.Version}}"
