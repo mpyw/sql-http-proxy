@@ -1,0 +1,243 @@
+queries:
+  # ==========================================================================
+  # Request Object Tests
+  # ==========================================================================
+
+  # Test request.method
+  - type: one
+    path: /test/request/method
+    mock:
+      object_js: |
+        return { method: request.method };
+
+  # Test request.url
+  - type: one
+    path: /test/request/url
+    mock:
+      object_js: |
+        return { url: request.url };
+
+  # Test request.headers.get()
+  - type: one
+    path: /test/request/headers/get
+    mock:
+      object_js: |
+        return {
+          customHeader: request.headers.get('X-Custom-Header'),
+          missingHeader: request.headers.get('X-Missing-Header'),
+          contentType: request.headers.get('Content-Type')
+        };
+
+  # Test request.headers.has()
+  - type: one
+    path: /test/request/headers/has
+    mock:
+      object_js: |
+        return {
+          hasCustom: request.headers.has('X-Custom-Header'),
+          hasMissing: request.headers.has('X-Missing-Header')
+        };
+
+  # Test request.headers.keys()
+  - type: one
+    path: /test/request/headers/keys
+    mock:
+      object_js: |
+        return { keys: request.headers.keys() };
+
+  # Test request.headers.values()
+  - type: one
+    path: /test/request/headers/values
+    mock:
+      object_js: |
+        return { values: request.headers.values() };
+
+  # Test request.headers.entries()
+  - type: one
+    path: /test/request/headers/entries
+    mock:
+      object_js: |
+        return { entries: request.headers.entries() };
+
+  # Test request.headers.forEach()
+  - type: one
+    path: /test/request/headers/foreach
+    mock:
+      object_js: |
+        const collected = [];
+        request.headers.forEach((value, name) => {
+          collected.push({ name, value });
+        });
+        return { collected };
+
+  # Test request.headers is read-only (set/append/delete should be ignored)
+  - type: one
+    path: /test/request/headers/readonly
+    mock:
+      object_js: |
+        const before = request.headers.get('X-Custom-Header');
+        request.headers.set('X-Custom-Header', 'modified');
+        request.headers.append('X-Custom-Header', 'appended');
+        request.headers.delete('X-Custom-Header');
+        const after = request.headers.get('X-Custom-Header');
+        return { before, after, unchanged: before === after };
+
+  # ==========================================================================
+  # Response Object Tests
+  # ==========================================================================
+
+  # Test response.status get/set
+  - type: one
+    path: /test/response/status
+    mock:
+      object: { id: 1 }
+    transform:
+      post: |
+        const defaultStatus = response.status;
+        response.status = 201;
+        const newStatus = response.status;
+        return { defaultStatus, newStatus };
+
+  # Test response.statusText get/set
+  - type: one
+    path: /test/response/statustext
+    mock:
+      object: { id: 1 }
+    transform:
+      post: |
+        response.status = 201;
+        const autoText = response.statusText;
+        response.statusText = 'Custom Created';
+        const customText = response.statusText;
+        return { autoText, customText };
+
+  # Test response.ok
+  - type: one
+    path: /test/response/ok
+    mock:
+      object: { id: 1 }
+    transform:
+      post: |
+        const okAt200 = response.ok;
+        response.status = 201;
+        const okAt201 = response.ok;
+        response.status = 404;
+        const okAt404 = response.ok;
+        response.status = 500;
+        const okAt500 = response.ok;
+        response.status = 200;
+        return { okAt200, okAt201, okAt404, okAt500 };
+
+  # Test response.headers.set()
+  - type: one
+    path: /test/response/headers/set
+    mock:
+      object: { id: 1 }
+    transform:
+      post: |
+        response.headers.set('X-Custom-Response', 'test-value');
+        response.headers.set('Cache-Control', 'no-cache');
+        return output;
+
+  # Test response.headers.append()
+  - type: one
+    path: /test/response/headers/append
+    mock:
+      object: { id: 1 }
+    transform:
+      post: |
+        response.headers.append('X-Multi', 'value1');
+        response.headers.append('X-Multi', 'value2');
+        return output;
+
+  # Test response.headers.delete()
+  - type: one
+    path: /test/response/headers/delete
+    mock:
+      object: { id: 1 }
+    transform:
+      post: |
+        response.headers.set('X-To-Delete', 'will-be-deleted');
+        response.headers.delete('X-To-Delete');
+        response.headers.set('X-Kept', 'will-remain');
+        return output;
+
+  # Test response.headers iteration methods
+  - type: one
+    path: /test/response/headers/iteration
+    mock:
+      object: { id: 1 }
+    transform:
+      post: |
+        response.headers.set('X-Header-A', 'value-a');
+        response.headers.set('X-Header-B', 'value-b');
+        return {
+          keys: response.headers.keys(),
+          values: response.headers.values(),
+          entries: response.headers.entries()
+        };
+
+  # Test invalid status codes are ignored
+  - type: one
+    path: /test/response/status/invalid
+    mock:
+      object: { id: 1 }
+    transform:
+      post: |
+        const before = response.status;
+        response.status = 99;   // Too low - ignored
+        const after99 = response.status;
+        response.status = 600;  // Too high - ignored
+        const after600 = response.status;
+        response.status = 202;  // Valid (Accepted)
+        const after202 = response.status;
+        return { before, after99, after600, after202 };
+
+  # ==========================================================================
+  # Request in Different Contexts
+  # ==========================================================================
+
+  # Test request in pre-transform
+  - type: one
+    path: /test/request/in-pre
+    mock:
+      object: { id: 1 }
+    transform:
+      pre: |
+        ctx.requestMethod = request.method;
+        ctx.hasHeader = request.headers.has('X-Test-Header');
+        return input;
+      post: |
+        return {
+          requestMethod: ctx.requestMethod,
+          hasHeader: ctx.hasHeader
+        };
+
+  # Test response not available in pre-transform
+  - type: one
+    path: /test/response/not-in-pre
+    mock:
+      object: { id: 1 }
+    transform:
+      pre: |
+        ctx.responseUndefined = typeof response === 'undefined';
+        return input;
+      post: |
+        return { responseUndefined: ctx.responseUndefined };
+
+mutations:
+  # Test request/response in mutations
+  - type: one
+    method: POST
+    path: /test/mutation/request-response
+    mock:
+      object_js: |
+        return {
+          method: request.method,
+          contentType: request.headers.get('Content-Type')
+        };
+    transform:
+      post: |
+        response.status = 201;
+        response.headers.set('Location', '/test/mutation/request-response/1');
+        return output;

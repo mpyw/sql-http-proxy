@@ -30,6 +30,9 @@ This document describes all configuration options for sql-http-proxy. For usage 
 - [Path Parameters](#path-parameters)
 - [Named Placeholders](#named-placeholders)
 - [Accepts](#accepts)
+- [Request Object](#request-object)
+- [Response Object](#response-object)
+- [Headers API](#headers-api)
 
 ---
 
@@ -379,6 +382,7 @@ For `object_js` and `array_js`:
 - `input` (parameter): Request parameters
 - `ctx` (free variable): Shared state
 - `sql` (free variable): SQL string (read-only)
+- `request` (free variable): HTTP [request object](#request-object) (read-only)
 
 ## Transform
 
@@ -400,6 +404,7 @@ Validates and transforms input before SQL/[mock](#mock) execution.
 - `input` (parameter): Request parameters
 - `ctx` (free variable): Shared state (persists to [post](#post-transform))
 - `sql` (free variable): SQL string (modifiable, only meaningful when using sql)
+- `request` (free variable): HTTP [request object](#request-object) (read-only)
 
 **Returns:** Object with parameters for SQL/mock
 
@@ -420,6 +425,8 @@ Transforms the result after SQL/[mock](#mock) execution.
 - `ctx` (free variable): Shared state from [pre](#pre-transform)
   - `ctx.lastInsertId`: Auto-increment ID ([MySQL mutations](#mysql-specific-behavior) only)
   - `ctx.rowsAffected`: Number of affected rows ([MySQL mutations](#mysql-specific-behavior) only)
+- `request` (free variable): HTTP [request object](#request-object) (read-only)
+- `response` (free variable): HTTP [response object](#response-object) (writable)
 
 **For type: one:**
 
@@ -590,3 +597,101 @@ accepts: [json, form]  # Both (default)
 
 > [!WARNING]
 > Returns 415 Unsupported Media Type if the request Content-Type doesn't match.
+
+## Request Object
+
+The `request` free variable provides read-only access to HTTP request information. Available in [pre](#pre-transform), [post](#post-transform), and [mock JS](#mock-js-variables).
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `method` | string | HTTP method (e.g., `"GET"`, `"POST"`) |
+| `url` | string | Request URL |
+| `headers` | [Headers](#headers-api) | Request headers (read-only) |
+
+```yaml
+transform:
+  pre: |
+    // Check request method
+    if (request.method !== 'POST') {
+      throw { status: 405, body: { error: 'POST required' } };
+    }
+    // Read custom header
+    const apiKey = request.headers.get('X-API-Key');
+    if (!apiKey) {
+      throw { status: 401, body: { error: 'API key required' } };
+    }
+    return input;
+```
+
+## Response Object
+
+The `response` free variable allows modifying HTTP response properties. **Only available in [post-transform](#post-transform).**
+
+| Property | Type | Access | Description |
+|----------|------|--------|-------------|
+| `status` | number | get/set | HTTP status code (100-599) |
+| `statusText` | string | get/set | HTTP status text |
+| `headers` | [Headers](#headers-api) | get (object is writable) | Response headers |
+| `ok` | boolean | get | `true` if status is 200-299 |
+
+```yaml
+transform:
+  post: |
+    // Set custom response headers
+    response.headers.set('X-Custom-Header', 'value');
+    response.headers.set('Cache-Control', 'max-age=3600');
+
+    // Change status code (affects HTTP response)
+    response.status = 201;
+
+    return output;
+```
+
+> [!NOTE]
+> Setting `response.status` changes the HTTP status code of the response. This is different from throwing an error with `status` — the response body is still the return value of post-transform.
+
+> [!WARNING]
+> `response` is only available in post-transform. Accessing it in pre-transform or mock JS will result in `undefined`.
+
+## Headers API
+
+The Headers API follows the [Web API Headers](https://developer.mozilla.org/en-US/docs/Web/API/Headers) interface.
+
+| Method | Description |
+|--------|-------------|
+| `get(name)` | Get header value (`null` if not found) |
+| `has(name)` | Check if header exists |
+| `set(name, value)` | Set header value (replaces existing) |
+| `append(name, value)` | Add header value (allows multiple) |
+| `delete(name)` | Remove header |
+| `keys()` | Get all header names |
+| `values()` | Get all header values |
+| `entries()` | Get `[name, value]` pairs |
+| `forEach(callback)` | Iterate with `callback(value, name)` |
+
+> [!NOTE]
+> Header names are case-insensitive. `headers.get('Content-Type')` and `headers.get('content-type')` return the same value.
+
+> [!IMPORTANT]
+> `request.headers` is read-only — `set()`, `append()`, and `delete()` are silently ignored.
+> `response.headers` is writable — all methods work as expected.
+
+```yaml
+transform:
+  post: |
+    // Read request headers
+    const userAgent = request.headers.get('User-Agent');
+    const acceptLanguage = request.headers.get('Accept-Language');
+
+    // Write response headers
+    response.headers.set('Content-Language', 'en');
+    response.headers.append('Set-Cookie', 'session=abc; HttpOnly');
+    response.headers.append('Set-Cookie', 'user=123');
+
+    // Iterate headers
+    request.headers.forEach((value, name) => {
+      console.log(name + ': ' + value);
+    });
+
+    return { ...output, userAgent };
+```
