@@ -41,7 +41,7 @@ queries:
     sql: SELECT * FROM users
 
   - type: one
-    path: /users/:id
+    path: /users/{id:*uuid_v7*}
     sql: SELECT * FROM users WHERE id = :id
 ```
 
@@ -54,8 +54,8 @@ sql-http-proxy -l :8080
 ## 3. Make Requests
 
 ```bash
-curl http://localhost:8080/users    # List all users
-curl http://localhost:8080/users/1  # Get user by ID (path parameter)
+curl http://localhost:8080/users                                        # List all users
+curl http://localhost:8080/users/019411a5-3d7f-7000-8000-000000000001   # Get user by ID (UUIDv7)
 ```
 
 # Mock Mode
@@ -125,26 +125,46 @@ mutations:
 
 ## Path Parameters
 
-Use `:param` syntax in paths to capture URL segments:
+Use `{param}` syntax in paths to capture URL segments (chi router syntax):
 
 ```yaml
 queries:
   - type: one
-    path: /users/:id
+    path: /users/{id:*uuid_v7*}
     sql: SELECT * FROM users WHERE id = :id
 
   - type: many
-    path: /users/:user_id/posts
+    path: /users/{user_id:*uuid_v7*}/posts
     sql: SELECT * FROM posts WHERE user_id = :user_id
 
 mutations:
   - type: one
     method: PUT
-    path: /users/:id
+    path: /users/{id:*uuid_v7*}
     sql: UPDATE users SET name = :name WHERE id = :id RETURNING *
 ```
 
 Path parameters take priority over query string and body parameters.
+
+**Regex shorthands** for common validation patterns:
+
+| Shorthand | Description |
+|-----------|-------------|
+| `*uuid*` | Any UUID (lowercase) |
+| `*uuid_v4*` | UUIDv4 only |
+| `*uuid_v7*` | UUIDv7 only |
+
+**Custom regex** (returns 404 if not matched):
+
+```yaml
+# Numeric ID only
+path: /posts/{id:[0-9]+}
+
+# Slug format
+path: /articles/{slug:[a-z0-9-]+}
+```
+
+See [SCHEMA.md](SCHEMA.md#path-parameters) for full regex syntax.
 
 ## Transform Pipeline
 

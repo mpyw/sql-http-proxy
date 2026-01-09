@@ -19,7 +19,7 @@ flag_management:
       carryforward: true
     - name: e2e
       paths:
-        - e2e/
+        - internal/
       carryforward: true
 
 comment:

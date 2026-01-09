@@ -1,7 +1,7 @@
 queries:
   # Basic path parameter
   - type: one
-    path: /users/:id
+    path: /users/{id}
     mock:
       array:
         - { id: 1, name: Alice }
@@ -11,7 +11,7 @@ queries:
 
   # Multiple path parameters
   - type: one
-    path: /users/:user_id/posts/:post_id
+    path: /users/{user_id}/posts/{post_id}
     mock:
       array:
         - { user_id: 1, post_id: 10, title: "Post 10" }
@@ -21,7 +21,7 @@ queries:
 
   # Path parameter takes priority over query parameter
   - type: one
-    path: /priority/:id
+    path: /priority/{id}
     mock:
       object_js: |
         return { received_id: input.id };
@@ -30,7 +30,7 @@ mutations:
   # Path parameter in mutation
   - type: one
     method: PUT
-    path: /users/:id
+    path: /users/{id}
     mock:
       object_js: |
         return {

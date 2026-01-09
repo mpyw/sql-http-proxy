@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/samber/lo"
 
+	"github.com/mpyw/sql-http-proxy/internal/config"
 	"github.com/mpyw/sql-http-proxy/internal/executor"
 	"github.com/mpyw/sql-http-proxy/internal/js"
 	"github.com/mpyw/sql-http-proxy/internal/mock"
@@ -19,7 +20,7 @@ import (
 
 // queryRecord represents an executed query record.
 type queryRecord struct {
-	Type   string         // "one" or "many"
+	Type   config.OpType  // OpTypeOne, OpTypeMany, or OpTypeNone
 	IsMock bool           // true if mock query
 	SQL    string         // executed SQL (bound for DB, original for mock)
 	Params map[string]any // named parameters (for mock)
@@ -188,29 +189,33 @@ func extractNamedParams(values url.Values) map[string]any {
 	return params
 }
 
-// extractPathParams extracts path parameter names from a path pattern.
-// Example: /users/:id/posts/:post_id -> ["id", "post_id"]
+// extractPathParams extracts path parameter names from a chi path pattern.
+// Example: /users/{id}/posts/{post_id} -> ["id", "post_id"]
+// Example: /users/{id:[0-9]+} -> ["id"]
 func extractPathParams(path string) []string {
 	var params []string
 	i := 0
 	for i < len(path) {
-		if path[i] == ':' {
+		if path[i] == '{' {
 			i++
 			start := i
-			// Read parameter name (alphanumeric and underscore)
-			for i < len(path) && (path[i] == '_' || isPathParamChar(path[i])) {
+			// Read parameter name until colon (regex) or closing brace
+			for i < len(path) && path[i] != '}' && path[i] != ':' {
 				i++
 			}
 			if i > start {
 				params = append(params, path[start:i])
+			}
+			// Skip to closing brace
+			for i < len(path) && path[i] != '}' {
+				i++
+			}
+			if i < len(path) {
+				i++ // skip closing brace
 			}
 		} else {
 			i++
 		}
 	}
 	return params
-}
-
-func isPathParamChar(c byte) bool {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }

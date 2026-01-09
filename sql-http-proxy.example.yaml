@@ -107,15 +107,48 @@ queries:
   # ---------------------------------------------------------------------------
   # Path Parameters
   # ---------------------------------------------------------------------------
-  # Use :param syntax for path parameters. Path params take priority over query params.
+  # Use {param} syntax for path parameters (chi router syntax).
+  # Path params take priority over query params.
 
   - type: one
-    path: /users/:id
+    path: /users/{id:*uuid_v7*}
     sql: SELECT * FROM users WHERE id = :id
 
   - type: many
-    path: /users/:user_id/posts
+    path: /users/{user_id:*uuid_v7*}/posts
     sql: SELECT * FROM posts WHERE user_id = :user_id
+
+  # ---------------------------------------------------------------------------
+  # Path Parameters with Regex Constraints
+  # ---------------------------------------------------------------------------
+  # Use {param:regex} to validate path parameters. Returns 404 if not matched.
+
+  # Any UUID (strict lowercase format) - using shorthand *uuid*
+  - type: one
+    path: /documents/{id:*uuid*}
+    sql: SELECT * FROM documents WHERE id = :id
+
+  # UUIDv4 only (version=4, variant=1) - using shorthand *uuid_v4*
+  # Validates: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8, 9, a, or b)
+  - type: one
+    path: /tokens/{id:*uuid_v4*}
+    sql: SELECT * FROM tokens WHERE id = :id
+
+  # UUIDv7 only (version=7, variant=1) - using shorthand *uuid_v7*
+  # Validates: xxxxxxxx-xxxx-7xxx-yxxx-xxxxxxxxxxxx (y = 8, 9, a, or b)
+  - type: one
+    path: /events/{id:*uuid_v7*}
+    sql: SELECT * FROM events WHERE id = :id
+
+  # Numeric ID only
+  - type: one
+    path: /posts/{id:[0-9]+}
+    sql: SELECT * FROM posts WHERE id = :id
+
+  # Slug format (lowercase letters, numbers, hyphens)
+  - type: one
+    path: /articles/{slug:[a-z0-9-]+}
+    sql: SELECT * FROM articles WHERE slug = :slug
 
   # ---------------------------------------------------------------------------
   # Query with Custom HTTP Method

@@ -58,8 +58,8 @@ func NewQueryExecutor(db *sqlx.DB, query config.Query, opts CompileTransformOpti
 		base: &BaseExecutor[ExecuteResult]{
 			DB:         db,
 			SQL:        query.SQL,
-			OpType:     string(query.Type),
-			Entity:     "query",
+			OpType:     config.OpType(query.Type),
+			Entity:     config.EntityQuery,
 			Transforms: transforms,
 			MockSource: mockSource,
 			Builder:    &queryResultBuilder{handleNotFound: query.HandleNotFound},
@@ -82,7 +82,7 @@ func (e *QueryExecutor) ExecuteDB(reqCtx context.Context, ec *ExecContext[Execut
 
 	if ec.Opts.Recorder != nil {
 		ec.Opts.Recorder(Record{
-			Type:   string(e.query.Type),
+			Type:   config.OpType(e.query.Type),
 			IsMock: false,
 			SQL:    boundSQL,
 			Args:   args,

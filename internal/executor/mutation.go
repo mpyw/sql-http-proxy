@@ -69,8 +69,8 @@ func NewMutationExecutor(db *sqlx.DB, mutation config.Mutation, opts CompileTran
 		base: &BaseExecutor[MutationResult]{
 			DB:         db,
 			SQL:        mutation.SQL,
-			OpType:     string(mutation.Type),
-			Entity:     "mutation",
+			OpType:     config.OpType(mutation.Type),
+			Entity:     config.EntityMutation,
 			Transforms: transforms,
 			MockSource: mockSource,
 			Builder:    &mutationResultBuilder{},
@@ -93,7 +93,7 @@ func (e *MutationExecutor) ExecuteDB(reqCtx context.Context, ec *ExecContext[Mut
 
 	if ec.Opts.Recorder != nil {
 		ec.Opts.Recorder(Record{
-			Type:   string(e.mutation.Type),
+			Type:   config.OpType(e.mutation.Type),
 			IsMock: false,
 			SQL:    boundSQL,
 			Args:   args,

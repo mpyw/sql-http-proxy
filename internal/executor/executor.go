@@ -11,6 +11,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
+	"github.com/mpyw/sql-http-proxy/internal/config"
 	"github.com/mpyw/sql-http-proxy/internal/js"
 	"github.com/mpyw/sql-http-proxy/internal/mock"
 )
@@ -58,7 +59,7 @@ func WrapPostError(err error) error {
 
 // Record represents an executed query/mutation record for testing/logging.
 type Record struct {
-	Type   string         // "one", "many", or "none"
+	Type   config.OpType  // OpTypeOne, OpTypeMany, or OpTypeNone
 	IsMock bool           // true if mock execution
 	SQL    string         // executed SQL (bound for DB, original for mock)
 	Params map[string]any // named parameters (for mock)
@@ -94,8 +95,8 @@ type ResultBuilder[R any] interface {
 type BaseExecutor[R any] struct {
 	DB         *sqlx.DB
 	SQL        string
-	OpType     string // "one", "many"
-	Entity     string // "query", "mutation"
+	OpType     config.OpType
+	Entity     config.EntityType
 	Transforms *Transforms
 	MockSource mock.Source
 	Builder    ResultBuilder[R]
@@ -168,9 +169,9 @@ func (e *BaseExecutor[R]) executeMock(ec *ExecContext[R]) (*R, error) {
 	}
 
 	switch e.OpType {
-	case "one":
+	case config.OpTypeOne:
 		return e.ProcessOneResult(ec.Ctx, ec.OriginalParams, mockOutput, ec.TC)
-	case "many":
+	case config.OpTypeMany:
 		return e.ProcessManyResult(ec.Ctx, ec.OriginalParams, mockOutput, ec.TC)
 	default:
 		return nil, fmt.Errorf("unsupported %s type: %s", e.Entity, e.OpType)

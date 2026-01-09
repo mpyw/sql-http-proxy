@@ -2,7 +2,6 @@
 package body
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,12 +10,7 @@ import (
 	"slices"
 
 	"github.com/mpyw/sql-http-proxy/internal/charset"
-)
-
-// AcceptType constants
-const (
-	AcceptJSON = "json"
-	AcceptForm = "form"
+	"github.com/mpyw/sql-http-proxy/internal/config"
 )
 
 // MaxBodySize is the maximum allowed request body size (10MB).
@@ -31,11 +25,11 @@ var (
 
 // Parser parses HTTP request bodies based on Content-Type.
 type Parser struct {
-	accepts []string
+	accepts []config.AcceptType
 }
 
 // NewParser creates a new Parser with the given accepted types.
-func NewParser(accepts []string) *Parser {
+func NewParser(accepts []config.AcceptType) *Parser {
 	return &Parser{accepts: accepts}
 }
 
@@ -50,8 +44,8 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
 		// Default to json if no Content-Type specified and json is accepted
-		if slices.Contains(p.accepts, AcceptJSON) {
-			return p.parseJSON(body, "")
+		if slices.Contains(p.accepts, config.AcceptJSON) {
+			return parseJSON(body, "")
 		}
 		return nil, fmt.Errorf("%w: missing Content-Type header", ErrUnsupportedMediaType)
 	}
@@ -65,33 +59,35 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 
 	switch mediaType {
 	case "application/json":
-		if !slices.Contains(p.accepts, AcceptJSON) {
+		if !slices.Contains(p.accepts, config.AcceptJSON) {
 			return nil, fmt.Errorf("%w: application/json not accepted", ErrUnsupportedMediaType)
 		}
-		return p.parseJSON(body, charsetName)
+		return parseJSON(body, charsetName)
 
 	case "application/x-www-form-urlencoded":
-		if !slices.Contains(p.accepts, AcceptForm) {
+		if !slices.Contains(p.accepts, config.AcceptForm) {
 			return nil, fmt.Errorf("%w: application/x-www-form-urlencoded not accepted", ErrUnsupportedMediaType)
 		}
-		return p.parseURLEncoded(body, charsetName)
+		return parseURLEncoded(body, charsetName)
 
 	case "multipart/form-data":
-		if !slices.Contains(p.accepts, AcceptForm) {
+		if !slices.Contains(p.accepts, config.AcceptForm) {
 			return nil, fmt.Errorf("%w: multipart/form-data not accepted", ErrUnsupportedMediaType)
 		}
 		boundary := params["boundary"]
 		if boundary == "" {
 			return nil, fmt.Errorf("%w: missing boundary in multipart/form-data", ErrBadRequest)
 		}
-		return p.parseMultipart(body, boundary, charsetName)
+		return parseMultipart(body, boundary, charsetName)
 
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedMediaType, mediaType)
 	}
 }
 
-func (p *Parser) parseJSON(body io.Reader, charsetName string) (map[string]any, error) {
+// readBody reads the body and applies charset conversion.
+// Returns ErrBodyTooLarge if body exceeds MaxBodySize.
+func readBody(body io.Reader, charsetName string) ([]byte, error) {
 	data, err := io.ReadAll(body)
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to read body: %v", ErrBadRequest, err)
@@ -107,9 +103,5 @@ func (p *Parser) parseJSON(body io.Reader, charsetName string) (map[string]any, 
 		}
 	}
 
-	var result map[string]any
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("%w: invalid JSON: %v", ErrBadRequest, err)
-	}
-	return result, nil
+	return data, nil
 }

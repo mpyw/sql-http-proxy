@@ -1,0 +1,35 @@
+queries:
+  # Any UUID using shorthand syntax
+  - type: one
+    path: /uuid/{id:*uuid*}
+    mock:
+      object_js: |
+        return { id: input.id, type: "any-uuid" };
+
+  # UUIDv4 only using shorthand syntax
+  - type: one
+    path: /uuid-v4/{id:*uuid_v4*}
+    mock:
+      object_js: |
+        return { id: input.id, type: "uuid-v4" };
+
+  # UUIDv7 only using shorthand syntax
+  - type: one
+    path: /uuid-v7/{id:*uuid_v7*}
+    mock:
+      object_js: |
+        return { id: input.id, type: "uuid-v7" };
+
+  # Numeric ID only
+  - type: one
+    path: /numeric/{id:[0-9]+}
+    mock:
+      object_js: |
+        return { id: parseInt(input.id), type: "numeric" };
+
+  # Slug format
+  - type: one
+    path: /slug/{slug:[a-z0-9-]+}
+    mock:
+      object_js: |
+        return { slug: input.slug, type: "slug" };

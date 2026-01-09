@@ -265,8 +265,8 @@ func TestQuery_GetAccepts(t *testing.T) {
 	})
 
 	t.Run("custom accepts", func(t *testing.T) {
-		q := Query{Accepts: AcceptTypes{"json"}}
-		assert.Equal(t, AcceptTypes{"json"}, q.GetAccepts())
+		q := Query{Accepts: AcceptTypes{AcceptJSON}}
+		assert.Equal(t, AcceptTypes{AcceptJSON}, q.GetAccepts())
 	})
 }
 
@@ -311,8 +311,8 @@ func TestMutation_GetAccepts(t *testing.T) {
 	})
 
 	t.Run("custom accepts", func(t *testing.T) {
-		m := Mutation{Accepts: AcceptTypes{"form"}}
-		assert.Equal(t, AcceptTypes{"form"}, m.GetAccepts())
+		m := Mutation{Accepts: AcceptTypes{AcceptForm}}
+		assert.Equal(t, AcceptTypes{AcceptForm}, m.GetAccepts())
 	})
 }
 
@@ -333,14 +333,14 @@ func TestAcceptTypes_UnmarshalYAML(t *testing.T) {
 		var a AcceptTypes
 		err := yaml.Unmarshal([]byte(`json`), &a)
 		require.NoError(t, err)
-		assert.Equal(t, AcceptTypes{"json"}, a)
+		assert.Equal(t, AcceptTypes{AcceptJSON}, a)
 	})
 
 	t.Run("array value", func(t *testing.T) {
 		var a AcceptTypes
 		err := yaml.Unmarshal([]byte(`[json, form]`), &a)
 		require.NoError(t, err)
-		assert.Equal(t, AcceptTypes{"json", "form"}, a)
+		assert.Equal(t, AcceptTypes{AcceptJSON, AcceptForm}, a)
 	})
 }
 

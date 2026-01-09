@@ -7,6 +7,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// OpType represents the operation type for result handling.
+type OpType string
+
+const (
+	// OpTypeOne returns a single row.
+	OpTypeOne OpType = "one"
+	// OpTypeMany returns multiple rows.
+	OpTypeMany OpType = "many"
+	// OpTypeNone returns no content (mutations only).
+	OpTypeNone OpType = "none"
+)
+
+// EntityType represents the entity type (query or mutation).
+type EntityType string
+
+const (
+	// EntityQuery represents a query operation.
+	EntityQuery EntityType = "query"
+	// EntityMutation represents a mutation operation.
+	EntityMutation EntityType = "mutation"
+)
+
 // QueryType represents the type of query result.
 type QueryType string
 
@@ -30,14 +52,16 @@ const (
 )
 
 // AcceptType represents accepted content types.
+type AcceptType string
+
 const (
-	AcceptJSON = "json"
-	AcceptForm = "form"
+	AcceptJSON AcceptType = "json"
+	AcceptForm AcceptType = "form"
 )
 
 // AcceptTypes represents a list of accepted content types.
 // Can be unmarshaled from either a string or array of strings.
-type AcceptTypes []string
+type AcceptTypes []AcceptType
 
 // DefaultAcceptTypes is the default list when accepts is not specified.
 var DefaultAcceptTypes = AcceptTypes{AcceptJSON, AcceptForm}
@@ -46,7 +70,7 @@ var DefaultAcceptTypes = AcceptTypes{AcceptJSON, AcceptForm}
 // Accepts either a string or an array of strings.
 func (a *AcceptTypes) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind == yaml.ScalarNode {
-		var s string
+		var s AcceptType
 		if err := value.Decode(&s); err != nil {
 			return err
 		}
@@ -54,7 +78,7 @@ func (a *AcceptTypes) UnmarshalYAML(value *yaml.Node) error {
 		return nil
 	}
 
-	var arr []string
+	var arr []AcceptType
 	if err := value.Decode(&arr); err != nil {
 		return err
 	}

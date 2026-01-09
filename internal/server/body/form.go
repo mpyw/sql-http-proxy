@@ -12,20 +12,11 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/charset"
 )
 
-func (p *Parser) parseURLEncoded(body io.Reader, charsetName string) (map[string]any, error) {
-	data, err := io.ReadAll(body)
+// parseURLEncoded parses URL-encoded form body with optional charset conversion.
+func parseURLEncoded(body io.Reader, charsetName string) (map[string]any, error) {
+	data, err := readBody(body, charsetName)
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to read body: %v", ErrBadRequest, err)
-	}
-	if len(data) > MaxBodySize {
-		return nil, ErrBodyTooLarge
-	}
-
-	if charsetName != "" {
-		data, err = charset.ToUTF8(data, charsetName)
-		if err != nil {
-			return nil, fmt.Errorf("%w: charset conversion failed: %v", ErrBadRequest, err)
-		}
+		return nil, err
 	}
 
 	values, err := url.ParseQuery(string(data))
@@ -36,7 +27,8 @@ func (p *Parser) parseURLEncoded(body io.Reader, charsetName string) (map[string
 	return formValuesToMap(values), nil
 }
 
-func (p *Parser) parseMultipart(body io.Reader, boundary, charsetName string) (map[string]any, error) {
+// parseMultipart parses multipart form body with optional charset conversion.
+func parseMultipart(body io.Reader, boundary, charsetName string) (map[string]any, error) {
 	reader := multipart.NewReader(body, boundary)
 	result := make(map[string]any)
 

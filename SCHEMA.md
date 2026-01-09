@@ -117,7 +117,7 @@ queries:
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `type` | `one` \| `many` | - | **Required.** `one`: single row, `many`: array |
-| `path` | string | - | **Required.** Endpoint path. Supports [path parameters](#path-parameters) (e.g., `/users/:id`) |
+| `path` | string | - | **Required.** Endpoint path. Supports [path parameters](#path-parameters) (e.g., `/users/{id}`) |
 | `sql` | string | - | SQL query with [`:name` placeholders](#named-placeholders) (required if no mock) |
 | `mock` | object | - | [Mock data source](#mock) (required if no sql) |
 | `method` | string | `GET` | HTTP method |
@@ -160,7 +160,7 @@ mutations:
 |----------|------|---------|-------------|
 | `type` | `one` \| `many` \| `none` | - | **Required.** Return type |
 | `method` | string | `POST` | HTTP method |
-| `path` | string | - | **Required.** Endpoint path. Supports [path parameters](#path-parameters) (e.g., `/users/:id`) |
+| `path` | string | - | **Required.** Endpoint path. Supports [path parameters](#path-parameters) (e.g., `/users/{id}`) |
 | `sql` | string | - | SQL (use `RETURNING *` for one/many) |
 | `mock` | object | - | [Mock data source](#mock) (type: one/many only) |
 | `accepts` | string/array | `[json, form]` | [Accepted Content-Types](#accepts) |
@@ -442,16 +442,16 @@ pre: |
 
 ## Path Parameters
 
-Use `:param` syntax in paths to capture URL segments as parameters.
+Use `{param}` syntax in paths to capture URL segments as parameters (chi router syntax).
 
 ```yaml
 queries:
   - type: one
-    path: /users/:id
+    path: /users/{id}
     sql: SELECT * FROM users WHERE id = :id
 
   - type: many
-    path: /users/:user_id/posts
+    path: /users/{user_id}/posts
     sql: SELECT * FROM posts WHERE user_id = :user_id
 ```
 
@@ -461,7 +461,7 @@ queries:
 # Request: GET /users/42?id=999
 # Result: id = "42" (path parameter wins)
 - type: one
-  path: /users/:id
+  path: /users/{id}
   mock:
     object_js: |
       return { received_id: input.id };  // "42"
@@ -471,9 +471,54 @@ queries:
 
 ```yaml
 - type: one
-  path: /users/:user_id/posts/:post_id
+  path: /users/{user_id}/posts/{post_id}
   sql: SELECT * FROM posts WHERE user_id = :user_id AND id = :post_id
 ```
+
+**Regex constraints:**
+
+Use `{param:regex}` syntax to validate path parameters with regular expressions. Requests that don't match will return 404.
+
+```yaml
+# Numeric ID only
+- type: one
+  path: /posts/{id:[0-9]+}
+  sql: SELECT * FROM posts WHERE id = :id
+
+# Slug format (lowercase letters, numbers, hyphens)
+- type: one
+  path: /articles/{slug:[a-z0-9-]+}
+  sql: SELECT * FROM articles WHERE slug = :slug
+```
+
+**Shorthand patterns:**
+
+For common patterns, use `{param:*shorthand*}` syntax:
+
+| Shorthand | Description | Regex |
+|-----------|-------------|-------|
+| `*uuid*` | Any UUID (strict lowercase) | `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}` |
+| `*uuid_v4*` | UUIDv4 only (version=4, variant=1) | `[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}` |
+| `*uuid_v7*` | UUIDv7 only (version=7, variant=1) | `[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}` |
+
+```yaml
+# Any UUID
+- type: one
+  path: /users/{id:*uuid*}
+  sql: SELECT * FROM users WHERE id = :id
+
+# UUIDv4 only
+- type: one
+  path: /tokens/{id:*uuid_v4*}
+  sql: SELECT * FROM tokens WHERE id = :id
+
+# UUIDv7 only
+- type: one
+  path: /events/{id:*uuid_v7*}
+  sql: SELECT * FROM events WHERE id = :id
+```
+
+The `*...*` syntax is unambiguous because `*` at the start of a regex is invalid.
 
 ## Named Placeholders
 
@@ -484,7 +529,7 @@ sql: SELECT * FROM users WHERE id = :id AND status = :status
 ```
 
 Parameters come from (in order of priority):
-1. **[Path parameters](#path-parameters):** URL segments (e.g., `/users/:id` → `id`)
+1. **[Path parameters](#path-parameters):** URL segments (e.g., `/users/{id}` → `id`)
 2. **Query string:** URL parameters (`?status=active`)
 3. **Request body:** JSON or form-urlencoded (see [Accepts](#accepts))
 
