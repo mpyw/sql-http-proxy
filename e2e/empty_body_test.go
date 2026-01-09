@@ -19,7 +19,7 @@ func TestEmptyBody_AcceptsEmpty(t *testing.T) {
 	configDir, _ := filepath.Abs(".")
 	conn, err := db.Connect(cfg, configDir)
 	require.NoError(t, err)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	mux, err := server.NewServeMux(conn, cfg, configDir)
 	require.NoError(t, err)

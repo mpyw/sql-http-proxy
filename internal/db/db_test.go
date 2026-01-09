@@ -16,7 +16,7 @@ import (
 func TestExecuteInit_InlineSQL(t *testing.T) {
 	db, err := sqlx.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
@@ -51,7 +51,7 @@ func TestExecuteInit_SQLFiles(t *testing.T) {
 
 	db, err := sqlx.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
@@ -85,7 +85,7 @@ func TestExecuteInit_BothSQLAndFiles(t *testing.T) {
 
 	db, err := sqlx.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
@@ -110,7 +110,7 @@ func TestExecuteInit_BothSQLAndFiles(t *testing.T) {
 func TestExecuteInit_NoInit(t *testing.T) {
 	db, err := sqlx.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
@@ -125,7 +125,7 @@ func TestExecuteInit_NoInit(t *testing.T) {
 func TestExecuteInit_NilDatabase(t *testing.T) {
 	db, err := sqlx.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	cfg := config.Config{}
 
@@ -136,7 +136,7 @@ func TestExecuteInit_NilDatabase(t *testing.T) {
 func TestExecuteInit_InvalidSQL(t *testing.T) {
 	db, err := sqlx.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
@@ -155,7 +155,7 @@ func TestExecuteInit_InvalidSQL(t *testing.T) {
 func TestExecuteInit_MissingSQLFile(t *testing.T) {
 	db, err := sqlx.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{

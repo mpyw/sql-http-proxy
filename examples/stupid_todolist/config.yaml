@@ -67,6 +67,7 @@ mutations:
     sql: |
       INSERT INTO todos (title) VALUES (:title)
       RETURNING id, title, completed, created_at
+    delay: 500ms
     transform:
       post: |
         response.status = 201;
@@ -79,6 +80,7 @@ mutations:
     sql: |
       UPDATE todos SET title = :title, completed = :completed WHERE id = :id
       RETURNING id, title, completed, created_at
+    delay: 500ms
     transform:
       pre: |
         return {
@@ -93,6 +95,7 @@ mutations:
     method: DELETE
     path: /api/todos/{id:[0-9]+}
     sql: DELETE FROM todos WHERE id = :id
+    delay: 500ms
     transform:
       post: |
         response.status = 204;

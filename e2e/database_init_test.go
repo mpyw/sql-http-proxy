@@ -24,7 +24,7 @@ func TestDatabaseInit_InlineSQL(t *testing.T) {
 	conn, err := db.Connect(cfg, configDir)
 	require.NoError(t, err)
 	require.NotNil(t, conn)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Create server handler
 	mux, err := server.NewServeMux(conn, cfg, configDir)
@@ -91,7 +91,7 @@ queries:
 	conn, err := db.Connect(cfg, tmpDir)
 	require.NoError(t, err)
 	require.NotNil(t, conn)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Create server handler
 	mux, err := server.NewServeMux(conn, cfg, tmpDir)
