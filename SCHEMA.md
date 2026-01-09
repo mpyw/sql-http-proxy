@@ -84,6 +84,7 @@ global_helpers:
 | `js` | string | Inline JavaScript code |
 | `js_files` | string[] | Paths to JavaScript files (relative to config) |
 
+> [!TIP]
 > **Shorthand:** `global_helpers: |` is equivalent to `global_helpers: { js: | }`
 
 ## CSV Config
@@ -107,7 +108,10 @@ The `value_parser` function receives `value` (string) and should return the pars
 
 ## Queries
 
-Query endpoints for SELECT operations. Each query must have either `sql` OR [`mock`](#mock), not both.
+Query endpoints for SELECT operations.
+
+> [!IMPORTANT]
+> Each query must have either `sql` OR [`mock`](#mock), not both.
 
 ```yaml
 queries:
@@ -138,6 +142,9 @@ queries:
 | `one` | Returns a single row as an object. Returns 404 if not found (or `null` to post with `handle_not_found: true`) |
 | `many` | Returns multiple rows as an array. Returns empty array `[]` if no rows found |
 
+> [!TIP]
+> Use `handle_not_found: true` to handle not-found cases in post-transform (e.g., return a default object instead of 404).
+
 ### Query Method
 
 | Value | Description |
@@ -150,7 +157,13 @@ queries:
 
 ## Mutations
 
-Mutation endpoints for INSERT/UPDATE/DELETE operations. Each mutation (type: one/many) must have either `sql` OR [`mock`](#mock), not both. Type: none requires `sql`.
+Mutation endpoints for INSERT/UPDATE/DELETE operations.
+
+> [!IMPORTANT]
+> Each mutation (type: one/many) must have either `sql` OR [`mock`](#mock), not both.
+
+> [!WARNING]
+> `type: none` requires `sql` — mock is not supported.
 
 ```yaml
 mutations:
@@ -172,7 +185,6 @@ mutations:
 | `accepts` | string/array | `[json, form]` | [Accepted Content-Types](#accepts) |
 | `transform` | object | - | [Pre/post transforms](#transform) |
 
-> Note: `type: none` requires `sql` - [mock](#mock) is not supported for type: none.
 
 ### Mutation Type
 
@@ -193,7 +205,10 @@ mutations:
 
 ### MySQL-Specific Behavior
 
-For MySQL, mutations use `Exec` instead of `Query` since MySQL does not support `RETURNING` clause. This makes `ctx.lastInsertId` and `ctx.rowsAffected` available in [post-transform](#post-transform):
+> [!WARNING]
+> MySQL does not support `RETURNING` clause. Use `ctx.lastInsertId` and `ctx.rowsAffected` in post-transform instead.
+
+For MySQL, mutations use `Exec` instead of `Query`. This makes `ctx.lastInsertId` and `ctx.rowsAffected` available in [post-transform](#post-transform):
 
 ```yaml
 mutations:
@@ -210,6 +225,7 @@ mutations:
 | `ctx.lastInsertId` | Auto-increment ID from INSERT | `undefined` |
 | `ctx.rowsAffected` | Number of affected rows | `undefined` |
 
+> [!TIP]
 > For PostgreSQL, SQLite, and SQL Server, use `RETURNING *` clause instead to get inserted data directly.
 
 ## Mock
@@ -220,7 +236,8 @@ Mock is specified at the [query](#queries)/[mutation](#mutations) level (same le
 
 ### Mock Sources
 
-**Only one source type can be specified per mock.**
+> [!IMPORTANT]
+> Only one source type can be specified per mock.
 
 #### Object Sources (type: one only)
 
@@ -289,7 +306,10 @@ mock:
 
 ### Filter
 
-The `filter` option allows filtering array data using JavaScript. For `type: one` with [array sources](#array-sources-type-many-or-type-one-with-filter), `filter` is **required** to select which row to return.
+The `filter` option allows filtering array data using JavaScript.
+
+> [!IMPORTANT]
+> For `type: one` with [array sources](#array-sources-type-many-or-type-one-with-filter), `filter` is **required** to select which row to return.
 
 **Filter variables:**
 - `row` (parameter): Current row being evaluated
@@ -433,6 +453,7 @@ post:
     return { items: output };
 ```
 
+> [!TIP]
 > **Shorthand:** `post: |` is equivalent to `post: { all: | }`
 
 ## Error Handling
@@ -445,6 +466,9 @@ pre: |
     throw { status: 401, body: { error: 'unauthorized' } };
   }
 ```
+
+> [!NOTE]
+> If you throw without `status`, the default depends on the phase:
 
 | Phase | Default Status |
 |-------|----------------|
@@ -467,7 +491,8 @@ queries:
     sql: SELECT * FROM posts WHERE user_id = :user_id
 ```
 
-**Priority:** Path parameters take precedence over query string and body parameters.
+> [!CAUTION]
+> Path parameters take precedence over query string and body parameters. If both exist, the path parameter wins.
 
 ```yaml
 # Request: GET /users/42?id=999
@@ -530,7 +555,8 @@ For common patterns, use `{param:*shorthand*}` syntax:
   sql: SELECT * FROM events WHERE id = :id
 ```
 
-The `*...*` syntax is unambiguous because `*` at the start of a regex is invalid.
+> [!NOTE]
+> The `*...*` syntax is unambiguous because `*` at the start of a regex is invalid.
 
 ## Named Placeholders
 
@@ -562,4 +588,5 @@ accepts: form          # Only application/x-www-form-urlencoded
 accepts: [json, form]  # Both (default)
 ```
 
-Returns 415 Unsupported Media Type if the request Content-Type doesn't match.
+> [!WARNING]
+> Returns 415 Unsupported Media Type if the request Content-Type doesn't match.
