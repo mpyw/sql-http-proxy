@@ -36,14 +36,16 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage-unit.txt
-          flags: unit,go${{ matrix.go-version }}
+          flags: unit
+          verbose: true
 
       - name: Upload e2e test coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage-e2e.txt
-          flags: e2e,go${{ matrix.go-version }}
+          flags: e2e
+          verbose: true
 
   lint:
     name: Lint

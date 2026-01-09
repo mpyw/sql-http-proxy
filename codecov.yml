@@ -14,12 +14,8 @@ flag_management:
     carryforward: true
   individual_flags:
     - name: unit
-      paths:
-        - internal/
       carryforward: true
     - name: e2e
-      paths:
-        - internal/
       carryforward: true
 
 comment:

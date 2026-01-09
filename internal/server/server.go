@@ -118,4 +118,3 @@ func expandPathShorthands(path string) string {
 	}
 	return result.String()
 }
-

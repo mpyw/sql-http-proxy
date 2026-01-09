@@ -204,12 +204,9 @@ func TestHeaders_ToJSObject(t *testing.T) {
 	require.NotNil(t, obj)
 
 	t.Run("get method", func(t *testing.T) {
-		result, err := vm.RunString(`
-			var headers = this.headers;
-			headers.get("Content-Type");
-		`)
-		_ = vm.Set("headers", obj)
-		result, err = vm.RunString(`headers.get("Content-Type")`)
+		err := vm.Set("headers", obj)
+		require.NoError(t, err)
+		result, err := vm.RunString(`headers.get("Content-Type")`)
 		require.NoError(t, err)
 		assert.Equal(t, "application/json", result.String())
 	})
@@ -265,8 +262,9 @@ func TestHeaders_ToJSObject(t *testing.T) {
 	})
 
 	t.Run("forEach method", func(t *testing.T) {
-		vm.Set("callCount", 0)
-		_, err := vm.RunString(`
+		err := vm.Set("callCount", 0)
+		require.NoError(t, err)
+		_, err = vm.RunString(`
 			headers.forEach(function(value, key) {
 				callCount++;
 			})
