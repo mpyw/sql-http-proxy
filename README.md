@@ -184,13 +184,12 @@ transform:
 Reusable JavaScript functions for all transforms:
 
 ```yaml
-global_helpers:
-  js: |
-    function requireInt(val, name) {
-      const n = parseInt(val);
-      if (isNaN(n)) throw { status: 400, body: { error: name + ' required' } };
-      return n;
-    }
+global_helpers: |
+  function requireInt(val, name) {
+    const n = parseInt(val);
+    if (isNaN(n)) throw { status: 400, body: { error: name + ' required' } };
+    return n;
+  }
 
 queries:
   - type: one
@@ -232,15 +231,21 @@ mock:
     - { id: 2, name: Bob }
   # or
   array_json: '[{"id": 1}, {"id": 2}]'   # JSON string
+  array_json_file: ./data/users.json     # External JSON file
   # or
   csv: |                                  # CSV with header
     id,name
     1,Alice
     2,Bob
+  csv_file: ./data/users.csv             # External CSV file
   # or
   jsonl: |                                # JSON Lines
     {"id": 1, "name": "Alice"}
     {"id": 2, "name": "Bob"}
+  jsonl_file: ./data/users.jsonl         # External JSONL file
+  # or
+  array_js: |                             # JavaScript (dynamic)
+    return [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }];
 ```
 
 ### Array Sources with Filter (for `type: one`)
