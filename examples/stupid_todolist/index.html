@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stupid Todo List</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Stupid Todo List</h1>
+    <p class="subtitle">Powered by sql-http-proxy + SQLite</p>
+
+    <form id="todo-form">
+      <input type="text" id="todo-input" placeholder="What needs to be done?" required>
+      <button type="submit">Add</button>
+    </form>
+
+    <div id="status" class="status"></div>
+
+    <ul id="todo-list"></ul>
+
+    <div class="footer">
+      <button id="init-btn" class="init-btn">Initialize Database</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
