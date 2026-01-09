@@ -30,16 +30,78 @@ var configSchema = func() *jsonschema.Schema {
 
 // Config represents the application configuration.
 type Config struct {
-	GlobalHelpers *GlobalHelpers `yaml:"global_helpers,omitempty"`
-	CSV           *CSVConfig     `yaml:"csv,omitempty"`
-	DSN           string         `yaml:"dsn"`
-	Queries       []Query        `yaml:"queries"`
-	Mutations     []Mutation     `yaml:"mutations"`
+	GlobalHelpers *GlobalHelpers  `yaml:"global_helpers,omitempty"`
+	CSV           *CSVConfig      `yaml:"csv,omitempty"`
+	Database      *DatabaseConfig `yaml:"database,omitempty"`
+	HTTP          *HTTPConfig     `yaml:"http,omitempty"`
+	Queries       []Query         `yaml:"queries"`
+	Mutations     []Mutation      `yaml:"mutations"`
+}
+
+// DatabaseConfig represents database connection configuration.
+type DatabaseConfig struct {
+	DSN  string        `yaml:"dsn"`
+	Init *DatabaseInit `yaml:"init,omitempty"`
+}
+
+// HTTPConfig represents HTTP server configuration.
+type HTTPConfig struct {
+	CORS *CORSConfig `yaml:"cors,omitempty"`
+}
+
+// CORSConfig represents CORS configuration.
+// Can be unmarshaled from either a boolean or an object.
+type CORSConfig struct {
+	AllowedOrigins   []string `yaml:"allowed_origins,omitempty"`
+	AllowCredentials bool     `yaml:"allow_credentials,omitempty"`
+	MaxAge           int      `yaml:"max_age,omitempty"`
+}
+
+// IsPermissive returns true if CORS allows all origins.
+func (c *CORSConfig) IsPermissive() bool {
+	return len(c.AllowedOrigins) == 1 && c.AllowedOrigins[0] == "*"
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling for CORSConfig.
+// Accepts either a boolean (true = permissive) or an object.
+func (c *CORSConfig) UnmarshalYAML(value *yaml.Node) error {
+	// Try as boolean first
+	if value.Kind == yaml.ScalarNode && value.Tag == "!!bool" {
+		var b bool
+		if err := value.Decode(&b); err != nil {
+			return err
+		}
+		if b {
+			c.AllowedOrigins = []string{"*"}
+		}
+		return nil
+	}
+
+	// Try as object
+	type corsRaw CORSConfig
+	var raw corsRaw
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+	*c = CORSConfig(raw)
+	return nil
+}
+
+// DSN returns the database connection string.
+func (cfg *Config) DSN() string {
+	if cfg.Database == nil {
+		return ""
+	}
+	return cfg.Database.DSN
 }
 
 // Driver returns the database driver name from the DSN.
 func (cfg *Config) Driver() (string, error) {
-	u, err := url.Parse(cfg.DSN)
+	dsn := cfg.DSN()
+	if dsn == "" {
+		return "", errors.New("no database configured")
+	}
+	u, err := url.Parse(dsn)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse DSN: %w", err)
 	}
@@ -51,6 +113,19 @@ func (cfg *Config) Driver() (string, error) {
 	default:
 		return u.Scheme, nil
 	}
+}
+
+// CORSEnabled returns true if CORS is configured.
+func (cfg *Config) CORSEnabled() bool {
+	return cfg.HTTP != nil && cfg.HTTP.CORS != nil && len(cfg.HTTP.CORS.AllowedOrigins) > 0
+}
+
+// GetCORS returns the CORS configuration or nil if not enabled.
+func (cfg *Config) GetCORS() *CORSConfig {
+	if cfg.HTTP == nil {
+		return nil
+	}
+	return cfg.HTTP.CORS
 }
 
 // RequiresDB returns true if any query or mutation requires a database connection.
@@ -168,17 +243,17 @@ func Parse(data []byte) (Config, error) {
 	}
 
 	// Expand environment variables in DSN (e.g., ${DB_PASSWORD}, $DB_HOST, ${DB_PORT:-5432})
-	if cfg.DSN != "" {
-		expanded, err := envsubst.String(cfg.DSN)
+	if cfg.Database != nil && cfg.Database.DSN != "" {
+		expanded, err := envsubst.String(cfg.Database.DSN)
 		if err != nil {
-			return Config{}, fmt.Errorf("failed to expand DSN: %w", err)
+			return Config{}, fmt.Errorf("failed to expand database.dsn: %w", err)
 		}
-		cfg.DSN = expanded
+		cfg.Database.DSN = expanded
 	}
 
 	// DSN is required only if any query needs a database connection
-	if cfg.DSN == "" && cfg.RequiresDB() {
-		return Config{}, errors.New("missing dsn: set dsn in YAML config (supports ${VAR} and ${VAR:-default} env expansion)")
+	if cfg.DSN() == "" && cfg.RequiresDB() {
+		return Config{}, errors.New("missing database.dsn: required when endpoints use SQL (supports ${VAR} and ${VAR:-default} env expansion)")
 	}
 	return cfg, nil
 }

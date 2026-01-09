@@ -1,4 +1,5 @@
-dsn: "sqlite::memory:"
+database:
+  dsn: "sqlite::memory:"
 
 queries:
   - type: invalid

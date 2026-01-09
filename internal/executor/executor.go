@@ -173,6 +173,8 @@ func (e *BaseExecutor[R]) executeMock(ec *ExecContext[R]) (*R, error) {
 		return e.ProcessOneResult(ec.Ctx, ec.OriginalParams, mockOutput, ec.TC)
 	case config.OpTypeMany:
 		return e.ProcessManyResult(ec.Ctx, ec.OriginalParams, mockOutput, ec.TC)
+	case config.OpTypeNone:
+		return e.ProcessNoneResult(ec.Ctx, ec.OriginalParams, ec.TC)
 	default:
 		return nil, fmt.Errorf("unsupported %s type: %s", e.Entity, e.OpType)
 	}
@@ -216,6 +218,19 @@ func (e *BaseExecutor[R]) ProcessManyResult(ctx, originalParams map[string]any, 
 	}
 
 	return e.Builder.BuildResult(result, tc), nil
+}
+
+// ProcessNoneResult processes type: none result (no data returned).
+func (e *BaseExecutor[R]) ProcessNoneResult(ctx, originalParams map[string]any, tc *js.TransformContext) (*R, error) {
+	// Apply post transform if present (can set response headers/status)
+	if e.Transforms.PostAll != nil {
+		_, err := e.Transforms.PostAll.ApplyPost(ctx, originalParams, nil, tc)
+		if err != nil {
+			return nil, WrapPostError(err)
+		}
+	}
+	// Return nil to trigger NoContent response
+	return e.Builder.BuildResult(nil, tc), nil
 }
 
 func (e *BaseExecutor[R]) applyPostOne(ctx, params map[string]any, entry map[string]any, tc *js.TransformContext) (any, error) {

@@ -70,13 +70,15 @@ func action(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
+	configDir := filepath.Dir(filename)
+
 	if validateOnly {
 		slog.Info("Validation successful")
 		return nil
 	}
 
 	slog.Info("Connecting to database")
-	conn, err := db.Connect(cfg)
+	conn, err := db.Connect(cfg, configDir)
 	if err != nil {
 		return err
 	}
@@ -91,7 +93,6 @@ func action(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	slog.Info("Creating HTTP handlers")
-	configDir := filepath.Dir(filename)
 	mux, err := server.NewServeMux(conn, cfg, configDir)
 	if err != nil {
 		return err

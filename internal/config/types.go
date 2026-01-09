@@ -161,7 +161,11 @@ type Transform struct {
 // Mock represents mock data source configuration.
 // Contains all possible data source fields for both type: one and type: many.
 // Only one data source field should be set (mutually exclusive).
+// For type: none, mock can be just `true` (marker for mock mode).
 type Mock struct {
+	// Enabled is set to true when mock is specified as `mock: true` (for type: none)
+	Enabled bool `yaml:"-"`
+
 	// Object sources (for type: one - returns single object directly)
 	Object         map[string]any `yaml:"object,omitempty"`
 	ObjectJSON     string         `yaml:"object_json,omitempty"`
@@ -186,8 +190,34 @@ type Mock struct {
 	Delay string `yaml:"delay,omitempty"`
 }
 
+// UnmarshalYAML implements custom YAML unmarshaling for Mock.
+// Accepts either a boolean (for type: none) or an object (for type: one/many).
+func (m *Mock) UnmarshalYAML(value *yaml.Node) error {
+	// Try as boolean first (for type: none)
+	if value.Kind == yaml.ScalarNode && value.Tag == "!!bool" {
+		var b bool
+		if err := value.Decode(&b); err != nil {
+			return err
+		}
+		m.Enabled = b
+		return nil
+	}
+
+	// Try as object
+	type mockRaw Mock
+	var raw mockRaw
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+	*m = Mock(raw)
+	return nil
+}
+
 // IsEmpty returns true if no mock source is configured.
 func (m *Mock) IsEmpty() bool {
+	if m.Enabled {
+		return false
+	}
 	return !lo.Contains(m.sourceFlags(), true)
 }
 
@@ -327,4 +357,34 @@ func (g *GlobalHelpers) UnmarshalYAML(value *yaml.Node) error {
 // CSVConfig defines global CSV parsing options.
 type CSVConfig struct {
 	ValueParser string `yaml:"value_parser,omitempty"`
+}
+
+// DatabaseInit defines SQL to execute on database connection.
+// Can be a simple string (sql code) or an object with sql and/or sql_files.
+type DatabaseInit struct {
+	SQL      string   `yaml:"sql,omitempty"`
+	SQLFiles []string `yaml:"sql_files,omitempty"`
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling for DatabaseInit.
+// Accepts either a string (shorthand for sql:) or an object.
+func (d *DatabaseInit) UnmarshalYAML(value *yaml.Node) error {
+	// Try as string first (shorthand: string → sql)
+	if value.Kind == yaml.ScalarNode {
+		var s string
+		if err := value.Decode(&s); err != nil {
+			return err
+		}
+		d.SQL = s
+		return nil
+	}
+
+	// Try as object
+	type databaseInitRaw DatabaseInit
+	var raw databaseInitRaw
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+	*d = DatabaseInit(raw)
+	return nil
 }

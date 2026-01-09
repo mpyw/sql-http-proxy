@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = 'http://localhost:8082/api';
 
 const todoForm = document.getElementById('todo-form');
 const todoInput = document.getElementById('todo-input');

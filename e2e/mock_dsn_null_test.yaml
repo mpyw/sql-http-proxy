@@ -1,6 +1,4 @@
-# Explicit dsn: null when all queries use mock
-dsn: null
-
+# No database config when all queries use mock
 queries:
   - type: one
     path: /user

@@ -1,38 +1,26 @@
 # Stupid Todo List - sql-http-proxy example
-# Uses SQLite in-memory database
+# Uses SQLite in-memory database with auto-initialization
 
-dsn: "file::memory:?cache=shared"
+database:
+  dsn: "file::memory:?cache=shared"
+  init: |
+    CREATE TABLE IF NOT EXISTS todos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      completed INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
 
-global_helpers: |
-  function cors() {
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-  }
+http:
+  cors: true
 
 queries:
-  # Initialize database (call once on startup)
-  - type: none
-    path: /api/init
-    sql: |
-      CREATE TABLE IF NOT EXISTS todos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        completed INTEGER DEFAULT 0,
-        created_at TEXT DEFAULT (datetime('now'))
-      )
-    transform:
-      post: |
-        cors();
-        return { ok: true };
-
   # List all todos
   - type: many
     path: /api/todos
     sql: SELECT id, title, completed, created_at FROM todos ORDER BY created_at DESC
     transform:
       post: |
-        cors();
         return output.map(row => ({
           ...row,
           completed: Boolean(row.completed)
@@ -44,7 +32,6 @@ queries:
     sql: SELECT id, title, completed, created_at FROM todos WHERE id = :id
     transform:
       post: |
-        cors();
         return { ...output, completed: Boolean(output.completed) };
 
 mutations:
@@ -57,7 +44,6 @@ mutations:
       RETURNING id, title, completed, created_at
     transform:
       post: |
-        cors();
         response.status = 201;
         return { ...output, completed: Boolean(output.completed) };
 
@@ -75,7 +61,6 @@ mutations:
           completed: input.completed ? 1 : 0
         };
       post: |
-        cors();
         return { ...output, completed: Boolean(output.completed) };
 
   # Delete todo
@@ -85,29 +70,5 @@ mutations:
     sql: DELETE FROM todos WHERE id = :id
     transform:
       post: |
-        cors();
-        response.status = 204;
-        return null;
-
-  # CORS preflight
-  - type: none
-    method: OPTIONS
-    path: /api/todos
-    mock:
-      object: {}
-    transform:
-      post: |
-        cors();
-        response.status = 204;
-        return null;
-
-  - type: none
-    method: OPTIONS
-    path: /api/todos/{id:[0-9]+}
-    mock:
-      object: {}
-    transform:
-      post: |
-        cors();
         response.status = 204;
         return null;

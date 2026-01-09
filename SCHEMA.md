@@ -5,8 +5,11 @@ This document describes all configuration options for sql-http-proxy. For usage 
 ## Table of Contents
 
 - [Top-Level Options](#top-level-options)
-- [DSN](#dsn)
+- [Database Configuration](#database-configuration)
+  - [Database Init](#database-init)
   - [Driver Examples](#driver-examples)
+- [HTTP Configuration](#http-configuration)
+  - [CORS](#cors)
 - [Global Helpers](#global-helpers)
 - [CSV Config](#csv-config)
 - [Queries](#queries)
@@ -40,7 +43,8 @@ This document describes all configuration options for sql-http-proxy. For usage 
 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
-| [`dsn`](#dsn) | string | No* | Database connection string. Supports `${VAR}`, `${VAR:-default}` env expansion |
+| [`database`](#database-configuration) | object | No* | Database connection configuration |
+| [`http`](#http-configuration) | object | No | HTTP server configuration (CORS, etc.) |
 | [`global_helpers`](#global-helpers) | object/string | No | JavaScript helpers for all transforms |
 | [`csv`](#csv-config) | object | No | CSV parsing options |
 | [`queries`](#queries) | array | No | Query endpoints (SELECT) |
@@ -48,13 +52,50 @@ This document describes all configuration options for sql-http-proxy. For usage 
 
 > *Required unless all endpoints use [mock](#mock)
 
-## DSN
+## Database Configuration
 
-Database connection string with `${VAR}`, `$VAR`, or `${VAR:-default}` environment variable expansion.
+Database connection configuration with `${VAR}`, `$VAR`, or `${VAR:-default}` environment variable expansion.
 
 ```yaml
-dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/mydb
+database:
+  dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/mydb
 ```
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `dsn` | string | Yes | Database connection string with env var expansion |
+| `init` | string/object | No | SQL to execute on startup (e.g., schema creation) |
+
+### Database Init
+
+Execute SQL when the database connection is established. Useful for creating tables, seeding data, or SQLite in-memory databases.
+
+```yaml
+# Shorthand (inline SQL only)
+database:
+  dsn: "sqlite::memory:"
+  init: |
+    CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT);
+    INSERT INTO users (id, name) VALUES (1, 'Alice');
+
+# Full form (with sql_files)
+database:
+  dsn: "sqlite::memory:"
+  init:
+    sql: |
+      CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT);
+    sql_files:
+      - ./migrations/001_init.sql
+      - ./migrations/002_seed.sql
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `sql` | string | Inline SQL code to execute |
+| `sql_files` | string[] | Paths to SQL files (relative to config file) |
+
+> [!TIP]
+> **Shorthand:** `init: |` is equivalent to `init: { sql: | }`
 
 ### Driver Examples
 
@@ -64,6 +105,38 @@ dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}
 | MySQL | `mysql://user:pass@tcp(localhost:3306)/db` |
 | SQLite | `file:./data.db` or `sqlite:./data.db` |
 | SQL Server | `sqlserver://user:pass@localhost:1433?database=db` |
+
+## HTTP Configuration
+
+HTTP server configuration including CORS settings.
+
+```yaml
+http:
+  cors: true  # Permissive CORS (Access-Control-Allow-Origin: *)
+```
+
+Or with detailed configuration:
+
+```yaml
+http:
+  cors:
+    allowed_origins:
+      - https://example.com
+      - https://app.example.com
+    allow_credentials: true
+    max_age: 86400
+```
+
+### CORS
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `allowed_origins` | string[] | Yes (if object) | List of allowed origins. Use `["*"]` for all origins |
+| `allow_credentials` | boolean | No | Allow credentials (cookies, auth headers). Default: `false` |
+| `max_age` | integer | No | Preflight cache duration in seconds. Default: `0` |
+
+> [!TIP]
+> Use `cors: true` for permissive development mode. For production, specify `allowed_origins` explicitly.
 
 ## Global Helpers
 

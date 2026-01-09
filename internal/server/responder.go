@@ -46,6 +46,10 @@ func (r *responder) Respond(status int, payload any) {
 
 func (r *responder) Error(status int, err error) {
 	status = validateStatus(status)
+	// Log server errors (5xx)
+	if status >= 500 {
+		slog.Error("Internal server error", "status", status, "error", err)
+	}
 	msg := lo.Must(json.Marshal(err.Error()))
 	r.w.Header().Set("Content-Type", "application/json")
 	r.w.WriteHeader(status)

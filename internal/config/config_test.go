@@ -10,49 +10,49 @@ import (
 
 func TestConfig_Driver(t *testing.T) {
 	t.Run("postgres", func(t *testing.T) {
-		cfg := &Config{DSN: "postgres://user:pass@localhost:5432/db"}
+		cfg := &Config{Database: &DatabaseConfig{DSN: "postgres://user:pass@localhost:5432/db"}}
 		driver, err := cfg.Driver()
 		require.NoError(t, err)
 		assert.Equal(t, "pgx", driver)
 	})
 
 	t.Run("postgresql", func(t *testing.T) {
-		cfg := &Config{DSN: "postgresql://user:pass@localhost:5432/db"}
+		cfg := &Config{Database: &DatabaseConfig{DSN: "postgresql://user:pass@localhost:5432/db"}}
 		driver, err := cfg.Driver()
 		require.NoError(t, err)
 		assert.Equal(t, "pgx", driver)
 	})
 
 	t.Run("mysql", func(t *testing.T) {
-		cfg := &Config{DSN: "mysql://user:pass@localhost:3306/db"}
+		cfg := &Config{Database: &DatabaseConfig{DSN: "mysql://user:pass@localhost:3306/db"}}
 		driver, err := cfg.Driver()
 		require.NoError(t, err)
 		assert.Equal(t, "mysql", driver)
 	})
 
 	t.Run("file (sqlite)", func(t *testing.T) {
-		cfg := &Config{DSN: "file:./test.db"}
+		cfg := &Config{Database: &DatabaseConfig{DSN: "file:./test.db"}}
 		driver, err := cfg.Driver()
 		require.NoError(t, err)
 		assert.Equal(t, "sqlite", driver)
 	})
 
 	t.Run("sqlite", func(t *testing.T) {
-		cfg := &Config{DSN: "sqlite:./test.db"}
+		cfg := &Config{Database: &DatabaseConfig{DSN: "sqlite:./test.db"}}
 		driver, err := cfg.Driver()
 		require.NoError(t, err)
 		assert.Equal(t, "sqlite", driver)
 	})
 
 	t.Run("sqlserver", func(t *testing.T) {
-		cfg := &Config{DSN: "sqlserver://user:pass@localhost:1433"}
+		cfg := &Config{Database: &DatabaseConfig{DSN: "sqlserver://user:pass@localhost:1433"}}
 		driver, err := cfg.Driver()
 		require.NoError(t, err)
 		assert.Equal(t, "sqlserver", driver)
 	})
 
 	t.Run("invalid DSN", func(t *testing.T) {
-		cfg := &Config{DSN: "://invalid"}
+		cfg := &Config{Database: &DatabaseConfig{DSN: "://invalid"}}
 		_, err := cfg.Driver()
 		require.Error(t, err)
 	})
@@ -236,7 +236,8 @@ func TestConfig_ValidateTransforms(t *testing.T) {
 func TestParse(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
 		yaml := `
-dsn: postgres://localhost:5432/db
+database:
+  dsn: postgres://localhost:5432/db
 queries:
   - type: one
     path: /user
@@ -244,7 +245,7 @@ queries:
 `
 		cfg, err := Parse([]byte(yaml))
 		require.NoError(t, err)
-		assert.Equal(t, "postgres://localhost:5432/db", cfg.DSN)
+		assert.Equal(t, "postgres://localhost:5432/db", cfg.DSN())
 		assert.Len(t, cfg.Queries, 1)
 		assert.Equal(t, "/user", cfg.Queries[0].Path)
 	})
@@ -311,7 +312,8 @@ queries:
 
 	t.Run("schema validation error - neither sql nor mock", func(t *testing.T) {
 		yaml := `
-dsn: postgres://localhost:5432/db
+database:
+  dsn: postgres://localhost:5432/db
 queries:
   - type: one
     path: /user
@@ -324,7 +326,8 @@ queries:
 		t.Setenv("TEST_DB_HOST", "myhost")
 		t.Setenv("TEST_DB_PORT", "5433")
 		yaml := `
-dsn: postgres://${TEST_DB_HOST}:${TEST_DB_PORT}/db
+database:
+  dsn: postgres://${TEST_DB_HOST}:${TEST_DB_PORT}/db
 queries:
   - type: one
     path: /user
@@ -332,12 +335,13 @@ queries:
 `
 		cfg, err := Parse([]byte(yaml))
 		require.NoError(t, err)
-		assert.Equal(t, "postgres://myhost:5433/db", cfg.DSN)
+		assert.Equal(t, "postgres://myhost:5433/db", cfg.DSN())
 	})
 
 	t.Run("env substitution with default", func(t *testing.T) {
 		yaml := `
-dsn: postgres://${UNDEFINED_HOST:-localhost}:5432/db
+database:
+  dsn: postgres://${UNDEFINED_HOST:-localhost}:5432/db
 queries:
   - type: one
     path: /user
@@ -345,7 +349,7 @@ queries:
 `
 		cfg, err := Parse([]byte(yaml))
 		require.NoError(t, err)
-		assert.Equal(t, "postgres://localhost:5432/db", cfg.DSN)
+		assert.Equal(t, "postgres://localhost:5432/db", cfg.DSN())
 	})
 
 	// Note: Transform JS validation happens at server startup via ValidateTransforms,
@@ -382,7 +386,21 @@ queries:
 		assert.Contains(t, err.Error(), "many")
 	})
 
-	t.Run("schema validation error - type none with mock", func(t *testing.T) {
+	t.Run("schema validation - type none with mock: true is valid", func(t *testing.T) {
+		yaml := `
+mutations:
+  - type: none
+    path: /delete
+    mock: true
+`
+		cfg, err := Parse([]byte(yaml))
+		require.NoError(t, err)
+		require.Len(t, cfg.Mutations, 1)
+		require.NotNil(t, cfg.Mutations[0].Mock)
+		assert.True(t, cfg.Mutations[0].Mock.Enabled)
+	})
+
+	t.Run("schema validation error - type none with mock object (not allowed)", func(t *testing.T) {
 		yaml := `
 mutations:
   - type: none
@@ -393,8 +411,8 @@ mutations:
 `
 		_, err := Parse([]byte(yaml))
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "none")
-		assert.Contains(t, err.Error(), "mock")
+		// type: none only allows mock: true, not mock: {object: ...}
+		assert.Contains(t, err.Error(), "validation")
 	})
 
 	t.Run("schema validation error - multiple mock sources", func(t *testing.T) {
@@ -471,7 +489,7 @@ queries:
 `
 		_, err := Parse([]byte(yaml))
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "missing dsn")
+		assert.Contains(t, err.Error(), "database.dsn")
 	})
 
 	t.Run("missing DSN with mock only is allowed", func(t *testing.T) {
@@ -485,6 +503,6 @@ queries:
 `
 		cfg, err := Parse([]byte(yaml))
 		require.NoError(t, err)
-		assert.Empty(t, cfg.DSN)
+		assert.Empty(t, cfg.DSN())
 	})
 }

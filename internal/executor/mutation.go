@@ -109,11 +109,7 @@ func (e *MutationExecutor) ExecuteDB(reqCtx context.Context, ec *ExecContext[Mut
 		if err != nil {
 			return nil, err
 		}
-		return &MutationResult{
-			NoContent:      true,
-			Status:         ec.TC.Response.Status(),
-			ResponseHeader: ec.TC.Response.ToHTTPHeader(),
-		}, nil
+		return ec.Base.ProcessNoneResult(ec.Ctx, ec.OriginalParams, ec.TC)
 
 	case config.MutationTypeOne:
 		slog.Debug("Executing mutation", "type", "one", "sql", boundSQL, "args", args)

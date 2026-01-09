@@ -1,4 +1,5 @@
-dsn: postgres://localhost/test
+database:
+  dsn: postgres://localhost/test
 
 mutations:
   - type: one

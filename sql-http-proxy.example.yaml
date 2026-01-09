@@ -83,7 +83,33 @@ csv:
 # Supports ${VAR}, $VAR, and ${VAR:-default} environment variable expansion
 # Not required if all endpoints use mock
 
-dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/mydb?sslmode=disable
+database:
+  dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/mydb?sslmode=disable
+
+  # Optional: SQL to execute on startup (useful for SQLite in-memory, schema setup)
+  # init: |
+  #   CREATE TABLE IF NOT EXISTS users (...);
+  # Or with files:
+  # init:
+  #   sql_files:
+  #     - ./migrations/001_schema.sql
+  #     - ./migrations/002_seed.sql
+
+# -----------------------------------------------------------------------------
+# HTTP Configuration
+# -----------------------------------------------------------------------------
+# Configure HTTP server settings including CORS
+
+http:
+  # CORS can be:
+  # - true: Permissive mode (Access-Control-Allow-Origin: *)
+  # - Object with detailed configuration
+  cors:
+    allowed_origins:
+      - https://example.com
+      - https://app.example.com
+    allow_credentials: true
+    max_age: 86400  # 24 hours
 
 # =============================================================================
 # QUERIES (SELECT operations)
@@ -670,10 +696,15 @@ mutations:
           created_at: new Date().toISOString()
         };
 
+  # ---------------------------------------------------------------------------
+  # Mock Mutation with type: none
+  # ---------------------------------------------------------------------------
+  # Use mock: true for type: none when no database operation is needed
+
   - type: none
     method: DELETE
     path: /mock/user
-    sql: SELECT 1  # type: none requires sql (mock not supported)
+    mock: true  # No database operation, just validate and return 204
     transform:
       pre: |
         // Validate the request

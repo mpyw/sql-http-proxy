@@ -68,16 +68,114 @@
       "additionalProperties": false,
       "description": "Global CSV parsing configuration for mock csv and csv_file sources"
     },
-    "dsn": {
-      "title": "DSN (Data Source Name)",
-      "type": ["string", "null"],
-      "description": "Database connection string. Supports ${VAR}, $VAR, ${VAR:-default} environment variable expansion. Required unless all endpoints use mock data.",
-      "examples": [
-        "postgres://user:pass@localhost:5432/mydb?sslmode=disable",
-        "mysql://user:pass@tcp(localhost:3306)/mydb",
-        "sqlite:./data.db",
-        "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:5432/mydb"
-      ]
+    "database": {
+      "title": "Database Configuration",
+      "type": "object",
+      "properties": {
+        "dsn": {
+          "title": "DSN (Data Source Name)",
+          "type": "string",
+          "minLength": 1,
+          "description": "Database connection string. Supports ${VAR}, $VAR, ${VAR:-default} environment variable expansion.",
+          "examples": [
+            "postgres://user:pass@localhost:5432/mydb?sslmode=disable",
+            "mysql://user:pass@tcp(localhost:3306)/mydb",
+            "sqlite:./data.db",
+            "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:5432/mydb"
+          ]
+        },
+        "init": {
+          "title": "Database Initialization",
+          "oneOf": [
+            {
+              "title": "Inline SQL (string)",
+              "type": "string",
+              "minLength": 1,
+              "description": "Inline SQL to execute on startup (e.g., CREATE TABLE statements)",
+              "examples": ["CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)"]
+            },
+            {
+              "title": "SQL Configuration (object)",
+              "type": "object",
+              "properties": {
+                "sql": {
+                  "title": "Inline SQL",
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Inline SQL to execute on startup"
+                },
+                "sql_files": {
+                  "title": "SQL File Paths",
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 },
+                  "minItems": 1,
+                  "description": "Paths to SQL files to execute on startup (relative to config file)",
+                  "examples": [["./migrations/001_init.sql", "./migrations/002_seed.sql"]]
+                }
+              },
+              "anyOf": [
+                { "required": ["sql"] },
+                { "required": ["sql_files"] }
+              ],
+              "additionalProperties": false,
+              "description": "Object form with sql and/or sql_files"
+            }
+          ],
+          "description": "SQL to execute on database connection (e.g., schema creation). Runs once on startup."
+        }
+      },
+      "required": ["dsn"],
+      "additionalProperties": false,
+      "description": "Database connection configuration. Required unless all endpoints use mock data."
+    },
+    "http": {
+      "title": "HTTP Configuration",
+      "type": "object",
+      "properties": {
+        "cors": {
+          "title": "CORS Configuration",
+          "oneOf": [
+            {
+              "title": "Enable permissive CORS (boolean)",
+              "type": "boolean",
+              "description": "Set to true to enable permissive CORS (Access-Control-Allow-Origin: *)"
+            },
+            {
+              "title": "CORS Configuration (object)",
+              "type": "object",
+              "properties": {
+                "allowed_origins": {
+                  "title": "Allowed Origins",
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 },
+                  "minItems": 1,
+                  "description": "List of allowed origins. Use '*' for all origins (not recommended for production).",
+                  "examples": [["https://example.com", "https://app.example.com"], ["*"]]
+                },
+                "allow_credentials": {
+                  "title": "Allow Credentials",
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Allow credentials (cookies, authorization headers). Cannot be used with '*' origin."
+                },
+                "max_age": {
+                  "title": "Max Age",
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "How long (in seconds) browsers can cache preflight results. Default: 0 (no caching).",
+                  "examples": [86400, 3600]
+                }
+              },
+              "required": ["allowed_origins"],
+              "additionalProperties": false,
+              "description": "Detailed CORS configuration"
+            }
+          ],
+          "description": "CORS configuration. Use true for permissive defaults, or object for fine-grained control."
+        }
+      },
+      "additionalProperties": false,
+      "description": "HTTP server configuration including CORS settings."
     },
     "queries": {
       "title": "Queries",
@@ -630,14 +728,25 @@
       "additionalProperties": false,
       "description": "Transform configuration for type: many queries/mutations. Pre runs before SQL/mock, post transforms the results."
     },
+    "postTransformNone": {
+      "title": "Post-Transform (type: none)",
+      "type": "string",
+      "minLength": 1,
+      "description": "JavaScript to run after SQL/mock execution. Receives: input (param), ctx (free var). Can set response headers. Return value is ignored.",
+      "examples": [
+        "response.headers.set('X-Custom', 'value');",
+        "response.status = 204;"
+      ]
+    },
     "transformNone": {
       "title": "Transform (type: none)",
       "type": "object",
       "properties": {
-        "pre": { "$ref": "#/$defs/preTransform" }
+        "pre": { "$ref": "#/$defs/preTransform" },
+        "post": { "$ref": "#/$defs/postTransformNone" }
       },
       "additionalProperties": false,
-      "description": "Transform configuration for type: none mutations. Only pre-transform is available (no return value to transform)."
+      "description": "Transform configuration for type: none mutations. Post-transform can set response headers but return value is ignored."
     },
     "handleNotFound": {
       "title": "Handle Not Found",
@@ -743,6 +852,11 @@
       "additionalProperties": false,
       "description": "Mutation endpoint returning multiple rows. Use sql OR mock (not both)."
     },
+    "mockNone": {
+      "title": "Mock (type: none)",
+      "const": true,
+      "description": "Mock marker for type: none. Use 'mock: true' to enable mock mode without database."
+    },
     "mutationNone": {
       "title": "Mutation (type: none)",
       "type": "object",
@@ -755,12 +869,17 @@
         "method": { "$ref": "#/$defs/method" },
         "path": { "$ref": "#/$defs/path" },
         "sql": { "$ref": "#/$defs/sql" },
+        "mock": { "$ref": "#/$defs/mockNone" },
         "accepts": { "$ref": "#/$defs/accepts" },
         "transform": { "$ref": "#/$defs/transformNone" }
       },
-      "required": ["type", "path", "sql"],
+      "required": ["type", "path"],
+      "oneOf": [
+        { "required": ["sql"] },
+        { "required": ["mock"] }
+      ],
       "additionalProperties": false,
-      "description": "Mutation endpoint with no return value (204 No Content). Requires sql (mock not supported)."
+      "description": "Mutation endpoint with no return value (204 No Content). Use sql OR mock (not both)."
     }
   }
 }

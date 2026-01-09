@@ -30,6 +30,11 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 		return nil, nil
 	}
 
+	// Handle mock: true (for type: none)
+	if m.Enabled {
+		return newNilSource(), nil
+	}
+
 	// Validate mutual exclusivity
 	if err := m.Validate(); err != nil {
 		return nil, err
@@ -150,4 +155,15 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 	}
 
 	return wrapWithDelay(source), nil
+}
+
+// nilSource is a mock source for type: none that returns nil.
+type nilSource struct{}
+
+func newNilSource() Source {
+	return &nilSource{}
+}
+
+func (s *nilSource) Data(_ map[string]any, _ string, _ map[string]any, _ *js.TransformContext) (any, map[string]any, error) {
+	return nil, nil, nil
 }

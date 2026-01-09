@@ -3,6 +3,8 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -46,6 +48,14 @@ func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (http.Handler
 	}
 
 	r := chi.NewRouter()
+
+	// Add CORS middleware if enabled
+	if cfg.CORSEnabled() {
+		r.Use(makeCORSMiddleware(cfg.GetCORS()))
+		// Handle OPTIONS preflight for all routes
+		r.Options("/*", corsPreflightHandler)
+	}
+
 	opts := handlerOptions{
 		ConfigDir:   configDir,
 		Helpers:     helpers,
@@ -71,6 +81,42 @@ func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (http.Handler
 	r.NotFound(createNotFoundHandler().ServeHTTP)
 
 	return r, nil
+}
+
+// makeCORSMiddleware creates a CORS middleware with the given configuration.
+func makeCORSMiddleware(cors *config.CORSConfig) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
+
+			// Set Access-Control-Allow-Origin
+			if cors.IsPermissive() {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			} else if origin != "" && slices.Contains(cors.AllowedOrigins, origin) {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Vary", "Origin")
+			}
+
+			// Set Access-Control-Allow-Credentials
+			if cors.AllowCredentials {
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+			}
+
+			// Set Access-Control-Max-Age for preflight caching
+			if cors.MaxAge > 0 {
+				w.Header().Set("Access-Control-Max-Age", strconv.Itoa(cors.MaxAge))
+			}
+
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "*")
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// corsPreflightHandler handles OPTIONS preflight requests.
+func corsPreflightHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // expandPathShorthands expands regex shorthand notations in path patterns.

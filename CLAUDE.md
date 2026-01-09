@@ -44,7 +44,11 @@ go test ./...
 Example `sql-http-proxy.yaml`:
 
 ```yaml
-dsn: postgres://user:pass@localhost:5432/db?sslmode=disable
+database:
+  dsn: postgres://user:pass@localhost:5432/db?sslmode=disable
+
+http:
+  cors: true  # Enable permissive CORS, or use object for detailed config
 
 queries:
   - type: one
@@ -56,7 +60,8 @@ queries:
     sql: SELECT * FROM users LIMIT :limit
 ```
 
-- `dsn`: Database connection string (or use `SQL_PROXY_DSN` environment variable)
+- `database.dsn`: Database connection string (supports `${VAR}` env expansion)
+- `http.cors`: CORS config - `true` for permissive, or object with `allowed_origins`, `allow_credentials`, `max_age`
 - `queries[].type`: `one` for single row, `many` for multiple rows
 - `queries[].path`: HTTP endpoint path
 - `queries[].sql`: SQL query with named placeholders (`:name`)

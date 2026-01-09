@@ -1,0 +1,16 @@
+database:
+  dsn: "sqlite::memory:"
+  init: |
+    CREATE TABLE IF NOT EXISTS products (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      price REAL NOT NULL
+    );
+    DELETE FROM products;
+    INSERT INTO products (id, name, price) VALUES (1, 'Widget', 19.99);
+    INSERT INTO products (id, name, price) VALUES (2, 'Gadget', 29.99);
+
+queries:
+  - type: many
+    path: /products
+    sql: SELECT * FROM products ORDER BY id

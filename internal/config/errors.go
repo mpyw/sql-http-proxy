@@ -74,24 +74,6 @@ func findMissingSqlMockError(errors []errorWithPath) string {
 
 // findMockSourceError detects mock-related errors and provides helpful messages.
 func findMockSourceError(errors []errorWithPath) string {
-	// First check for type: none with mock (detected at mutation level, not mock level)
-	for _, e := range errors {
-		if !isQueryOrMutationPath(e.path) {
-			continue
-		}
-
-		if addl, ok := e.err.ErrorKind.(*kind.AdditionalProperties); ok {
-			// Check if mock is in the additional properties and type is none
-			if slices.Contains(addl.Properties, "mock") {
-				// Check if this is type: none by looking for const errors
-				if isTypeNone(errors, e.path) {
-					return fmt.Sprintf("at '%s': type 'none' does not support mock - use 'sql' instead",
-						formatPath(e.path))
-				}
-			}
-		}
-	}
-
 	// Look for mock path errors
 	for _, e := range errors {
 		if !isMockPath(e.path) {
@@ -163,34 +145,6 @@ func findTypeValue(errors []errorWithPath, parentPath string) string {
 
 	// Default - couldn't determine
 	return ""
-}
-
-// isTypeNone checks if the type at the given path is 'none'.
-// This is determined by looking for const errors expecting 'one' or 'many' (meaning the actual is 'none').
-func isTypeNone(errors []errorWithPath, parentPath string) bool {
-	typePath := parentPath + "/type"
-
-	// Count how many different const errors we have for the type
-	// If we see both 'one' and 'many' as expected values, the actual must be 'none'
-	foundOne := false
-	foundMany := false
-
-	for _, e := range errors {
-		if e.path == typePath {
-			if constErr, ok := e.err.ErrorKind.(*kind.Const); ok {
-				if s, ok := constErr.Want.(string); ok {
-					if s == "one" {
-						foundOne = true
-					}
-					if s == "many" {
-						foundMany = true
-					}
-				}
-			}
-		}
-	}
-
-	return foundOne && foundMany
 }
 
 // isSqlMockOneOfError checks if the oneOf error is specifically about sql/mock.

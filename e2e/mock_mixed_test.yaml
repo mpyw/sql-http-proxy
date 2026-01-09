@@ -1,4 +1,5 @@
-dsn: file::memory:?cache=shared
+database:
+  dsn: file::memory:?cache=shared
 
 queries:
   # Real database query
