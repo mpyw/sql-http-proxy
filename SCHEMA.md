@@ -67,7 +67,11 @@ dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}
 JavaScript functions available in all [`pre`](#pre-transform), [`post`](#post-transform) transforms, [mock JS sources](#mock-js-variables), [`filter`](#filter), and [`csv.value_parser`](#csv-config).
 
 ```yaml
-# Full form
+# Shorthand (inline JS only)
+global_helpers: |
+  function validate(x) { ... }
+
+# Full form (with js_files)
 global_helpers:
   js: |
     function validate(x) { ... }
@@ -79,6 +83,8 @@ global_helpers:
 |----------|------|-------------|
 | `js` | string | Inline JavaScript code |
 | `js_files` | string[] | Paths to JavaScript files (relative to config) |
+
+> **Shorthand:** `global_helpers: |` is equivalent to `global_helpers: { js: | }`
 
 ## CSV Config
 
@@ -405,23 +411,29 @@ post: |
 **For type: many:**
 
 ```yaml
-# Each row
+# Shorthand: transform entire array
+post: |
+  return { data: output, count: output.length };
+
+# Full form: each row only
 post:
   each: |
     return { ...output, processed: true };
 
-# Entire array
+# Full form: entire array only
 post:
   all: |
     return { data: output, count: output.length };
 
-# Both (each runs first)
+# Full form: both (each runs first, then all)
 post:
   each: |
     return { ...output, upper: output.name.toUpperCase() };
   all: |
     return { items: output };
 ```
+
+> **Shorthand:** `post: |` is equivalent to `post: { all: | }`
 
 ## Error Handling
 
