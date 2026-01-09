@@ -33,7 +33,7 @@ go install -tags mock github.com/mpyw/sql-http-proxy/cmd/sql-http-proxy@latest  
 Create `.sql-http-proxy.yaml`:
 
 ```yaml
-dsn: postgres://${DB_USER}:${DB_PASSWORD}@localhost:5432/mydb
+dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/mydb
 
 queries:
   - type: many
@@ -101,7 +101,7 @@ See [SCHEMA.md](SCHEMA.md) for complete reference and [sql-http-proxy.example.ya
 Supports `${VAR}` environment variable expansion:
 
 ```yaml
-dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/mydb
+dsn: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/mydb
 ```
 
 ## Queries & Mutations
