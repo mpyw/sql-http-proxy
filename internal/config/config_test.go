@@ -435,7 +435,7 @@ func TestParseFile(t *testing.T) {
 		// Create a temporary file
 		tmpFile, err := os.CreateTemp("", "config-*.yaml")
 		require.NoError(t, err)
-		defer os.Remove(tmpFile.Name())
+		defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 		content := `
 queries:
@@ -447,7 +447,7 @@ queries:
 `
 		_, err = tmpFile.WriteString(content)
 		require.NoError(t, err)
-		tmpFile.Close()
+		require.NoError(t, tmpFile.Close())
 
 		cfg, err := ParseFile(tmpFile.Name())
 		require.NoError(t, err)

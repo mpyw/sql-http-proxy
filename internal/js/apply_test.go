@@ -1,6 +1,7 @@
 package js
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -285,5 +286,23 @@ func TestApplyPostToAllRows(t *testing.T) {
 
 		resultMap := result.Output.(map[string]any)
 		assert.Equal(t, int64(2), resultMap["total"])
+	})
+}
+
+func TestJSTimeout(t *testing.T) {
+	t.Run("infinite loop times out", func(t *testing.T) {
+		// This test verifies that infinite loops are interrupted
+		// Note: JSTimeout is 5 seconds by default
+		transformer, err := CompilePre(`while(true) {} return input`)
+		require.NoError(t, err)
+
+		_, err = transformer.ApplyPre(
+			map[string]any{},
+			"SELECT 1",
+			map[string]any{},
+			nil,
+		)
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, ErrJSTimeout), "expected timeout error, got: %v", err)
 	})
 }

@@ -21,6 +21,14 @@ func TestTransformError(t *testing.T) {
 		assert.Equal(t, "validation error", err.Error())
 	})
 
+	t.Run("object body with error key", func(t *testing.T) {
+		err := &TransformError{
+			Status: 400,
+			Body:   map[string]any{"error": "something went wrong", "code": "ERR001"},
+		}
+		assert.Equal(t, "something went wrong", err.Error())
+	})
+
 	t.Run("object body without message", func(t *testing.T) {
 		err := &TransformError{
 			Status: 400,
@@ -145,5 +153,20 @@ func TestParseJSError_ThrownString(t *testing.T) {
 		require.ErrorAs(t, err, &transformErr)
 		assert.Equal(t, 0, transformErr.Status)
 		assert.Equal(t, "simple error message", transformErr.Body)
+	})
+}
+
+func TestParseJSError_ErrorKey(t *testing.T) {
+	t.Run("body with error key", func(t *testing.T) {
+		transformer, err := CompilePre(`throw { status: 400, body: { error: "something went wrong" } }`)
+		require.NoError(t, err)
+
+		_, err = transformer.ApplyMock(nil, "", nil, nil)
+		require.Error(t, err)
+
+		var transformErr *TransformError
+		require.ErrorAs(t, err, &transformErr)
+		assert.Equal(t, 400, transformErr.Status)
+		assert.Equal(t, "something went wrong", transformErr.Error())
 	})
 }
