@@ -71,7 +71,7 @@ func TestDatabaseInit_SQLFile(t *testing.T) {
 	configFile := filepath.Join(tmpDir, "config.yaml")
 	err = os.WriteFile(configFile, []byte(`
 database:
-  dsn: "sqlite::memory:"
+  dsn: ":memory:"
   init:
     sql_files:
       - ./init.sql

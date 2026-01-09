@@ -20,7 +20,7 @@ func TestExecuteInit_InlineSQL(t *testing.T) {
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
-			DSN: "sqlite::memory:",
+			DSN: ":memory:",
 			Init: &config.DatabaseInit{
 				SQL: "CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)",
 			},
@@ -55,7 +55,7 @@ func TestExecuteInit_SQLFiles(t *testing.T) {
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
-			DSN: "sqlite::memory:",
+			DSN: ":memory:",
 			Init: &config.DatabaseInit{
 				SQLFiles: []string{"init.sql"},
 			},
@@ -89,7 +89,7 @@ func TestExecuteInit_BothSQLAndFiles(t *testing.T) {
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
-			DSN: "sqlite::memory:",
+			DSN: ":memory:",
 			Init: &config.DatabaseInit{
 				SQL:      "CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT); INSERT INTO test (id, name) VALUES (1, 'Alice');",
 				SQLFiles: []string{"seed.sql"},
@@ -114,7 +114,7 @@ func TestExecuteInit_NoInit(t *testing.T) {
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
-			DSN: "sqlite::memory:",
+			DSN: ":memory:",
 		},
 	}
 
@@ -140,7 +140,7 @@ func TestExecuteInit_InvalidSQL(t *testing.T) {
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
-			DSN: "sqlite::memory:",
+			DSN: ":memory:",
 			Init: &config.DatabaseInit{
 				SQL: "INVALID SQL SYNTAX",
 			},
@@ -159,7 +159,7 @@ func TestExecuteInit_MissingSQLFile(t *testing.T) {
 
 	cfg := config.Config{
 		Database: &config.DatabaseConfig{
-			DSN: "sqlite::memory:",
+			DSN: ":memory:",
 			Init: &config.DatabaseInit{
 				SQLFiles: []string{"nonexistent.sql"},
 			},

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/a8m/envsubst"
 	"github.com/samber/lo"
@@ -100,6 +101,10 @@ func (cfg *Config) Driver() (string, error) {
 	dsn := cfg.DSN()
 	if dsn == "" {
 		return "", errors.New("no database configured")
+	}
+	// Handle SQLite special cases: :memory: or file paths without scheme
+	if dsn == ":memory:" || strings.HasSuffix(dsn, ".db") || strings.HasSuffix(dsn, ".sqlite") {
+		return "sqlite", nil
 	}
 	u, err := url.Parse(dsn)
 	if err != nil {

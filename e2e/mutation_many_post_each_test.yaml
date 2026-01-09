@@ -1,5 +1,5 @@
 database:
-  dsn: "sqlite::memory:"
+  dsn: ":memory:"
 
 mutations:
   - type: many

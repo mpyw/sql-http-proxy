@@ -73,14 +73,14 @@ Execute SQL when the database connection is established. Useful for creating tab
 ```yaml
 # Shorthand (inline SQL only)
 database:
-  dsn: "sqlite::memory:"
+  dsn: ":memory:"
   init: |
     CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT);
     INSERT INTO users (id, name) VALUES (1, 'Alice');
 
 # Full form (with sql_files)
 database:
-  dsn: "sqlite::memory:"
+  dsn: ":memory:"
   init:
     sql: |
       CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT);
