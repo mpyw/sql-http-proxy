@@ -12,8 +12,8 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/server"
 )
 
-func TestMockDelay(t *testing.T) {
-	cfg, err := config.ParseFile("mock_delay_test.yaml")
+func TestDelay(t *testing.T) {
+	cfg, err := config.ParseFile("delay_test.yaml")
 	require.NoError(t, err)
 
 	mux, err := server.NewServeMux(nil, cfg, ".")

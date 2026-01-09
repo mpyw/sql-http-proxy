@@ -1,7 +1,9 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/samber/lo"
@@ -41,6 +43,15 @@ func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOpt
 		return nil, err
 	}
 
+	// Parse delay if specified
+	var delay time.Duration
+	if query.Delay != "" {
+		delay, err = time.ParseDuration(query.Delay)
+		if err != nil {
+			return nil, fmt.Errorf("query %s: invalid delay %q: %w", query.Path, query.Delay, err)
+		}
+	}
+
 	return &QueryHandler{
 		exec:          exec,
 		method:        query.GetMethod(),
@@ -49,5 +60,6 @@ func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOpt
 		recorder:      opts.Recorder,
 		processor:     &queryResultProcessor{},
 		checkNotFound: true,
+		delay:         delay,
 	}, nil
 }

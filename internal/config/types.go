@@ -96,6 +96,7 @@ type Query struct {
 	Accepts        *AcceptTypes `yaml:"accepts,omitempty"`          // Accepted content types for body (nil: default, empty: none)
 	HandleNotFound bool         `yaml:"handle_not_found,omitempty"` // Pass null to post-transform instead of 404 (type: one only)
 	Transform      *Transform   `yaml:"transform,omitempty"`
+	Delay          string       `yaml:"delay,omitempty"` // Artificial delay before response (e.g., "100ms", "1s")
 }
 
 // GetMethod returns the HTTP method for the query (default: GET).
@@ -129,6 +130,7 @@ type Mutation struct {
 	Mock      *Mock        `yaml:"mock,omitempty"`    // Mock data source (alternative to SQL)
 	Accepts   *AcceptTypes `yaml:"accepts,omitempty"` // Accepted content types for body (nil: default, empty: none)
 	Transform *Transform   `yaml:"transform,omitempty"`
+	Delay     string       `yaml:"delay,omitempty"` // Artificial delay before response (e.g., "100ms", "1s")
 }
 
 // GetMethod returns the HTTP method for the mutation (default: POST).
@@ -187,9 +189,6 @@ type Mock struct {
 	// Filter for array sources (JS code: receives row, input params, ctx free var; returns boolean)
 	// Required for type: one with array sources, optional for type: many
 	Filter string `yaml:"filter,omitempty"`
-
-	// Delay adds artificial latency to mock responses (e.g., "100ms", "1s")
-	Delay string `yaml:"delay,omitempty"`
 }
 
 // UnmarshalYAML implements custom YAML unmarshaling for Mock.

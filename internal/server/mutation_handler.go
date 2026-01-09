@@ -1,7 +1,9 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/samber/lo"
@@ -46,6 +48,15 @@ func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts h
 		return nil, err
 	}
 
+	// Parse delay if specified
+	var delay time.Duration
+	if mutation.Delay != "" {
+		delay, err = time.ParseDuration(mutation.Delay)
+		if err != nil {
+			return nil, fmt.Errorf("mutation %s: invalid delay %q: %w", mutation.Path, mutation.Delay, err)
+		}
+	}
+
 	return &MutationHandler{
 		exec:          exec,
 		method:        mutation.GetMethod(),
@@ -54,5 +65,6 @@ func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts h
 		recorder:      opts.Recorder,
 		processor:     &mutationResultProcessor{},
 		checkNotFound: false,
+		delay:         delay,
 	}, nil
 }

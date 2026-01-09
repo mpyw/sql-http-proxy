@@ -3,7 +3,6 @@ package mock
 import (
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/mpyw/sql-http-proxy/internal/config"
 	"github.com/mpyw/sql-http-proxy/internal/js"
@@ -40,30 +39,12 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 		return nil, err
 	}
 
-	// Parse delay if specified
-	var delay time.Duration
-	if m.Delay != "" {
-		var err error
-		delay, err = time.ParseDuration(m.Delay)
-		if err != nil {
-			return nil, fmt.Errorf("mock: invalid delay %q: %w", m.Delay, err)
-		}
-	}
-
 	// Helper to resolve file paths
 	resolvePath := func(path string) string {
 		if filepath.IsAbs(path) {
 			return path
 		}
 		return filepath.Join(opts.ConfigDir, path)
-	}
-
-	// Helper to wrap with delay if needed
-	wrapWithDelay := func(source Source) Source {
-		if delay > 0 {
-			return newDelayedSource(source, delay)
-		}
-		return source
 	}
 
 	// CSV parsing options
@@ -90,7 +71,7 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 			return nil, err
 		}
 		src.SetHelpers(opts.Helpers)
-		return wrapWithDelay(src), nil // JS handles its own execution
+		return src, nil // JS handles its own execution
 
 	// Array sources
 	case m.Array != nil:
@@ -117,9 +98,9 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 			if err != nil {
 				return nil, err
 			}
-			return wrapWithDelay(filtered), nil
+			return filtered, nil
 		}
-		return wrapWithDelay(src), nil
+		return src, nil
 
 	case m.CSV != "":
 		source, err = parseCSVWithOptions(m.CSV, csvOpts)
@@ -151,10 +132,10 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 		if err != nil {
 			return nil, err
 		}
-		return wrapWithDelay(filtered), nil
+		return filtered, nil
 	}
 
-	return wrapWithDelay(source), nil
+	return source, nil
 }
 
 // nilSource is a mock source for type: none that returns nil.

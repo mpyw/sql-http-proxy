@@ -24,8 +24,8 @@ This document describes all configuration options for sql-http-proxy. For usage 
     - [Object Sources](#object-sources-type-one-only)
     - [Array Sources](#array-sources-type-many-or-type-one-with-filter)
   - [Filter](#filter)
-  - [Delay](#delay)
   - [Mock JS Variables](#mock-js-variables)
+- [Delay](#delay)
 - [Transform](#transform)
   - [Pre-Transform](#pre-transform)
   - [Post-Transform](#post-transform)
@@ -415,14 +415,16 @@ The `filter` option allows filtering array data using JavaScript.
     filter: return row.role === input.role
 ```
 
-### Delay
+## Delay
 
-Add artificial latency to mock responses. Useful for testing loading states and timeouts.
+Add artificial latency to responses. Useful for testing loading states and timeouts.
 
 ```yaml
-mock:
-  object: { id: 1, name: Alice }
-  delay: 500ms
+queries:
+  - type: one
+    path: /slow-user
+    delay: 500ms
+    sql: SELECT * FROM users WHERE id = :id
 ```
 
 | Value | Description |
@@ -432,20 +434,23 @@ mock:
 **Supported units:** `ns`, `us`/`µs`, `ms`, `s`, `m`, `h`
 
 ```yaml
-# With array source
-mock:
-  array:
-    - { id: 1, name: Alice }
-    - { id: 2, name: Bob }
-  delay: 1s
+# With mock source
+queries:
+  - type: many
+    path: /slow-users
+    delay: 1s
+    mock:
+      array:
+        - { id: 1, name: Alice }
+        - { id: 2, name: Bob }
 
-# With filter
-mock:
-  array:
-    - { id: 1, name: Alice }
-    - { id: 2, name: Bob }
-  filter: return row.id == parseInt(input.id)
-  delay: 200ms
+# With mutations
+mutations:
+  - type: one
+    method: POST
+    path: /slow-create
+    delay: 200ms
+    sql: INSERT INTO users (name) VALUES (:name) RETURNING *
 ```
 
 ### Mock JS Variables

@@ -13,7 +13,9 @@
           "type": "string",
           "minLength": 1,
           "description": "Inline JavaScript helpers (shorthand for global_helpers.js)",
-          "examples": ["function requireInt(v) { return parseInt(v) || 0; }"]
+          "examples": [
+            "function requireInt(v) { return parseInt(v) || 0; }"
+          ]
         },
         {
           "title": "JavaScript Files (object)",
@@ -24,7 +26,9 @@
               "type": "string",
               "minLength": 1,
               "description": "Inline JavaScript helper code",
-              "examples": ["function validate(x) { if (!x) throw { status: 400, body: { error: 'required' } }; return x; }"]
+              "examples": [
+                "function validate(x) { if (!x) throw { status: 400, body: { error: 'required' } }; return x; }"
+              ]
             },
             "js_files": {
               "title": "JavaScript File Paths",
@@ -34,16 +38,31 @@
                 "minLength": 1,
                 "title": "JavaScript File Path",
                 "description": "Path to JavaScript helper file",
-                "examples": ["./helpers/validation.js"]
+                "examples": [
+                  "./helpers/validation.js"
+                ]
               },
               "minItems": 1,
               "description": "Paths to JavaScript helper files (relative to config file)",
-              "examples": [["./helpers/validation.js", "./helpers/auth.js"]]
+              "examples": [
+                [
+                  "./helpers/validation.js",
+                  "./helpers/auth.js"
+                ]
+              ]
             }
           },
           "anyOf": [
-            { "required": ["js"] },
-            { "required": ["js_files"] }
+            {
+              "required": [
+                "js"
+              ]
+            },
+            {
+              "required": [
+                "js_files"
+              ]
+            }
           ],
           "additionalProperties": false,
           "description": "Object form with js and/or js_files"
@@ -92,7 +111,9 @@
               "type": "string",
               "minLength": 1,
               "description": "Inline SQL to execute on startup (e.g., CREATE TABLE statements)",
-              "examples": ["CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)"]
+              "examples": [
+                "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)"
+              ]
             },
             {
               "title": "SQL Configuration (object)",
@@ -107,15 +128,31 @@
                 "sql_files": {
                   "title": "SQL File Paths",
                   "type": "array",
-                  "items": { "type": "string", "minLength": 1 },
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
                   "minItems": 1,
                   "description": "Paths to SQL files to execute on startup (relative to config file)",
-                  "examples": [["./migrations/001_init.sql", "./migrations/002_seed.sql"]]
+                  "examples": [
+                    [
+                      "./migrations/001_init.sql",
+                      "./migrations/002_seed.sql"
+                    ]
+                  ]
                 }
               },
               "anyOf": [
-                { "required": ["sql"] },
-                { "required": ["sql_files"] }
+                {
+                  "required": [
+                    "sql"
+                  ]
+                },
+                {
+                  "required": [
+                    "sql_files"
+                  ]
+                }
               ],
               "additionalProperties": false,
               "description": "Object form with sql and/or sql_files"
@@ -124,7 +161,9 @@
           "description": "SQL to execute on database connection (e.g., schema creation). Runs once on startup."
         }
       },
-      "required": ["dsn"],
+      "required": [
+        "dsn"
+      ],
       "additionalProperties": false,
       "description": "Database connection configuration. Required unless all endpoints use mock data."
     },
@@ -147,10 +186,21 @@
                 "allowed_origins": {
                   "title": "Allowed Origins",
                   "type": "array",
-                  "items": { "type": "string", "minLength": 1 },
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
                   "minItems": 1,
                   "description": "List of allowed origins. Use '*' for all origins (not recommended for production).",
-                  "examples": [["https://example.com", "https://app.example.com"], ["*"]]
+                  "examples": [
+                    [
+                      "https://example.com",
+                      "https://app.example.com"
+                    ],
+                    [
+                      "*"
+                    ]
+                  ]
                 },
                 "allow_credentials": {
                   "title": "Allow Credentials",
@@ -163,10 +213,15 @@
                   "type": "integer",
                   "minimum": 0,
                   "description": "How long (in seconds) browsers can cache preflight results. Default: 0 (no caching).",
-                  "examples": [86400, 3600]
+                  "examples": [
+                    86400,
+                    3600
+                  ]
                 }
               },
-              "required": ["allowed_origins"],
+              "required": [
+                "allowed_origins"
+              ],
               "additionalProperties": false,
               "description": "Detailed CORS configuration"
             }
@@ -183,8 +238,12 @@
       "items": {
         "title": "Query",
         "oneOf": [
-          { "$ref": "#/$defs/queryOne" },
-          { "$ref": "#/$defs/queryMany" }
+          {
+            "$ref": "#/$defs/queryOne"
+          },
+          {
+            "$ref": "#/$defs/queryMany"
+          }
         ]
       },
       "minItems": 1,
@@ -196,9 +255,15 @@
       "items": {
         "title": "Mutation",
         "oneOf": [
-          { "$ref": "#/$defs/mutationOne" },
-          { "$ref": "#/$defs/mutationMany" },
-          { "$ref": "#/$defs/mutationNone" }
+          {
+            "$ref": "#/$defs/mutationOne"
+          },
+          {
+            "$ref": "#/$defs/mutationMany"
+          },
+          {
+            "$ref": "#/$defs/mutationNone"
+          }
         ]
       },
       "minItems": 1,
@@ -206,8 +271,16 @@
     }
   },
   "anyOf": [
-    { "required": ["queries"] },
-    { "required": ["mutations"] }
+    {
+      "required": [
+        "queries"
+      ]
+    },
+    {
+      "required": [
+        "mutations"
+      ]
+    }
   ],
   "additionalProperties": false,
   "$defs": {
@@ -216,7 +289,12 @@
       "type": "string",
       "pattern": "^/",
       "description": "HTTP endpoint path. Must start with /. Supports path parameters with :param syntax (e.g., /users/:id).",
-      "examples": ["/users", "/users/:id", "/users/:user_id/posts/:post_id", "/api/v1/products"]
+      "examples": [
+        "/users",
+        "/users/:id",
+        "/users/:user_id/posts/:post_id",
+        "/api/v1/products"
+      ]
     },
     "sql": {
       "title": "SQL Query",
@@ -234,18 +312,37 @@
     "method": {
       "title": "HTTP Method (Mutation)",
       "type": "string",
-      "enum": ["POST", "PUT", "PATCH", "DELETE"],
+      "enum": [
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
       "default": "POST",
       "description": "HTTP method for mutation endpoint. POST: create, PUT: replace, PATCH: partial update, DELETE: delete.",
-      "examples": ["POST", "PUT", "PATCH", "DELETE"]
+      "examples": [
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
     },
     "queryMethod": {
       "title": "HTTP Method (Query)",
       "type": "string",
-      "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      "enum": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
       "default": "GET",
       "description": "HTTP method for query endpoint. GET is default. Use POST for complex parameters in request body.",
-      "examples": ["GET", "POST"]
+      "examples": [
+        "GET",
+        "POST"
+      ]
     },
     "accepts": {
       "title": "Accepted Content-Types",
@@ -253,7 +350,10 @@
         {
           "title": "Single Content-Type",
           "type": "string",
-          "enum": ["json", "form"],
+          "enum": [
+            "json",
+            "form"
+          ],
           "description": "Accept single content type. json: application/json, form: application/x-www-form-urlencoded"
         },
         {
@@ -261,16 +361,29 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["json", "form"],
+            "enum": [
+              "json",
+              "form"
+            ],
             "title": "Content-Type",
             "description": "Content type identifier"
           },
           "description": "Accept multiple content types. Empty array means no body accepted."
         }
       ],
-      "default": ["json", "form"],
+      "default": [
+        "json",
+        "form"
+      ],
       "description": "Accepted Content-Types for request body. json: application/json, form: application/x-www-form-urlencoded. Returns 415 if not matched.",
-      "examples": ["json", "form", ["json", "form"]]
+      "examples": [
+        "json",
+        "form",
+        [
+          "json",
+          "form"
+        ]
+      ]
     },
     "preTransform": {
       "title": "Pre-Transform",
@@ -349,11 +462,16 @@
       ]
     },
     "delay": {
-      "title": "Mock Response Delay",
+      "title": "Response Delay",
       "type": "string",
       "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
-      "description": "Artificial delay before returning mock response. Uses Go duration format (e.g., '100ms', '1s', '500µs').",
-      "examples": ["100ms", "1s", "500ms", "2s"]
+      "description": "Artificial delay before returning response. Uses Go duration format (e.g., '100ms', '1s', '500µs').",
+      "examples": [
+        "100ms",
+        "1s",
+        "500ms",
+        "2s"
+      ]
     },
     "mockOneObject": {
       "title": "Mock Object Sources (type: one)",
@@ -366,11 +484,18 @@
               "title": "Object Data",
               "type": "object",
               "description": "Inline YAML/JSON object to return",
-              "examples": [{ "id": 1, "name": "Alice", "email": "alice@example.com" }]
-            },
-            "delay": { "$ref": "#/$defs/delay" }
+              "examples": [
+                {
+                  "id": 1,
+                  "name": "Alice",
+                  "email": "alice@example.com"
+                }
+              ]
+            }
           },
-          "required": ["object"],
+          "required": [
+            "object"
+          ],
           "additionalProperties": false,
           "description": "Return inline YAML object"
         },
@@ -382,11 +507,14 @@
               "type": "string",
               "minLength": 1,
               "description": "JSON string containing a single object",
-              "examples": ["{\"id\": 1, \"name\": \"Alice\"}"]
-            },
-            "delay": { "$ref": "#/$defs/delay" }
+              "examples": [
+                "{\"id\": 1, \"name\": \"Alice\"}"
+              ]
+            }
           },
-          "required": ["object_json"],
+          "required": [
+            "object_json"
+          ],
           "additionalProperties": false,
           "description": "Return object parsed from JSON string"
         },
@@ -398,11 +526,15 @@
               "type": "string",
               "minLength": 1,
               "description": "Path to JSON file containing a single object (relative to config file)",
-              "examples": ["./mocks/user.json", "./data/config.json"]
-            },
-            "delay": { "$ref": "#/$defs/delay" }
+              "examples": [
+                "./mocks/user.json",
+                "./data/config.json"
+              ]
+            }
           },
-          "required": ["object_json_file"],
+          "required": [
+            "object_json_file"
+          ],
           "additionalProperties": false,
           "description": "Return object loaded from JSON file"
         },
@@ -418,10 +550,11 @@
                 "return { id: parseInt(input.id), name: 'User ' + input.id };",
                 "if (input.id === '404') return null;\nreturn { id: parseInt(input.id), name: 'Mock User' };"
               ]
-            },
-            "delay": { "$ref": "#/$defs/delay" }
+            }
           },
-          "required": ["object_js"],
+          "required": [
+            "object_js"
+          ],
           "additionalProperties": false,
           "description": "Return object generated by JavaScript"
         }
@@ -438,14 +571,31 @@
             "array": {
               "title": "Array Data",
               "type": "array",
-              "items": { "type": "object" },
+              "items": {
+                "type": "object"
+              },
               "description": "Inline YAML/JSON array of objects",
-              "examples": [[{ "id": 1, "name": "Alice" }, { "id": 2, "name": "Bob" }]]
+              "examples": [
+                [
+                  {
+                    "id": 1,
+                    "name": "Alice"
+                  },
+                  {
+                    "id": 2,
+                    "name": "Bob"
+                  }
+                ]
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["array", "filter"],
+          "required": [
+            "array",
+            "filter"
+          ],
           "additionalProperties": false,
           "description": "Filter YAML array to find matching row"
         },
@@ -457,12 +607,18 @@
               "type": "string",
               "minLength": 1,
               "description": "JSON string containing array of objects",
-              "examples": ["[{\"id\": 1, \"name\": \"Alice\"}, {\"id\": 2, \"name\": \"Bob\"}]"]
+              "examples": [
+                "[{\"id\": 1, \"name\": \"Alice\"}, {\"id\": 2, \"name\": \"Bob\"}]"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["array_json", "filter"],
+          "required": [
+            "array_json",
+            "filter"
+          ],
           "additionalProperties": false,
           "description": "Filter JSON array string to find matching row"
         },
@@ -474,12 +630,18 @@
               "type": "string",
               "minLength": 1,
               "description": "Path to JSON file containing array of objects",
-              "examples": ["./mocks/users.json"]
+              "examples": [
+                "./mocks/users.json"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["array_json_file", "filter"],
+          "required": [
+            "array_json_file",
+            "filter"
+          ],
           "additionalProperties": false,
           "description": "Filter JSON file array to find matching row"
         },
@@ -491,12 +653,18 @@
               "type": "string",
               "minLength": 1,
               "description": "Inline CSV data with header row. First line is column names.",
-              "examples": ["id,name,email\n1,Alice,alice@example.com\n2,Bob,bob@example.com"]
+              "examples": [
+                "id,name,email\n1,Alice,alice@example.com\n2,Bob,bob@example.com"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["csv", "filter"],
+          "required": [
+            "csv",
+            "filter"
+          ],
           "additionalProperties": false,
           "description": "Filter CSV data to find matching row"
         },
@@ -508,12 +676,19 @@
               "type": "string",
               "minLength": 1,
               "description": "Path to CSV file (relative to config file)",
-              "examples": ["./mocks/users.csv", "./data/products.csv"]
+              "examples": [
+                "./mocks/users.csv",
+                "./data/products.csv"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["csv_file", "filter"],
+          "required": [
+            "csv_file",
+            "filter"
+          ],
           "additionalProperties": false,
           "description": "Filter CSV file to find matching row"
         },
@@ -525,12 +700,18 @@
               "type": "string",
               "minLength": 1,
               "description": "Inline JSONL data (one JSON object per line)",
-              "examples": ["{\"id\": 1, \"name\": \"Alice\"}\n{\"id\": 2, \"name\": \"Bob\"}"]
+              "examples": [
+                "{\"id\": 1, \"name\": \"Alice\"}\n{\"id\": 2, \"name\": \"Bob\"}"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["jsonl", "filter"],
+          "required": [
+            "jsonl",
+            "filter"
+          ],
           "additionalProperties": false,
           "description": "Filter JSONL data to find matching row"
         },
@@ -542,12 +723,19 @@
               "type": "string",
               "minLength": 1,
               "description": "Path to JSONL file (one JSON object per line)",
-              "examples": ["./mocks/users.jsonl", "./logs/events.jsonl"]
+              "examples": [
+                "./mocks/users.jsonl",
+                "./logs/events.jsonl"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["jsonl_file", "filter"],
+          "required": [
+            "jsonl_file",
+            "filter"
+          ],
           "additionalProperties": false,
           "description": "Filter JSONL file to find matching row"
         }
@@ -557,8 +745,12 @@
     "mockOne": {
       "title": "Mock (type: one)",
       "oneOf": [
-        { "$ref": "#/$defs/mockOneObject" },
-        { "$ref": "#/$defs/mockOneArray" }
+        {
+          "$ref": "#/$defs/mockOneObject"
+        },
+        {
+          "$ref": "#/$defs/mockOneArray"
+        }
       ],
       "description": "Mock data source for type: one. Either object sources (return single object) or array sources with filter (select matching row)."
     },
@@ -572,14 +764,30 @@
             "array": {
               "title": "Array Data",
               "type": "array",
-              "items": { "type": "object" },
+              "items": {
+                "type": "object"
+              },
               "description": "Inline YAML/JSON array of objects",
-              "examples": [[{ "id": 1, "name": "Alice" }, { "id": 2, "name": "Bob" }]]
+              "examples": [
+                [
+                  {
+                    "id": 1,
+                    "name": "Alice"
+                  },
+                  {
+                    "id": 2,
+                    "name": "Bob"
+                  }
+                ]
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["array"],
+          "required": [
+            "array"
+          ],
           "additionalProperties": false,
           "description": "Return YAML array (optionally filtered)"
         },
@@ -591,12 +799,17 @@
               "type": "string",
               "minLength": 1,
               "description": "JSON string containing array of objects",
-              "examples": ["[{\"id\": 1}, {\"id\": 2}]"]
+              "examples": [
+                "[{\"id\": 1}, {\"id\": 2}]"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["array_json"],
+          "required": [
+            "array_json"
+          ],
           "additionalProperties": false,
           "description": "Return array parsed from JSON string (optionally filtered)"
         },
@@ -608,12 +821,17 @@
               "type": "string",
               "minLength": 1,
               "description": "Path to JSON file containing array of objects",
-              "examples": ["./mocks/users.json"]
+              "examples": [
+                "./mocks/users.json"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["array_json_file"],
+          "required": [
+            "array_json_file"
+          ],
           "additionalProperties": false,
           "description": "Return array loaded from JSON file (optionally filtered)"
         },
@@ -629,10 +847,11 @@
                 "return [{ id: 1, name: 'User 1' }, { id: 2, name: 'User 2' }];",
                 "const count = parseInt(input.count) || 5;\nreturn Array.from({ length: count }, (_, i) => ({ id: i + 1, name: 'User ' + (i + 1) }));"
               ]
-            },
-            "delay": { "$ref": "#/$defs/delay" }
+            }
           },
-          "required": ["array_js"],
+          "required": [
+            "array_js"
+          ],
           "additionalProperties": false,
           "description": "Return array generated by JavaScript"
         },
@@ -644,12 +863,17 @@
               "type": "string",
               "minLength": 1,
               "description": "Inline CSV data with header row",
-              "examples": ["id,name,role\n1,Alice,admin\n2,Bob,user\n3,Charlie,admin"]
+              "examples": [
+                "id,name,role\n1,Alice,admin\n2,Bob,user\n3,Charlie,admin"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["csv"],
+          "required": [
+            "csv"
+          ],
           "additionalProperties": false,
           "description": "Return array parsed from CSV data (optionally filtered)"
         },
@@ -661,12 +885,17 @@
               "type": "string",
               "minLength": 1,
               "description": "Path to CSV file",
-              "examples": ["./mocks/users.csv"]
+              "examples": [
+                "./mocks/users.csv"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["csv_file"],
+          "required": [
+            "csv_file"
+          ],
           "additionalProperties": false,
           "description": "Return array loaded from CSV file (optionally filtered)"
         },
@@ -678,12 +907,17 @@
               "type": "string",
               "minLength": 1,
               "description": "Inline JSONL data (one JSON object per line)",
-              "examples": ["{\"id\": 1, \"level\": \"info\"}\n{\"id\": 2, \"level\": \"error\"}"]
+              "examples": [
+                "{\"id\": 1, \"level\": \"info\"}\n{\"id\": 2, \"level\": \"error\"}"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["jsonl"],
+          "required": [
+            "jsonl"
+          ],
           "additionalProperties": false,
           "description": "Return array parsed from JSONL data (optionally filtered)"
         },
@@ -695,12 +929,17 @@
               "type": "string",
               "minLength": 1,
               "description": "Path to JSONL file",
-              "examples": ["./mocks/logs.jsonl"]
+              "examples": [
+                "./mocks/logs.jsonl"
+              ]
             },
-            "filter": { "$ref": "#/$defs/filter" },
-            "delay": { "$ref": "#/$defs/delay" }
+            "filter": {
+              "$ref": "#/$defs/filter"
+            }
           },
-          "required": ["jsonl_file"],
+          "required": [
+            "jsonl_file"
+          ],
           "additionalProperties": false,
           "description": "Return array loaded from JSONL file (optionally filtered)"
         }
@@ -711,8 +950,12 @@
       "title": "Transform (type: one)",
       "type": "object",
       "properties": {
-        "pre": { "$ref": "#/$defs/preTransform" },
-        "post": { "$ref": "#/$defs/postTransformOne" }
+        "pre": {
+          "$ref": "#/$defs/preTransform"
+        },
+        "post": {
+          "$ref": "#/$defs/postTransformOne"
+        }
       },
       "additionalProperties": false,
       "description": "Transform configuration for type: one queries/mutations. Pre runs before SQL/mock, post transforms the result."
@@ -721,8 +964,12 @@
       "title": "Transform (type: many)",
       "type": "object",
       "properties": {
-        "pre": { "$ref": "#/$defs/preTransform" },
-        "post": { "$ref": "#/$defs/postTransformMany" }
+        "pre": {
+          "$ref": "#/$defs/preTransform"
+        },
+        "post": {
+          "$ref": "#/$defs/postTransformMany"
+        }
       },
       "additionalProperties": false,
       "description": "Transform configuration for type: many queries/mutations. Pre runs before SQL/mock, post transforms the results."
@@ -741,8 +988,12 @@
       "title": "Transform (type: none)",
       "type": "object",
       "properties": {
-        "pre": { "$ref": "#/$defs/preTransform" },
-        "post": { "$ref": "#/$defs/postTransformNone" }
+        "pre": {
+          "$ref": "#/$defs/preTransform"
+        },
+        "post": {
+          "$ref": "#/$defs/postTransformNone"
+        }
       },
       "additionalProperties": false,
       "description": "Transform configuration for type: none mutations. Post-transform can set response headers but return value is ignored."
@@ -752,7 +1003,10 @@
       "type": "boolean",
       "default": false,
       "description": "If true, pass null to post-transform instead of returning 404 when no row found. Allows custom not-found handling.",
-      "examples": [true, false]
+      "examples": [
+        true,
+        false
+      ]
     },
     "queryOne": {
       "title": "Query (type: one)",
@@ -763,18 +1017,46 @@
           "const": "one",
           "description": "Single row query. Returns object if found, 404 if not found."
         },
-        "method": { "$ref": "#/$defs/queryMethod" },
-        "path": { "$ref": "#/$defs/path" },
-        "sql": { "$ref": "#/$defs/sql" },
-        "mock": { "$ref": "#/$defs/mockOne" },
-        "accepts": { "$ref": "#/$defs/accepts" },
-        "handle_not_found": { "$ref": "#/$defs/handleNotFound" },
-        "transform": { "$ref": "#/$defs/transformOne" }
+        "method": {
+          "$ref": "#/$defs/queryMethod"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sql": {
+          "$ref": "#/$defs/sql"
+        },
+        "mock": {
+          "$ref": "#/$defs/mockOne"
+        },
+        "accepts": {
+          "$ref": "#/$defs/accepts"
+        },
+        "handle_not_found": {
+          "$ref": "#/$defs/handleNotFound"
+        },
+        "transform": {
+          "$ref": "#/$defs/transformOne"
+        },
+        "delay": {
+          "$ref": "#/$defs/delay"
+        }
       },
-      "required": ["type", "path"],
+      "required": [
+        "type",
+        "path"
+      ],
       "oneOf": [
-        { "required": ["sql"] },
-        { "required": ["mock"] }
+        {
+          "required": [
+            "sql"
+          ]
+        },
+        {
+          "required": [
+            "mock"
+          ]
+        }
       ],
       "additionalProperties": false,
       "description": "Query endpoint returning single row. Use sql OR mock (not both)."
@@ -788,17 +1070,43 @@
           "const": "many",
           "description": "Multiple rows query. Returns array (empty array if no rows)."
         },
-        "method": { "$ref": "#/$defs/queryMethod" },
-        "path": { "$ref": "#/$defs/path" },
-        "sql": { "$ref": "#/$defs/sql" },
-        "mock": { "$ref": "#/$defs/mockMany" },
-        "accepts": { "$ref": "#/$defs/accepts" },
-        "transform": { "$ref": "#/$defs/transformMany" }
+        "method": {
+          "$ref": "#/$defs/queryMethod"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sql": {
+          "$ref": "#/$defs/sql"
+        },
+        "mock": {
+          "$ref": "#/$defs/mockMany"
+        },
+        "accepts": {
+          "$ref": "#/$defs/accepts"
+        },
+        "transform": {
+          "$ref": "#/$defs/transformMany"
+        },
+        "delay": {
+          "$ref": "#/$defs/delay"
+        }
       },
-      "required": ["type", "path"],
+      "required": [
+        "type",
+        "path"
+      ],
       "oneOf": [
-        { "required": ["sql"] },
-        { "required": ["mock"] }
+        {
+          "required": [
+            "sql"
+          ]
+        },
+        {
+          "required": [
+            "mock"
+          ]
+        }
       ],
       "additionalProperties": false,
       "description": "Query endpoint returning multiple rows. Use sql OR mock (not both)."
@@ -812,17 +1120,43 @@
           "const": "one",
           "description": "Mutation returning single row. Use RETURNING * in SQL."
         },
-        "method": { "$ref": "#/$defs/method" },
-        "path": { "$ref": "#/$defs/path" },
-        "sql": { "$ref": "#/$defs/sql" },
-        "mock": { "$ref": "#/$defs/mockOne" },
-        "accepts": { "$ref": "#/$defs/accepts" },
-        "transform": { "$ref": "#/$defs/transformOne" }
+        "method": {
+          "$ref": "#/$defs/method"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sql": {
+          "$ref": "#/$defs/sql"
+        },
+        "mock": {
+          "$ref": "#/$defs/mockOne"
+        },
+        "accepts": {
+          "$ref": "#/$defs/accepts"
+        },
+        "transform": {
+          "$ref": "#/$defs/transformOne"
+        },
+        "delay": {
+          "$ref": "#/$defs/delay"
+        }
       },
-      "required": ["type", "path"],
+      "required": [
+        "type",
+        "path"
+      ],
       "oneOf": [
-        { "required": ["sql"] },
-        { "required": ["mock"] }
+        {
+          "required": [
+            "sql"
+          ]
+        },
+        {
+          "required": [
+            "mock"
+          ]
+        }
       ],
       "additionalProperties": false,
       "description": "Mutation endpoint returning single row. Use sql OR mock (not both)."
@@ -836,17 +1170,43 @@
           "const": "many",
           "description": "Mutation returning multiple rows. Use RETURNING * in SQL."
         },
-        "method": { "$ref": "#/$defs/method" },
-        "path": { "$ref": "#/$defs/path" },
-        "sql": { "$ref": "#/$defs/sql" },
-        "mock": { "$ref": "#/$defs/mockMany" },
-        "accepts": { "$ref": "#/$defs/accepts" },
-        "transform": { "$ref": "#/$defs/transformMany" }
+        "method": {
+          "$ref": "#/$defs/method"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sql": {
+          "$ref": "#/$defs/sql"
+        },
+        "mock": {
+          "$ref": "#/$defs/mockMany"
+        },
+        "accepts": {
+          "$ref": "#/$defs/accepts"
+        },
+        "transform": {
+          "$ref": "#/$defs/transformMany"
+        },
+        "delay": {
+          "$ref": "#/$defs/delay"
+        }
       },
-      "required": ["type", "path"],
+      "required": [
+        "type",
+        "path"
+      ],
       "oneOf": [
-        { "required": ["sql"] },
-        { "required": ["mock"] }
+        {
+          "required": [
+            "sql"
+          ]
+        },
+        {
+          "required": [
+            "mock"
+          ]
+        }
       ],
       "additionalProperties": false,
       "description": "Mutation endpoint returning multiple rows. Use sql OR mock (not both)."
@@ -865,17 +1225,43 @@
           "const": "none",
           "description": "Mutation with no return value. Returns 204 No Content."
         },
-        "method": { "$ref": "#/$defs/method" },
-        "path": { "$ref": "#/$defs/path" },
-        "sql": { "$ref": "#/$defs/sql" },
-        "mock": { "$ref": "#/$defs/mockNone" },
-        "accepts": { "$ref": "#/$defs/accepts" },
-        "transform": { "$ref": "#/$defs/transformNone" }
+        "method": {
+          "$ref": "#/$defs/method"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sql": {
+          "$ref": "#/$defs/sql"
+        },
+        "mock": {
+          "$ref": "#/$defs/mockNone"
+        },
+        "accepts": {
+          "$ref": "#/$defs/accepts"
+        },
+        "transform": {
+          "$ref": "#/$defs/transformNone"
+        },
+        "delay": {
+          "$ref": "#/$defs/delay"
+        }
       },
-      "required": ["type", "path"],
+      "required": [
+        "type",
+        "path"
+      ],
       "oneOf": [
-        { "required": ["sql"] },
-        { "required": ["mock"] }
+        {
+          "required": [
+            "sql"
+          ]
+        },
+        {
+          "required": [
+            "mock"
+          ]
+        }
       ],
       "additionalProperties": false,
       "description": "Mutation endpoint with no return value (204 No Content). Use sql OR mock (not both)."

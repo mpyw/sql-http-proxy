@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/samber/lo"
@@ -65,7 +66,8 @@ type baseHandler[R any] struct {
 	parser        *body.Parser
 	recorder      queryRecorder
 	processor     ResultProcessor[R]
-	checkNotFound bool // true for query handlers
+	checkNotFound bool          // true for query handlers
+	delay         time.Duration // artificial delay before response
 }
 
 // ServeHTTP implements http.Handler.
@@ -100,6 +102,11 @@ func (h *baseHandler[R]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.handleError(res, err)
 		return
+	}
+
+	// Apply artificial delay if configured
+	if h.delay > 0 {
+		time.Sleep(h.delay)
 	}
 
 	status, output, headers := h.processor.BuildResponse(result)
