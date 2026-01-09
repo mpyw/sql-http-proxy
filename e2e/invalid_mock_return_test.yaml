@@ -1,0 +1,28 @@
+queries:
+  # array_js returning a scalar (should error)
+  - type: many
+    path: /array-returns-scalar
+    mock:
+      array_js: |
+        return "not an array";
+
+  # array_js returning an object (should error)
+  - type: many
+    path: /array-returns-object
+    mock:
+      array_js: |
+        return { id: 1 };
+
+  # object_js returning an array (should error)
+  - type: one
+    path: /object-returns-array
+    mock:
+      object_js: |
+        return [{ id: 1 }];
+
+  # object_js returning a scalar (should error)
+  - type: one
+    path: /object-returns-scalar
+    mock:
+      object_js: |
+        return "not an object";

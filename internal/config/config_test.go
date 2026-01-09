@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -349,4 +350,141 @@ queries:
 
 	// Note: Transform JS validation happens at server startup via ValidateTransforms,
 	// not during Parse. Parse only validates the YAML schema structure.
+
+	t.Run("schema validation error - type one with array source without filter", func(t *testing.T) {
+		yaml := `
+queries:
+  - type: one
+    path: /user
+    mock:
+      array:
+        - id: 1
+        - id: 2
+`
+		_, err := Parse([]byte(yaml))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "filter")
+		assert.Contains(t, err.Error(), "array")
+	})
+
+	t.Run("schema validation error - type many with object source", func(t *testing.T) {
+		yaml := `
+queries:
+  - type: many
+    path: /users
+    mock:
+      object:
+        id: 1
+`
+		_, err := Parse([]byte(yaml))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "object")
+		assert.Contains(t, err.Error(), "many")
+	})
+
+	t.Run("schema validation error - type none with mock", func(t *testing.T) {
+		yaml := `
+mutations:
+  - type: none
+    path: /delete
+    mock:
+      object:
+        id: 1
+`
+		_, err := Parse([]byte(yaml))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "none")
+		assert.Contains(t, err.Error(), "mock")
+	})
+
+	t.Run("schema validation error - multiple mock sources", func(t *testing.T) {
+		yaml := `
+queries:
+  - type: many
+    path: /users
+    mock:
+      array:
+        - id: 1
+      array_js: "return [{id: 1}]"
+`
+		_, err := Parse([]byte(yaml))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "one source")
+	})
+
+	t.Run("schema validation error - type one with csv without filter", func(t *testing.T) {
+		yaml := `
+queries:
+  - type: one
+    path: /user
+    mock:
+      csv: |
+        id,name
+        1,Alice
+        2,Bob
+`
+		_, err := Parse([]byte(yaml))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "filter")
+		assert.Contains(t, err.Error(), "csv")
+	})
+}
+
+func TestParseFile(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		// Create a temporary file
+		tmpFile, err := os.CreateTemp("", "config-*.yaml")
+		require.NoError(t, err)
+		defer os.Remove(tmpFile.Name())
+
+		content := `
+queries:
+  - type: one
+    path: /user
+    mock:
+      object:
+        id: 1
+`
+		_, err = tmpFile.WriteString(content)
+		require.NoError(t, err)
+		tmpFile.Close()
+
+		cfg, err := ParseFile(tmpFile.Name())
+		require.NoError(t, err)
+		assert.Len(t, cfg.Queries, 1)
+	})
+
+	t.Run("file not found", func(t *testing.T) {
+		_, err := ParseFile("/nonexistent/path/config.yaml")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to open file")
+	})
+}
+
+func TestParse_DSNValidation(t *testing.T) {
+	t.Run("missing DSN with SQL query", func(t *testing.T) {
+		yaml := `
+queries:
+  - type: one
+    path: /user
+    sql: SELECT * FROM users WHERE id = :id
+`
+		_, err := Parse([]byte(yaml))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "missing dsn")
+	})
+
+	t.Run("missing DSN with mock only is allowed", func(t *testing.T) {
+		yaml := `
+queries:
+  - type: one
+    path: /user
+    mock:
+      object:
+        id: 1
+`
+		cfg, err := Parse([]byte(yaml))
+		require.NoError(t, err)
+		assert.Empty(t, cfg.DSN)
+	})
 }

@@ -218,6 +218,15 @@ func TestResponseObject(t *testing.T) {
 			"after202": 202
 		}`, rec.Body.String())
 	})
+
+	t.Run("response.status 204 No Content returns empty body", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/test/response/204", nil)
+		rec := httptest.NewRecorder()
+
+		mux.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusNoContent, rec.Code)
+		require.Empty(t, rec.Body.String())
+	})
 }
 
 func TestRequestInDifferentContexts(t *testing.T) {

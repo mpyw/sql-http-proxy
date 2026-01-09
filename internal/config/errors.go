@@ -108,47 +108,11 @@ func findMockSourceError(errors []errorWithPath) string {
 		}
 	}
 
-	// Look for missing filter error (array source with type: one without filter)
-	for _, e := range errors {
-		if !isMockPath(e.path) {
-			continue
-		}
-
-		if req, ok := e.err.ErrorKind.(*kind.Required); ok {
-			if slices.Contains(req.Missing, "filter") {
-				if usedSource := findUsedArraySource(errors, e.path); usedSource != "" {
-					parentPath := getParentPath(e.path)
-					return fmt.Sprintf("at '%s': type 'one' with '%s' source requires 'filter' to select a single row",
-						formatPath(parentPath), usedSource)
-				}
-			}
-		}
-	}
-
-	// Look for multiple sources error
-	for _, e := range errors {
-		if !isMockPath(e.path) {
-			continue
-		}
-
-		if addl, ok := e.err.ErrorKind.(*kind.AdditionalProperties); ok {
-			if len(addl.Properties) > 1 {
-				parentPath := getParentPath(e.path)
-				return fmt.Sprintf("at '%s': mock must have exactly one source, found multiple: %s",
-					formatPath(parentPath), strings.Join(addl.Properties, ", "))
-			}
-		}
-	}
-
 	return ""
 }
 
 // formatMockSourceMismatchError creates a helpful message for source/type mismatches.
 func formatMockSourceMismatchError(parentPath string, typeName string, invalidSources []string) string {
-	if len(invalidSources) == 0 {
-		return ""
-	}
-
 	source := invalidSources[0]
 
 	// Check if multiple sources
@@ -157,7 +121,7 @@ func formatMockSourceMismatchError(parentPath string, typeName string, invalidSo
 			formatPath(parentPath), strings.Join(invalidSources, ", "))
 	}
 
-	// type: one with array source (without filter - but we should have caught this above)
+	// type: one with array source without filter
 	if typeName == "one" && isArraySource(source) {
 		return fmt.Sprintf("at '%s': type 'one' with '%s' requires 'filter' to select a single row, or use object/object_js for a single object",
 			formatPath(parentPath), source)
@@ -169,13 +133,7 @@ func formatMockSourceMismatchError(parentPath string, typeName string, invalidSo
 			formatPath(parentPath), source)
 	}
 
-	// type: none with mock
-	if typeName == "none" {
-		return fmt.Sprintf("at '%s': type 'none' does not support mock - use 'sql' instead",
-			formatPath(parentPath))
-	}
-
-	// Generic message
+	// Generic message for other cases
 	return fmt.Sprintf("at '%s': invalid mock source '%s' for type '%s'",
 		formatPath(parentPath), source, typeName)
 }
@@ -233,22 +191,6 @@ func isTypeNone(errors []errorWithPath, parentPath string) bool {
 	}
 
 	return foundOne && foundMany
-}
-
-// findUsedArraySource finds which array source was used from error messages.
-func findUsedArraySource(errors []errorWithPath, mockPath string) string {
-	for _, e := range errors {
-		if e.path == mockPath {
-			if addl, ok := e.err.ErrorKind.(*kind.AdditionalProperties); ok {
-				for _, prop := range addl.Properties {
-					if isArraySource(prop) {
-						return prop
-					}
-				}
-			}
-		}
-	}
-	return ""
 }
 
 // isSqlMockOneOfError checks if the oneOf error is specifically about sql/mock.

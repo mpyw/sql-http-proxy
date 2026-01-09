@@ -193,6 +193,16 @@ queries:
         const after202 = response.status;
         return { before, after99, after600, after202 };
 
+  # Test 204 No Content returns empty body
+  - type: one
+    path: /test/response/204
+    mock:
+      object: { id: 1 }
+    transform:
+      post: |
+        response.status = 204;
+        return output;
+
   # ==========================================================================
   # Request in Different Contexts
   # ==========================================================================
