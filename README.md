@@ -28,17 +28,19 @@ scoop install sql-http-proxy
 ## Debian / Ubuntu
 
 ```bash
-# Download the latest .deb package from GitHub Releases
-curl -LO https://github.com/mpyw/sql-http-proxy/releases/latest/download/sql-http-proxy_VERSION-1_amd64.deb
-sudo dpkg -i sql-http-proxy_VERSION-1_amd64.deb
+export VERSION=1.0.0
+export ARCH=amd64  # or arm64
+curl -LO "https://github.com/mpyw/sql-http-proxy/releases/download/v${VERSION}/sql-http-proxy_${VERSION}-1_${ARCH}.deb"
+sudo dpkg -i "sql-http-proxy_${VERSION}-1_${ARCH}.deb"
 ```
 
 ## RHEL / Fedora
 
 ```bash
-# Download the latest .rpm package from GitHub Releases
-curl -LO https://github.com/mpyw/sql-http-proxy/releases/latest/download/sql-http-proxy-VERSION-1.x86_64.rpm
-sudo rpm -i sql-http-proxy-VERSION-1.x86_64.rpm
+export VERSION=1.0.0
+export ARCH=x86_64  # or aarch64
+curl -LO "https://github.com/mpyw/sql-http-proxy/releases/download/v${VERSION}/sql-http-proxy-${VERSION}-1.${ARCH}.rpm"
+sudo rpm -i "sql-http-proxy-${VERSION}-1.${ARCH}.rpm"
 ```
 
 ## Binary Download (Linux / macOS)
