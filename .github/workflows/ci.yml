@@ -37,6 +37,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage-unit.txt
           flags: unit
+          disable_search: true
           verbose: true
 
       - name: Upload e2e test coverage to Codecov
@@ -45,6 +46,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage-e2e.txt
           flags: e2e
+          disable_search: true
           verbose: true
 
   lint:
