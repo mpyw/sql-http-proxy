@@ -16,13 +16,19 @@
       <button type="submit">Add</button>
     </form>
 
+    <div class="search-box">
+      <input type="text" id="search-input" placeholder="Search todos...">
+    </div>
+
+    <div class="filter-buttons">
+      <button type="button" class="filter-btn active" data-filter="all">All</button>
+      <button type="button" class="filter-btn" data-filter="incomplete">Active</button>
+      <button type="button" class="filter-btn" data-filter="completed">Completed</button>
+    </div>
+
     <div id="status" class="status"></div>
 
     <ul id="todo-list"></ul>
-
-    <div class="footer">
-      <button id="init-btn" class="init-btn">Initialize Database</button>
-    </div>
   </div>
 
   <script src="app.js"></script>

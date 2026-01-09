@@ -1,6 +1,25 @@
 # Stupid Todo List - sql-http-proxy example
 # Uses SQLite in-memory database with auto-initialization
 
+global_helpers: |
+  // Escape LIKE special characters (_, %, \)
+  function escapeLike(s) {
+    return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+  }
+  // Build LIKE conditions from search string
+  // Returns [exprs, params] tuple
+  function buildLikeConditions(query, column, prefix = 'kw') {
+    const keywords = (query || '').trim().split(/\s+/).filter(k => k);
+    const exprs = [];
+    const params = {};
+    keywords.forEach((kw, i) => {
+      const name = prefix + i;
+      exprs.push(column + " LIKE :" + name + " ESCAPE '\\'");
+      params[name] = '%' + escapeLike(kw) + '%';
+    });
+    return [exprs, params];
+  }
+
 database:
   dsn: "file::memory:?cache=shared"
   init: |
@@ -15,16 +34,22 @@ http:
   cors: true
 
 queries:
-  # List all todos
+  # List all todos with optional search (supports multiple keywords)
   - type: many
     path: /api/todos
-    sql: SELECT id, title, completed, created_at FROM todos ORDER BY created_at DESC
+    sql: SELECT id, title, completed, created_at FROM todos WHERE 1=1
     transform:
-      post: |
-        return output.map(row => ({
-          ...row,
-          completed: Boolean(row.completed)
-        }));
+      pre: |
+        const [exprs, params] = buildLikeConditions(input.q, 'title');
+        if (exprs.length) sql = sql + ' AND ' + exprs.join(' AND ');
+        // Filter by completion status
+        if (input.filter === 'incomplete') sql = sql + ' AND completed = 0';
+        else if (input.filter === 'completed') sql = sql + ' AND completed = 1';
+        sql = sql + ' ORDER BY created_at DESC';
+        return params;
+      post:
+        each: |
+          return { ...output, completed: Boolean(output.completed) };
 
   # Get single todo
   - type: one

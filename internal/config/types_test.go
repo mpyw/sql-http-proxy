@@ -259,14 +259,22 @@ func TestQuery_GetMethod(t *testing.T) {
 }
 
 func TestQuery_GetAccepts(t *testing.T) {
-	t.Run("default accepts", func(t *testing.T) {
+	t.Run("default accepts when nil", func(t *testing.T) {
 		q := Query{}
 		assert.Equal(t, DefaultAcceptTypes, q.GetAccepts())
 	})
 
 	t.Run("custom accepts", func(t *testing.T) {
-		q := Query{Accepts: AcceptTypes{AcceptJSON}}
+		accepts := AcceptTypes{AcceptJSON}
+		q := Query{Accepts: &accepts}
 		assert.Equal(t, AcceptTypes{AcceptJSON}, q.GetAccepts())
+	})
+
+	t.Run("empty accepts explicitly set", func(t *testing.T) {
+		accepts := AcceptTypes{}
+		q := Query{Accepts: &accepts}
+		assert.Equal(t, AcceptTypes{}, q.GetAccepts())
+		assert.Empty(t, q.GetAccepts())
 	})
 }
 
@@ -305,14 +313,22 @@ func TestMutation_GetMethod(t *testing.T) {
 }
 
 func TestMutation_GetAccepts(t *testing.T) {
-	t.Run("default accepts", func(t *testing.T) {
+	t.Run("default accepts when nil", func(t *testing.T) {
 		m := Mutation{}
 		assert.Equal(t, DefaultAcceptTypes, m.GetAccepts())
 	})
 
 	t.Run("custom accepts", func(t *testing.T) {
-		m := Mutation{Accepts: AcceptTypes{AcceptForm}}
+		accepts := AcceptTypes{AcceptForm}
+		m := Mutation{Accepts: &accepts}
 		assert.Equal(t, AcceptTypes{AcceptForm}, m.GetAccepts())
+	})
+
+	t.Run("empty accepts explicitly set", func(t *testing.T) {
+		accepts := AcceptTypes{}
+		m := Mutation{Accepts: &accepts}
+		assert.Equal(t, AcceptTypes{}, m.GetAccepts())
+		assert.Empty(t, m.GetAccepts())
 	})
 }
 

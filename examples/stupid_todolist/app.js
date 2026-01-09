@@ -1,10 +1,13 @@
-const API_BASE = 'http://localhost:8082/api';
+const API_BASE = 'http://localhost:8090/api';
 
 const todoForm = document.getElementById('todo-form');
 const todoInput = document.getElementById('todo-input');
+const searchInput = document.getElementById('search-input');
+const filterButtons = document.querySelectorAll('.filter-btn');
 const todoList = document.getElementById('todo-list');
 const statusDiv = document.getElementById('status');
-const initBtn = document.getElementById('init-btn');
+
+let currentFilter = 'all';
 
 // Show status message
 function showStatus(message, isError = false) {
@@ -30,25 +33,15 @@ async function api(endpoint, options = {}) {
   return res.json();
 }
 
-// Initialize database
-async function initDatabase() {
-  try {
-    initBtn.disabled = true;
-    await api('/init', { method: 'POST' });
-    showStatus('Database initialized!');
-    loadTodos();
-  } catch (err) {
-    showStatus('Init failed: ' + err.message, true);
-  } finally {
-    initBtn.disabled = false;
-  }
-}
-
-// Load all todos
-async function loadTodos() {
+// Load todos with optional search and filter
+async function loadTodos(search = '', filter = 'all') {
   try {
     todoList.classList.add('loading');
-    const todos = await api('/todos');
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (filter && filter !== 'all') params.set('filter', filter);
+    const query = params.toString() ? `?${params}` : '';
+    const todos = await api(`/todos${query}`);
     renderTodos(todos);
   } catch (err) {
     showStatus('Failed to load: ' + err.message, true);
@@ -84,7 +77,7 @@ async function addTodo(title) {
       body: JSON.stringify({ title }),
     });
     todoInput.value = '';
-    loadTodos();
+    loadTodos(searchInput.value, currentFilter);
   } catch (err) {
     showStatus('Failed to add: ' + err.message, true);
   } finally {
@@ -101,10 +94,10 @@ async function toggleTodo(id, completed) {
       method: 'PUT',
       body: JSON.stringify({ ...todo, completed }),
     });
-    loadTodos();
+    loadTodos(searchInput.value, currentFilter);
   } catch (err) {
     showStatus('Failed to update: ' + err.message, true);
-    loadTodos();
+    loadTodos(searchInput.value, currentFilter);
   }
 }
 
@@ -112,10 +105,19 @@ async function toggleTodo(id, completed) {
 async function deleteTodo(id) {
   try {
     await api(`/todos/${id}`, { method: 'DELETE' });
-    loadTodos();
+    loadTodos(searchInput.value, currentFilter);
   } catch (err) {
     showStatus('Failed to delete: ' + err.message, true);
   }
+}
+
+// Debounce helper
+function debounce(fn, delay) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  };
 }
 
 // Event listeners
@@ -125,7 +127,18 @@ todoForm.addEventListener('submit', (e) => {
   if (title) addTodo(title);
 });
 
-initBtn.addEventListener('click', initDatabase);
+searchInput.addEventListener('input', debounce((e) => {
+  loadTodos(e.target.value, currentFilter);
+}, 300));
+
+filterButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    loadTodos(searchInput.value, currentFilter);
+  });
+});
 
 // Initial load
 loadTodos();

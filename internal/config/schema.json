@@ -265,8 +265,7 @@
             "title": "Content-Type",
             "description": "Content type identifier"
           },
-          "minItems": 1,
-          "description": "Accept multiple content types"
+          "description": "Accept multiple content types. Empty array means no body accepted."
         }
       ],
       "default": ["json", "form"],

@@ -88,14 +88,14 @@ func (a *AcceptTypes) UnmarshalYAML(value *yaml.Node) error {
 
 // Query represents a single query configuration.
 type Query struct {
-	Type           QueryType   `yaml:"type"`
-	Method         string      `yaml:"method,omitempty"` // HTTP method (default: GET)
-	Path           string      `yaml:"path"`
-	SQL            string      `yaml:"sql,omitempty"`
-	Mock           *Mock       `yaml:"mock,omitempty"`             // Mock data source (alternative to SQL)
-	Accepts        AcceptTypes `yaml:"accepts,omitempty"`          // Accepted content types for body (default: [json, form])
-	HandleNotFound bool        `yaml:"handle_not_found,omitempty"` // Pass null to post-transform instead of 404 (type: one only)
-	Transform      *Transform  `yaml:"transform,omitempty"`
+	Type           QueryType    `yaml:"type"`
+	Method         string       `yaml:"method,omitempty"` // HTTP method (default: GET)
+	Path           string       `yaml:"path"`
+	SQL            string       `yaml:"sql,omitempty"`
+	Mock           *Mock        `yaml:"mock,omitempty"`             // Mock data source (alternative to SQL)
+	Accepts        *AcceptTypes `yaml:"accepts,omitempty"`          // Accepted content types for body (nil: default, empty: none)
+	HandleNotFound bool         `yaml:"handle_not_found,omitempty"` // Pass null to post-transform instead of 404 (type: one only)
+	Transform      *Transform   `yaml:"transform,omitempty"`
 }
 
 // GetMethod returns the HTTP method for the query (default: GET).
@@ -106,12 +106,13 @@ func (q Query) GetMethod() string {
 	return q.Method
 }
 
-// GetAccepts returns the accepted content types (default: [json, form]).
+// GetAccepts returns the accepted content types.
+// Returns default [json, form] if not specified, or empty slice if explicitly set to [].
 func (q Query) GetAccepts() AcceptTypes {
-	if len(q.Accepts) == 0 {
+	if q.Accepts == nil {
 		return DefaultAcceptTypes
 	}
-	return q.Accepts
+	return *q.Accepts
 }
 
 // HasMock returns true if this query uses mock data.
@@ -126,7 +127,7 @@ type Mutation struct {
 	Path      string       `yaml:"path"`
 	SQL       string       `yaml:"sql,omitempty"`
 	Mock      *Mock        `yaml:"mock,omitempty"`    // Mock data source (alternative to SQL)
-	Accepts   AcceptTypes  `yaml:"accepts,omitempty"` // Accepted content types for body (default: [json, form])
+	Accepts   *AcceptTypes `yaml:"accepts,omitempty"` // Accepted content types for body (nil: default, empty: none)
 	Transform *Transform   `yaml:"transform,omitempty"`
 }
 
@@ -138,12 +139,13 @@ func (m Mutation) GetMethod() string {
 	return m.Method
 }
 
-// GetAccepts returns the accepted content types (default: [json, form]).
+// GetAccepts returns the accepted content types.
+// Returns default [json, form] if not specified, or empty slice if explicitly set to [].
 func (m Mutation) GetAccepts() AcceptTypes {
-	if len(m.Accepts) == 0 {
+	if m.Accepts == nil {
 		return DefaultAcceptTypes
 	}
-	return m.Accepts
+	return *m.Accepts
 }
 
 // HasMock returns true if this mutation uses mock data.

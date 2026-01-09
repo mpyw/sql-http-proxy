@@ -1,0 +1,23 @@
+database:
+  dsn: "sqlite::memory:"
+  init: |
+    CREATE TABLE IF NOT EXISTS resources (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL
+    );
+    DELETE FROM resources;
+    INSERT INTO resources (id, name) VALUES (1, 'Test');
+
+mutations:
+  # DELETE with accepts: [] - no body accepted
+  - type: none
+    method: DELETE
+    path: /resources/{id:[0-9]+}
+    accepts: []
+    sql: DELETE FROM resources WHERE id = :id
+
+  # DELETE without accepts - uses default (json, form)
+  - type: none
+    method: DELETE
+    path: /resources-default/{id:[0-9]+}
+    sql: DELETE FROM resources WHERE id = :id

@@ -43,9 +43,18 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
-		// Default to json if no Content-Type specified and json is accepted
+		// No Content-Type: check if body is empty first
+		data, err := readBody(body, "")
+		if err != nil {
+			return nil, err
+		}
+		// Empty body is always valid (common for DELETE/GET requests)
+		if len(data) == 0 {
+			return map[string]any{}, nil
+		}
+		// Non-empty body: default to JSON if accepted
 		if slices.Contains(p.accepts, config.AcceptJSON) {
-			return parseJSON(body, "")
+			return parseJSONBytes(data)
 		}
 		return nil, fmt.Errorf("%w: missing Content-Type header", ErrUnsupportedMediaType)
 	}

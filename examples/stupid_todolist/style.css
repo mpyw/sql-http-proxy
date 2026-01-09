@@ -141,18 +141,50 @@ button:disabled {
   background: #c82333;
 }
 
-.footer {
-  margin-top: 1.5rem;
-  text-align: center;
+.search-box {
+  margin-bottom: 1rem;
 }
 
-.init-btn {
-  background: #6c757d;
+#search-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   font-size: 0.875rem;
 }
 
-.init-btn:hover {
-  background: #545b62;
+#search-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+#search-input::placeholder {
+  color: #aaa;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.filter-btn {
+  flex: 1;
+  padding: 0.5rem;
+  background: #f0f0f0;
+  color: #666;
+  border: 1px solid #ddd;
+  font-size: 0.875rem;
+}
+
+.filter-btn:hover {
+  background: #e0e0e0;
+}
+
+.filter-btn.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
 }
 
 .loading {

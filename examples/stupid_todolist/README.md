@@ -13,8 +13,10 @@ A minimal todo list application demonstrating sql-http-proxy with SQLite in-memo
 
 ```bash
 cd examples/stupid_todolist
-sql-http-proxy -c config.yaml -l :8080
+sql-http-proxy -c config.yaml -l :8090
 ```
+
+The database is automatically initialized on startup via `database.init`.
 
 ### 2. Open the frontend
 
@@ -40,10 +42,6 @@ python -m http.server 3000
 # Then open http://localhost:3000
 ```
 
-### 3. Initialize the database
-
-Click the "Initialize Database" button to create the todos table.
-
 ## Architecture
 
 ```
@@ -51,7 +49,7 @@ Browser (index.html)
     |
     | fetch() with CORS
     v
-sql-http-proxy (:8080)
+sql-http-proxy (:8090)
     |
     | SQL
     v
@@ -62,15 +60,20 @@ SQLite (in-memory)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | /api/init | Initialize database (create table) |
-| GET | /api/todos | List all todos |
+| GET | /api/todos | List todos (supports `?q=search` for filtering) |
 | GET | /api/todos/:id | Get single todo |
 | POST | /api/todos | Create todo |
 | PUT | /api/todos/:id | Update todo |
 | DELETE | /api/todos/:id | Delete todo |
 
+## Features Demonstrated
+
+- **Database Auto-Init**: Uses `database.init` to create tables on startup
+- **Dynamic LIKE Query**: Search with `?q=term` using pre-transform to build LIKE pattern
+- **CORS Support**: Enabled via `http.cors: true`
+- **Response Status**: Custom status codes (201 for create, 204 for delete)
+
 ## Notes
 
 - Uses SQLite in-memory database (`file::memory:?cache=shared`)
 - Data is lost when the server stops
-- CORS headers are added via `global_helpers` and `response.headers.set()`

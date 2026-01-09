@@ -192,6 +192,45 @@ func TestParser_Parse_Multipart(t *testing.T) {
 	})
 }
 
+func TestParser_Parse_EmptyBody(t *testing.T) {
+	t.Run("empty body without Content-Type is always valid", func(t *testing.T) {
+		p := NewParser([]config.AcceptType{config.AcceptJSON})
+		req := httptest.NewRequest(http.MethodDelete, "/", strings.NewReader(""))
+
+		result, err := p.Parse(req)
+		require.NoError(t, err)
+		assert.Empty(t, result)
+	})
+
+	t.Run("empty body with accepts=[] is valid", func(t *testing.T) {
+		p := NewParser([]config.AcceptType{})
+		req := httptest.NewRequest(http.MethodDelete, "/", strings.NewReader(""))
+
+		result, err := p.Parse(req)
+		require.NoError(t, err)
+		assert.Empty(t, result)
+	})
+
+	t.Run("non-empty body with accepts=[] is rejected", func(t *testing.T) {
+		p := NewParser([]config.AcceptType{})
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"key":"value"}`))
+
+		_, err := p.Parse(req)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrUnsupportedMediaType)
+	})
+
+	t.Run("empty body with Content-Type is valid", func(t *testing.T) {
+		p := NewParser([]config.AcceptType{config.AcceptJSON})
+		req := httptest.NewRequest(http.MethodDelete, "/", strings.NewReader(""))
+		req.Header.Set("Content-Type", "application/json")
+
+		result, err := p.Parse(req)
+		require.NoError(t, err)
+		assert.Empty(t, result)
+	})
+}
+
 func TestParser_Parse_UnsupportedMediaType(t *testing.T) {
 	p := NewParser([]config.AcceptType{config.AcceptJSON, config.AcceptForm})
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(""))

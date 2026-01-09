@@ -666,7 +666,11 @@ Control which Content-Types are accepted for request body.
 accepts: json          # Only application/json
 accepts: form          # Only application/x-www-form-urlencoded
 accepts: [json, form]  # Both (default)
+accepts: []            # No body accepted (empty body only)
 ```
+
+> [!NOTE]
+> Empty body requests (common for DELETE) are always allowed regardless of `accepts` setting.
 
 > [!WARNING]
 > Returns 415 Unsupported Media Type if the request Content-Type doesn't match.
