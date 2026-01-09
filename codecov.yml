@@ -9,16 +9,7 @@ coverage:
         target: auto
         threshold: 1%
 
-flag_management:
-  default_rules:
-    carryforward: true
-  individual_flags:
-    - name: unit
-      carryforward: true
-    - name: e2e
-      carryforward: true
-
 comment:
-  layout: "reach, diff, flags, files"
+  layout: "reach, diff, files"
   behavior: default
   require_changes: false

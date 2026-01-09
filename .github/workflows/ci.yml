@@ -31,23 +31,11 @@ jobs:
       - name: Run e2e tests with coverage
         run: go test -v -race -coverprofile=coverage-e2e.txt -covermode=atomic -coverpkg=./... ./e2e/...
 
-      - name: Upload unit test coverage to Codecov
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage-unit.txt
-          flags: unit
-          disable_search: true
-          verbose: true
-
-      - name: Upload e2e test coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage-e2e.txt
-          flags: e2e
-          disable_search: true
-          verbose: true
+          files: ./coverage-unit.txt,./coverage-e2e.txt
 
   lint:
     name: Lint
