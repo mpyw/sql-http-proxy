@@ -41,9 +41,23 @@ curl -LO https://github.com/mpyw/sql-http-proxy/releases/latest/download/sql-htt
 sudo rpm -i sql-http-proxy-VERSION-1.x86_64.rpm
 ```
 
-## Binary Download
+## Binary Download (Linux / macOS)
 
-Download pre-built binaries from [GitHub Releases](https://github.com/mpyw/sql-http-proxy/releases).
+```bash
+# Set version and architecture
+export VERSION=1.0.0
+export ARCH=amd64  # or arm64
+
+# Linux
+curl -L "https://github.com/mpyw/sql-http-proxy/releases/download/v${VERSION}/sql-http-proxy_${VERSION}_linux_${ARCH}.tar.gz" | tar xz
+sudo mv sql-http-proxy /usr/local/bin/
+
+# macOS
+curl -L "https://github.com/mpyw/sql-http-proxy/releases/download/v${VERSION}/sql-http-proxy_${VERSION}_darwin_${ARCH}.tar.gz" | tar xz
+sudo mv sql-http-proxy /usr/local/bin/
+```
+
+Or download manually from [GitHub Releases](https://github.com/mpyw/sql-http-proxy/releases).
 
 ## Go Install
 
