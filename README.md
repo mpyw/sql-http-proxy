@@ -1,6 +1,6 @@
 # sql-http-proxy
 
-[![CI](https://github.com/mpyw/sql-http-proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/mpyw/sql-http-proxy/actions/workflows/ci.yml)
+[![Test](https://github.com/mpyw/sql-http-proxy/actions/workflows/test.yml/badge.svg)](https://github.com/mpyw/sql-http-proxy/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/mpyw/sql-http-proxy/graph/badge.svg)](https://codecov.io/gh/mpyw/sql-http-proxy)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mpyw/sql-http-proxy)](https://goreportcard.com/report/github.com/mpyw/sql-http-proxy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -12,11 +12,46 @@ A YAML-driven HTTP server that maps endpoints to SQL queries. Define your API in
 
 # Installation
 
+## Homebrew (macOS / Linux)
+
+```bash
+brew install mpyw/tap/sql-http-proxy
+```
+
+## Scoop (Windows)
+
+```powershell
+scoop bucket add mpyw https://github.com/mpyw/scoop-bucket
+scoop install sql-http-proxy
+```
+
+## Debian / Ubuntu
+
+```bash
+# Download the latest .deb package from GitHub Releases
+curl -LO https://github.com/mpyw/sql-http-proxy/releases/latest/download/sql-http-proxy_VERSION-1_amd64.deb
+sudo dpkg -i sql-http-proxy_VERSION-1_amd64.deb
+```
+
+## RHEL / Fedora
+
+```bash
+# Download the latest .rpm package from GitHub Releases
+curl -LO https://github.com/mpyw/sql-http-proxy/releases/latest/download/sql-http-proxy-VERSION-1.x86_64.rpm
+sudo rpm -i sql-http-proxy-VERSION-1.x86_64.rpm
+```
+
+## Binary Download
+
+Download pre-built binaries from [GitHub Releases](https://github.com/mpyw/sql-http-proxy/releases).
+
+## Go Install
+
 ```bash
 go install github.com/mpyw/sql-http-proxy/cmd/sql-http-proxy@latest
 ```
 
-## Build Tags
+### Build Tags
 
 Use build tags for smaller binaries:
 
