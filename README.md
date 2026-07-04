@@ -2,7 +2,6 @@
 
 [![Test](https://github.com/mpyw/sql-http-proxy/actions/workflows/test.yml/badge.svg)](https://github.com/mpyw/sql-http-proxy/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/mpyw/sql-http-proxy/graph/badge.svg)](https://codecov.io/gh/mpyw/sql-http-proxy)
-[![Go Report Card](https://goreportcard.com/badge/github.com/mpyw/sql-http-proxy)](https://goreportcard.com/report/github.com/mpyw/sql-http-proxy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A YAML-driven HTTP server that maps endpoints to SQL queries. Define your API in YAML, run the server, and get a working REST API.
