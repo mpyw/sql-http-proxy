@@ -30,9 +30,5 @@ go.work.sum
 # OS
 .DS_Store
 Thumbs.db
-
-# MCP
-.mcp.json
-.kiri/
 coverage.html
 out/
