@@ -181,7 +181,7 @@ jobs:
       - name: Generate checksums
         run: |
           cd releases
-          sha256sum * > checksums.txt
+          sha256sum *.tar.gz *.zip *.deb *.rpm > checksums.txt
           cat checksums.txt
 
       - name: Create GitHub Release
@@ -189,9 +189,24 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ inputs.version }}
         run: |
+          export VERSION="${TAG#v}"
+          export BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+
+          # Generate download table from template
+          DOWNLOAD_TABLE=$(envsubst < .github/templates/release-notes-downloads.md)
+
+          # Generate release notes
+          NEW_NOTES=$(gh api repos/${{ github.repository }}/releases/generate-notes \
+            -f tag_name="$TAG" \
+            --jq .body)
+
+          FINAL_BODY="${NEW_NOTES}
+
+          ${DOWNLOAD_TABLE}"
+
           gh release create "$TAG" \
             --title "$TAG" \
-            --generate-notes \
+            --notes "$FINAL_BODY" \
             releases/*
 
       - name: Update Homebrew formula
