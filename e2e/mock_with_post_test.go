@@ -1,13 +1,11 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMockWithPost(t *testing.T) {
@@ -20,8 +18,7 @@ func TestMockWithPost(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var result map[string]any
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+	result := decodeJSON[map[string]any](t, w.Body)
 	assert.Equal(t, float64(1), result["id"])
 	assert.Equal(t, "Mock User", result["fullName"])
 }

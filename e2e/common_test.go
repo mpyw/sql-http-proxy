@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	json "encoding/json/v2"
+	"io"
 	"net/http"
 	"testing"
 
@@ -67,4 +69,16 @@ func createMutationHandler(t *testing.T, db *sqlx.DB, cfg config.Config) http.Ha
 	handler, err := server.NewMutationHandler(db, cfg.Mutations[0])
 	require.NoError(t, err)
 	return handler
+}
+
+// decodeJSON decodes a response body as T, failing the test if it does not
+// parse. Decoding uses encoding/json/v2 defaults, so every assertion made
+// through this helper also asserts that the response is RFC 7493 JSON: one
+// complete value, no duplicate object members, valid UTF-8 throughout.
+func decodeJSON[T any](t *testing.T, body io.Reader) T {
+	t.Helper()
+
+	var v T
+	require.NoError(t, json.UnmarshalRead(body, &v))
+	return v
 }

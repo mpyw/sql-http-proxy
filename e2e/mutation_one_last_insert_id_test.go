@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,9 +26,7 @@ func TestMutationOneLastInsertId(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
 
-	var result map[string]any
-	err = json.NewDecoder(rec.Body).Decode(&result)
-	require.NoError(t, err)
+	result := decodeJSON[map[string]any](t, rec.Body)
 
 	// In mock mode, lastInsertId and rowsAffected are not available
 	require.Equal(t, false, result["hasLastInsertId"])

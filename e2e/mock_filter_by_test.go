@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,9 +25,7 @@ func TestMockFilterBy(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code)
 
-		var result map[string]any
-		err := json.NewDecoder(rec.Body).Decode(&result)
-		require.NoError(t, err)
+		result := decodeJSON[map[string]any](t, rec.Body)
 		require.Equal(t, float64(2), result["id"])
 		require.Equal(t, "Bob", result["name"])
 	})
@@ -48,9 +45,7 @@ func TestMockFilterBy(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code)
 
-		var result []map[string]any
-		err := json.NewDecoder(rec.Body).Decode(&result)
-		require.NoError(t, err)
+		result := decodeJSON[[]map[string]any](t, rec.Body)
 		require.Len(t, result, 2)
 		require.Equal(t, "Alice", result[0]["name"])
 		require.Equal(t, "Charlie", result[1]["name"])
@@ -63,9 +58,7 @@ func TestMockFilterBy(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code)
 
-		var result []map[string]any
-		err := json.NewDecoder(rec.Body).Decode(&result)
-		require.NoError(t, err)
+		result := decodeJSON[[]map[string]any](t, rec.Body)
 		require.Len(t, result, 0)
 	})
 
@@ -76,9 +69,7 @@ func TestMockFilterBy(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code)
 
-		var result []map[string]any
-		err := json.NewDecoder(rec.Body).Decode(&result)
-		require.NoError(t, err)
+		result := decodeJSON[[]map[string]any](t, rec.Body)
 		require.Len(t, result, 2)
 	})
 }

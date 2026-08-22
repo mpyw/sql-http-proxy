@@ -1,8 +1,9 @@
 package mock
 
 import (
-	"bufio"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
+	"errors"
 	"io"
 	"log/slog"
 	"os"
@@ -22,11 +23,7 @@ type jsonSource struct {
 func newJSON(data any) (*jsonSource, error) {
 	// If data is a string, parse it as JSON
 	if s, ok := data.(string); ok {
-		var parsed any
-		if err := json.Unmarshal([]byte(s), &parsed); err != nil {
-			return nil, err
-		}
-		return &jsonSource{data: parsed}, nil
+		return parseJSONString(s)
 	}
 	return &jsonSource{data: data}, nil
 }
@@ -46,14 +43,10 @@ func parseJSONFile(path string) (*jsonSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			slog.Debug("Failed to close file", "error", err)
-		}
-	}()
+	defer closeQuietly(f)
 
 	var data any
-	if err := json.NewDecoder(f).Decode(&data); err != nil {
+	if err := json.UnmarshalRead(f, &data); err != nil {
 		return nil, err
 	}
 
@@ -72,36 +65,37 @@ func parseJSONLFile(path string) (*jsonSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			slog.Debug("Failed to close file", "error", err)
-		}
-	}()
+	defer closeQuietly(f)
 	return parseJSONLReader(f)
 }
 
+// parseJSONLReader decodes a stream of whitespace-separated JSON values.
+//
+// A jsontext.Decoder consumes the reader incrementally, so rows are never
+// buffered as whole lines. This also removes the bufio.Scanner token limit that
+// previously made any JSONL row larger than 64KiB fail to parse.
 func parseJSONLReader(r io.Reader) (*jsonSource, error) {
 	var rows []any
-	scanner := bufio.NewScanner(r)
+	dec := jsontext.NewDecoder(r)
 
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue // Skip empty lines
-		}
-
-		var obj any
-		if err := json.Unmarshal([]byte(line), &obj); err != nil {
+	for {
+		var row any
+		if err := json.UnmarshalDecode(dec, &row); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
 			return nil, err
 		}
-		rows = append(rows, obj)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
+		rows = append(rows, row)
 	}
 
 	return &jsonSource{data: rows}, nil
+}
+
+func closeQuietly(f *os.File) {
+	if err := f.Close(); err != nil {
+		slog.Debug("Failed to close file", "error", err)
+	}
 }
 
 // Data returns the parsed JSON data.

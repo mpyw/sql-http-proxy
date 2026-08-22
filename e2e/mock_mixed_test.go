@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,8 +26,7 @@ func TestMockMixed(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[map[string]any](t, w.Body)
 		assert.Equal(t, float64(1), result["id"])
 		assert.Equal(t, "John", result["first_name"])
 		assert.NotContains(t, result, "source")
@@ -44,8 +42,7 @@ func TestMockMixed(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[map[string]any](t, w.Body)
 		assert.Equal(t, float64(1), result["id"])
 		assert.Equal(t, "Mock User", result["name"])
 		assert.Equal(t, "mock", result["source"])

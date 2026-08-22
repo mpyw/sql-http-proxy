@@ -17,10 +17,12 @@ type Request struct {
 }
 
 // NewRequest creates a new Request object from an HTTP request.
+// The URL is cloned so the value JS observes is a snapshot, independent of any
+// later rewriting of r.URL by middleware or the router.
 func NewRequest(r *http.Request) *Request {
 	return &Request{
 		method:  r.Method,
-		url:     r.URL,
+		url:     r.URL.Clone(),
 		headers: NewReadonlyHeaders(r.Header),
 	}
 }

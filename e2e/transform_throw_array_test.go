@@ -1,13 +1,11 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTransformThrowArray(t *testing.T) {
@@ -22,8 +20,7 @@ func TestTransformThrowArray(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
 
-	var result []map[string]any
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+	result := decodeJSON[[]map[string]any](t, w.Body)
 	assert.Len(t, result, 2)
 	assert.Equal(t, "id", result[0]["field"])
 	assert.Equal(t, "required", result[0]["message"])

@@ -290,6 +290,8 @@ func TestApplyPostToAllRows(t *testing.T) {
 }
 
 func TestJSTimeout(t *testing.T) {
+	t.Parallel() // JSTimeout is 5s; overlap with the other slow timeout test.
+
 	t.Run("infinite loop times out", func(t *testing.T) {
 		// This test verifies that infinite loops are interrupted
 		// Note: JSTimeout is 5 seconds by default

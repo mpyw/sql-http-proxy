@@ -62,6 +62,8 @@ Or download manually from [GitHub Releases](https://github.com/mpyw/sql-http-pro
 
 ## Go Install
 
+Requires Go 1.27 or later.
+
 ```bash
 go install github.com/mpyw/sql-http-proxy/cmd/sql-http-proxy@latest
 ```

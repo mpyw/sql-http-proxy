@@ -1,10 +1,6 @@
 package mock
 
 import (
-	"errors"
-	"sync"
-	"time"
-
 	"github.com/dop251/goja"
 	"github.com/samber/lo"
 
@@ -13,16 +9,8 @@ import (
 
 // jsFilteredSource wraps a Source and filters data using JavaScript.
 type jsFilteredSource struct {
-	source  Source
-	program *goja.Program
-	helpers *js.CompiledHelpers
-	pool    sync.Pool
-}
-
-// filterVM holds a cached VM and callable for reuse.
-type filterVM struct {
-	vm       *goja.Runtime
-	callable goja.Callable
+	source Source
+	vms    *js.PooledVM
 }
 
 // newJSFilteredSource creates a jsFilteredSource that filters by JavaScript code.
@@ -36,42 +24,10 @@ func newJSFilteredSource(source Source, filterJS string, helpers *js.CompiledHel
 		return nil, err
 	}
 
-	f := &jsFilteredSource{
-		source:  source,
-		program: program,
-		helpers: helpers,
-	}
-	f.pool.New = func() any {
-		vm, callable, err := f.createVM()
-		if err != nil {
-			return nil
-		}
-		return &filterVM{vm: vm, callable: callable}
-	}
-	return f, nil
-}
-
-// createVM creates a new VM with helpers and callable.
-func (f *jsFilteredSource) createVM() (*goja.Runtime, goja.Callable, error) {
-	vm := goja.New()
-
-	if f.helpers != nil {
-		if err := f.helpers.InjectInto(vm); err != nil {
-			return nil, nil, err
-		}
-	}
-
-	val, err := vm.RunProgram(f.program)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	callable, ok := goja.AssertFunction(val)
-	if !ok {
-		return nil, nil, nil
-	}
-
-	return vm, callable, nil
+	return &jsFilteredSource{
+		source: source,
+		vms:    js.NewPooledVM("filter", program, helpers),
+	}, nil
 }
 
 // Data returns filtered data based on JavaScript filter function.
@@ -129,50 +85,12 @@ func (f *jsFilteredSource) filterArray(arr []any, input map[string]any, ctx map[
 }
 
 // evaluateFilter evaluates the filter function for a single row.
-// Execution is limited to JSTimeout to prevent infinite loops.
+// Execution is limited to js.JSTimeout to prevent infinite loops.
 func (f *jsFilteredSource) evaluateFilter(row any, input map[string]any, ctx map[string]any) (bool, error) {
-	// Get or create a VM from pool
-	fvm := f.pool.Get()
-	if fvm == nil {
-		// Pool.New failed, create directly
-		vm, callable, err := f.createVM()
-		if err != nil {
-			return false, err
-		}
-		if callable == nil {
-			return false, nil
-		}
-		fvm = &filterVM{vm: vm, callable: callable}
-	}
-	cached := fvm.(*filterVM)
-	defer f.pool.Put(cached)
-
-	// Set ctx as a free variable (can be updated on reused VM)
+	// ctx is a free variable, refreshed per call because the pooled runtime may
+	// still hold the previous caller's value.
 	if ctx == nil {
 		ctx = make(map[string]any)
 	}
-	if err := cached.vm.Set("ctx", ctx); err != nil {
-		return false, err
-	}
-
-	// Set up timeout to prevent infinite loops
-	timer := time.AfterFunc(js.JSTimeout, func() {
-		cached.vm.Interrupt(js.ErrJSTimeout)
-	})
-	defer timer.Stop()
-
-	// Call the function with row and input
-	result, err := cached.callable(goja.Undefined(), cached.vm.ToValue(row), cached.vm.ToValue(input))
-	if err != nil {
-		// Check if error was due to timeout interrupt
-		if interrupted := (*goja.InterruptedError)(nil); errors.As(err, &interrupted) {
-			if timeoutErr, ok := interrupted.Value().(error); ok && errors.Is(timeoutErr, js.ErrJSTimeout) {
-				return false, js.ErrJSTimeout
-			}
-		}
-		return false, err
-	}
-
-	// Convert result to boolean
-	return result.ToBoolean(), nil
+	return f.vms.Call(map[string]any{"ctx": ctx}, goja.Value.ToBoolean, row, input)
 }

@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -35,8 +34,7 @@ func TestNotFoundHandler(t *testing.T) {
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
 
-		var result map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[map[string]any](t, w.Body)
 		assert.Equal(t, "not found", result["error"])
 	})
 
