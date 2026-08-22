@@ -240,7 +240,7 @@ func Parse(data []byte) (Config, error) {
 
 	// Validate against JSON Schema
 	if err := configSchema.Validate(raw); err != nil {
-		if validationErr := (*jsonschema.ValidationError)(nil); errors.As(err, &validationErr) {
+		if validationErr, ok := errors.AsType[*jsonschema.ValidationError](err); ok {
 			return Config{}, fmt.Errorf("config validation failed: %s", formatValidationError(validationErr))
 		}
 		return Config{}, fmt.Errorf("config validation failed: %w", err)

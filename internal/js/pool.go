@@ -156,7 +156,7 @@ func runWithTimeout(vm *goja.Runtime, fn func() (goja.Value, error)) (goja.Value
 
 	result, err := fn()
 	if err != nil {
-		if interrupted := (*goja.InterruptedError)(nil); errors.As(err, &interrupted) {
+		if interrupted, ok := errors.AsType[*goja.InterruptedError](err); ok {
 			if timeoutErr, ok := interrupted.Value().(error); ok && errors.Is(timeoutErr, ErrJSTimeout) {
 				return nil, ErrJSTimeout
 			}

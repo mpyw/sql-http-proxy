@@ -10,18 +10,27 @@ import (
 	"github.com/samber/lo"
 )
 
-// marshalOptions configures response encoding.
+// marshalOptions pins encoding/json/v2 to the response bytes v1 produced.
+// Responses are this project's public API, so v2's stricter or tidier defaults
+// are opted out of one by one rather than accepted wholesale:
 //
-// Deterministic sorts map keys, matching encoding/json v1 (which always sorted
-// them) so that responses built from map[string]any rows stay byte-stable.
+//   - Deterministic sorts map keys. v1 always sorted them, and rows arrive as
+//     map[string]any, so without this the column order in a response would
+//     vary between identical requests.
+//   - AllowInvalidUTF8 keeps v1's lenient handling of column values that are
+//     not valid UTF-8: invalid bytes are emitted as U+FFFD instead of failing.
+//     v2 rejects them by default, which would turn rows that serve fine today
+//     (latin1 or binary columns) into a 500.
+//   - FormatNilSliceAsNull and FormatNilMapAsNull keep v1's `null` for a nil
+//     slice or map. v2 renders them as `[]` and `{}`.
 //
-// AllowInvalidUTF8 keeps v1's lenient handling of column values that are not
-// valid UTF-8: the invalid bytes are emitted as U+FFFD instead of failing the
-// whole response. v2 would reject them by default, which would turn rows that
-// used to serve fine into a 500.
+// The one difference left is deliberate: v2 does not escape <, > and & , and
+// responses are served as application/json where v1's escaping bought nothing.
 var marshalOptions = json.JoinOptions(
 	json.Deterministic(true),
 	jsontext.AllowInvalidUTF8(true),
+	json.FormatNilSliceAsNull(true),
+	json.FormatNilMapAsNull(true),
 )
 
 type responder struct {

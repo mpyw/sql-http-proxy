@@ -143,7 +143,7 @@ func (h *baseHandler[R]) handleError(res *responder, err error) {
 		res.Error(http.StatusNotFound, errors.New("not found"))
 		return
 	}
-	if transformErr := (*js.TransformError)(nil); errors.As(err, &transformErr) {
+	if transformErr, ok := errors.AsType[*js.TransformError](err); ok {
 		status := lo.CoalesceOrEmpty(transformErr.Status, defaultStatusForPhase(err))
 		res.Respond(status, transformErr.Body)
 		return
@@ -180,7 +180,7 @@ func (h *baseHandler[R]) applyResponseHeaders(w http.ResponseWriter, headers htt
 }
 
 func defaultStatusForPhase(err error) int {
-	if phaseErr := (*executor.PhaseError)(nil); errors.As(err, &phaseErr) && phaseErr.Phase == "pre" {
+	if phaseErr, ok := errors.AsType[*executor.PhaseError](err); ok && phaseErr.Phase == "pre" {
 		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError

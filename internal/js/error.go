@@ -47,8 +47,8 @@ func toHTTPStatus(v any) int {
 // Supports Lambda-style format: throw { status: 400, body: "message" } or throw { status: 400, body: { message: "error" } }
 // Native Error objects (throw new Error("...")) always return 500.
 func parseJSError(err error) error {
-	var jsErr *goja.Exception
-	if !errors.As(err, &jsErr) {
+	jsErr, ok := errors.AsType[*goja.Exception](err)
+	if !ok {
 		return fmt.Errorf("transform error: %w", err)
 	}
 
