@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"bytes"
-	"encoding/json"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -36,8 +35,7 @@ func TestContentTypeMultipart(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var result map[string]any
-		require.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+		result := decodeJSON[map[string]any](t, rec.Body)
 		assert.Equal(t, float64(42), result["id"])
 		assert.Equal(t, "Multipart User", result["name"])
 	})

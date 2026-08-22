@@ -96,19 +96,12 @@ func (t *Transformer) runCallable(vm *goja.Runtime, fnName string, args ...goja.
 		return nil, fmt.Errorf("%s is not a function", fnName)
 	}
 
-	// Set up timeout to prevent infinite loops
-	timer := time.AfterFunc(JSTimeout, func() {
-		vm.Interrupt(ErrJSTimeout)
+	result, err := runWithTimeout(vm, func() (goja.Value, error) {
+		return callable(goja.Undefined(), args...)
 	})
-	defer timer.Stop()
-
-	result, err := callable(goja.Undefined(), args...)
 	if err != nil {
-		// Check if error was due to timeout interrupt
-		if interrupted := (*goja.InterruptedError)(nil); errors.As(err, &interrupted) {
-			if timeoutErr, ok := interrupted.Value().(error); ok && errors.Is(timeoutErr, ErrJSTimeout) {
-				return nil, ErrJSTimeout
-			}
+		if errors.Is(err, ErrJSTimeout) {
+			return nil, err
 		}
 		return nil, parseJSError(err)
 	}
@@ -116,21 +109,13 @@ func (t *Transformer) runCallable(vm *goja.Runtime, fnName string, args ...goja.
 	return result, nil
 }
 
-// readBackCtx reads ctx from globalThis, returning fallback if not found.
-func readBackCtx(globalThis *goja.Object, fallback map[string]any) map[string]any {
-	if ctxVal := globalThis.Get("ctx"); ctxVal != nil && !goja.IsUndefined(ctxVal) {
-		if c, ok := ctxVal.Export().(map[string]any); ok {
-			return c
-		}
-	}
-	return fallback
-}
-
-// readBackSQL reads sql from globalThis, returning fallback if not found.
-func readBackSQL(globalThis *goja.Object, fallback string) string {
-	if sqlVal := globalThis.Get("sql"); sqlVal != nil && !goja.IsUndefined(sqlVal) {
-		if s, ok := sqlVal.Export().(string); ok {
-			return s
+// readBack reads the global name from globalThis, returning fallback unless it
+// is set and exports to T. Transforms are free to reassign or clobber the
+// globals they were handed, so anything unexpected falls back to the input.
+func readBack[T any](globalThis *goja.Object, name string, fallback T) T {
+	if val := globalThis.Get(name); val != nil && !goja.IsUndefined(val) {
+		if v, ok := val.Export().(T); ok {
+			return v
 		}
 	}
 	return fallback
@@ -163,8 +148,8 @@ func (t *Transformer) ApplyPre(ctx map[string]any, sql string, input map[string]
 
 	return &PreTransformResult{
 		Output: output,
-		SQL:    readBackSQL(globalThis, sql),
-		Ctx:    readBackCtx(globalThis, ctx),
+		SQL:    readBack(globalThis, "sql", sql),
+		Ctx:    readBack(globalThis, "ctx", ctx),
 	}, nil
 }
 
@@ -185,7 +170,7 @@ func (t *Transformer) ApplyMock(ctx map[string]any, sql string, input map[string
 
 	return &MockResult{
 		Output: result.Export(),
-		Ctx:    readBackCtx(globalThis, ctx),
+		Ctx:    readBack(globalThis, "ctx", ctx),
 	}, nil
 }
 
@@ -211,7 +196,7 @@ func (t *Transformer) ApplyPost(ctx map[string]any, input map[string]any, output
 
 	return &PostTransformResult{
 		Output: result.Export(),
-		Ctx:    readBackCtx(globalThis, ctx),
+		Ctx:    readBack(globalThis, "ctx", ctx),
 	}, nil
 }
 

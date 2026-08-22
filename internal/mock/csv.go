@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"strings"
 
@@ -43,11 +44,7 @@ func parseCSVFileWithOptions(path string, opts parseCSVOptions) (*csvSource, err
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			slog.Debug("Failed to close file", "error", err)
-		}
-	}()
+	defer closeQuietly(f)
 	return parseCSVReaderWithOptions(f, opts)
 }
 
@@ -135,9 +132,7 @@ func (s *csvSource) Data(_ map[string]any, _ string, _ map[string]any, _ *js.Tra
 	result := make([]map[string]any, len(s.rows))
 	for i, row := range s.rows {
 		rowCopy := make(map[string]any, len(row))
-		for k, v := range row {
-			rowCopy[k] = v
-		}
+		maps.Copy(rowCopy, row)
 		result[i] = rowCopy
 	}
 	return result, nil, nil

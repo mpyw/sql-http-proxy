@@ -1,14 +1,12 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMutationManyPostAll(t *testing.T) {
@@ -25,8 +23,7 @@ func TestMutationManyPostAll(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var result []map[string]any
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+	result := decodeJSON[[]map[string]any](t, w.Body)
 	assert.Len(t, result, 2)
 	// DB uppercased, then post.all lowercased
 	assert.Equal(t, "john@example.com", result[0]["email"])

@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,8 +26,7 @@ func TestCSVValueParser(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var result []map[string]any
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+	result := decodeJSON[[]map[string]any](t, w.Body)
 	require.Len(t, result, 2)
 
 	// Row 1: 1,Alice,true,95.5,2024-01-15,

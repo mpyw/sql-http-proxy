@@ -1,13 +1,11 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTransformThrowDefaultPre(t *testing.T) {
@@ -22,7 +20,6 @@ func TestTransformThrowDefaultPre(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-	var result map[string]any
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+	result := decodeJSON[map[string]any](t, w.Body)
 	assert.Equal(t, "no status specified in pre", result["message"])
 }

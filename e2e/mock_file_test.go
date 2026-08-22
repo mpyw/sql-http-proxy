@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,8 +26,7 @@ func TestMockFile(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result []map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[[]map[string]any](t, w.Body)
 		assert.Len(t, result, 2)
 		assert.Equal(t, "CSV User 1", result[0]["name"])
 		assert.Equal(t, true, result[0]["active"])
@@ -41,8 +39,7 @@ func TestMockFile(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result []map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[[]map[string]any](t, w.Body)
 		assert.Len(t, result, 2)
 		assert.Equal(t, "JSON User 1", result[0]["name"])
 	})
@@ -54,8 +51,7 @@ func TestMockFile(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result []map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[[]map[string]any](t, w.Body)
 		assert.Len(t, result, 2)
 		assert.Equal(t, "JSONL User 1", result[0]["name"])
 	})

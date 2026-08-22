@@ -201,8 +201,8 @@ func isMockPath(path string) bool {
 }
 
 func getParentPath(path string) string {
-	if lastSlash := strings.LastIndex(path, "/"); lastSlash > 0 {
-		return path[:lastSlash]
+	if parent, _, found := strings.CutLast(path, "/"); found && parent != "" {
+		return parent
 	}
 	return path
 }

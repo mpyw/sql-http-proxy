@@ -71,6 +71,47 @@ func TestParser_Parse_JSON(t *testing.T) {
 	})
 }
 
+func TestParser_Parse_JSON_RejectsIllFormed(t *testing.T) {
+	// encoding/json/v2 enforces RFC 7493 by default. Both cases below were
+	// silently accepted by encoding/json v1, which mattered because the parsed
+	// map becomes the SQL bind parameters.
+	tests := []struct {
+		name string
+		body string
+	}{
+		// v1 kept the last "id", letting a duplicate member override a
+		// parameter the caller had already set.
+		{"duplicate object member", `{"id":1,"id":2}`},
+		{"duplicate member in nested object", `{"a":{"id":1,"id":2}}`},
+		// v1 replaced invalid bytes with U+FFFD and carried on.
+		{"invalid UTF-8 in value", "{\"name\":\"\xff\xfe\"}"},
+		{"invalid UTF-8 in member name", "{\"\xff\xfe\":1}"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewParser([]config.AcceptType{config.AcceptJSON})
+			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+
+			_, err := p.Parse(req)
+			require.Error(t, err)
+			assert.ErrorIs(t, err, ErrBadRequest)
+			assert.Contains(t, err.Error(), "invalid JSON")
+		})
+	}
+}
+
+func TestParser_Parse_JSON_RejectsTrailingContent(t *testing.T) {
+	p := NewParser([]config.AcceptType{config.AcceptJSON})
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"a":1} {"b":2}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	_, err := p.Parse(req)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrBadRequest)
+}
+
 func TestParser_Parse_FormURLEncoded(t *testing.T) {
 	t.Run("valid form data", func(t *testing.T) {
 		p := NewParser([]config.AcceptType{config.AcceptForm})

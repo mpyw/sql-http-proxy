@@ -1,14 +1,12 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMutationMockMany(t *testing.T) {
@@ -23,8 +21,7 @@ func TestMutationMockMany(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var result []map[string]any
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+	result := decodeJSON[[]map[string]any](t, w.Body)
 	assert.Len(t, result, 2)
 	assert.Equal(t, float64(1), result[0]["id"])
 	assert.Equal(t, "mock1@example.com", result[0]["email"])

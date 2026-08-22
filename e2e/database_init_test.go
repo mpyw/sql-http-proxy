@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -37,8 +36,7 @@ func TestDatabaseInit_InlineSQL(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 
-	var result []map[string]any
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+	result := decodeJSON[[]map[string]any](t, w.Body)
 
 	// Verify init SQL created table and inserted data
 	require.Len(t, result, 2)
@@ -104,8 +102,7 @@ queries:
 
 	require.Equal(t, http.StatusOK, w.Code)
 
-	var result []map[string]any
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+	result := decodeJSON[[]map[string]any](t, w.Body)
 
 	// Verify init SQL file created table and inserted data
 	require.Len(t, result, 2)

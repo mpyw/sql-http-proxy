@@ -1,8 +1,10 @@
 package mock
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/samber/lo"
@@ -256,4 +258,39 @@ func TestParseJSONLFile(t *testing.T) {
 		_, err := parseJSONLFile("/nonexistent/file.jsonl")
 		require.Error(t, err)
 	})
+}
+
+func TestParseJSONL_LargeRow(t *testing.T) {
+	// The previous bufio.Scanner-based reader capped a line at 64KiB and failed
+	// with "token too long". A jsontext.Decoder has no such limit.
+	name := strings.Repeat("x", 128*1024)
+	source, err := parseJSONL(fmt.Sprintf(`{"name":%q}`+"\n", name))
+	require.NoError(t, err)
+
+	rows := source.data.([]any)
+	require.Len(t, rows, 1)
+	assert.Equal(t, name, rows[0].(map[string]any)["name"])
+}
+
+func TestParseJSONL_RejectsIllFormed(t *testing.T) {
+	tests := []struct {
+		name string
+		data string
+	}{
+		{"duplicate object member", `{"id":1,"id":2}`},
+		{"invalid UTF-8", "{\"name\":\"\xff\xfe\"}"},
+		{"truncated value", `{"id":1`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseJSONL(tt.data)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestParseJSONString_RejectsDuplicateMember(t *testing.T) {
+	_, err := parseJSONString(`{"id":1,"id":2}`)
+	require.Error(t, err)
 }

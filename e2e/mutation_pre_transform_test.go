@@ -1,14 +1,12 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMutationPreTransform(t *testing.T) {
@@ -26,8 +24,7 @@ func TestMutationPreTransform(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var result map[string]any
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+	result := decodeJSON[map[string]any](t, w.Body)
 	assert.Equal(t, "Alice", result["first_name"])
 	assert.Equal(t, "Brown", result["last_name"])
 	assert.Equal(t, "alice@example.com", result["email"])
@@ -48,7 +45,6 @@ func TestMutationPreTransformValidationError(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-	var result map[string]any
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+	result := decodeJSON[map[string]any](t, w.Body)
 	assert.Equal(t, "invalid email", result["message"])
 }

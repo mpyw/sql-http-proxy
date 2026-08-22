@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,8 +27,7 @@ func TestGlobalHelpers(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[map[string]any](t, w.Body)
 		assert.Equal(t, float64(10), result["input_doubled"]) // double(5) = 10
 	})
 
@@ -40,8 +38,7 @@ func TestGlobalHelpers(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[map[string]any](t, w.Body)
 		assert.Equal(t, float64(20), result["value"]) // double(10) = 20
 	})
 
@@ -52,8 +49,7 @@ func TestGlobalHelpers(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[map[string]any](t, w.Body)
 		assert.Equal(t, "John Doe", result["fullName"])
 	})
 
@@ -64,8 +60,7 @@ func TestGlobalHelpers(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result []map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[[]map[string]any](t, w.Body)
 		assert.Len(t, result, 2)
 		assert.Equal(t, float64(10), result[0]["doubled"]) // double(5) = 10
 		assert.Equal(t, float64(20), result[1]["doubled"]) // double(10) = 20

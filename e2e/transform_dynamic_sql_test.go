@@ -1,13 +1,11 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTransformDynamicSql(t *testing.T) {
@@ -23,8 +21,7 @@ func TestTransformDynamicSql(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result []map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[[]map[string]any](t, w.Body)
 		assert.Len(t, result, 3)
 	})
 
@@ -35,8 +32,7 @@ func TestTransformDynamicSql(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result []map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[[]map[string]any](t, w.Body)
 		assert.Len(t, result, 1)
 		assert.Equal(t, "john@example.com", result[0]["email"])
 	})
@@ -48,8 +44,7 @@ func TestTransformDynamicSql(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result []map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[[]map[string]any](t, w.Body)
 		assert.Len(t, result, 1)
 		assert.Equal(t, "jane@example.com", result[0]["email"])
 	})

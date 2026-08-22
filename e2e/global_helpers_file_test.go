@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,8 +26,7 @@ func TestGlobalHelpersFile(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[map[string]any](t, w.Body)
 		assert.Equal(t, float64(10), result["doubled"])     // double(5) from inline
 		assert.Equal(t, float64(15), result["tripled"])     // triple(5) from file
 		assert.Equal(t, "Hello, Test!", result["greeting"]) // greet() from file

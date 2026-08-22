@@ -24,6 +24,9 @@ sql-http-proxy/
 
 ## Development Commands
 
+Requires Go 1.27 or later: the project uses `encoding/json/v2` / `encoding/json/jsontext`
+and generic methods.
+
 ```bash
 # Build (all drivers)
 go build ./cmd/sql-http-proxy

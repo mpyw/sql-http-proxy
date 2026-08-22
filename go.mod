@@ -1,6 +1,6 @@
 module github.com/mpyw/sql-http-proxy
 
-go 1.24.0
+go 1.27.0
 
 require (
 	github.com/a8m/envsubst v1.4.3

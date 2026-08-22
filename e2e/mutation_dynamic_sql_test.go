@@ -1,14 +1,12 @@
 package e2e
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMutationDynamicSql(t *testing.T) {
@@ -26,8 +24,7 @@ func TestMutationDynamicSql(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[map[string]any](t, w.Body)
 		assert.Equal(t, "Updated", result["first_name"])
 		assert.Equal(t, "Doe", result["last_name"]) // unchanged
 	})
@@ -41,8 +38,7 @@ func TestMutationDynamicSql(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var result map[string]any
-		require.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+		result := decodeJSON[map[string]any](t, w.Body)
 		assert.Equal(t, "Janet", result["first_name"])
 		assert.Equal(t, "Smith", result["last_name"]) // unchanged
 		assert.Equal(t, "janet@example.com", result["email"])
