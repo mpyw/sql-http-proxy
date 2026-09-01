@@ -69,7 +69,10 @@ jobs:
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
-          version: "~> v2"
+          # Pinned exactly (not "~> v2"): goreleaser 2.18.0 attests every build
+          # artifact, which fails this build job. 2.17.1 is the last release
+          # before that.
+          version: "2.17.1"
           args: build --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
