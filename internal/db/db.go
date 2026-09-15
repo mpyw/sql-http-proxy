@@ -1,3 +1,8 @@
+// db.go is the unit this package is named for: the connection lifecycle.
+// Its API is read as db.Connect, so its names stay unprefixed.
+//
+//declscope:core
+
 // Package db provides database connection management for sql-http-proxy.
 package db
 
