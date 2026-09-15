@@ -1,3 +1,8 @@
+// Namespace note: baseHandler is one type assembled across three files - the
+// generic machinery here, and the query/mutation specializations that fill in
+// its fields. mutation_handler.go and query_handler.go therefore join this
+// file's namespace with //declscope:namespace handler.
+
 // Package server provides HTTP server functionality for sql-http-proxy.
 package server
 
@@ -19,8 +24,8 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/server/body"
 )
 
-// queryRecord represents an executed query record.
-type queryRecord struct {
+// handledQueryRecord represents an executed query record.
+type handledQueryRecord struct {
 	Type   config.OpType  // OpTypeOne, OpTypeMany, or OpTypeNone
 	IsMock bool           // true if mock query
 	SQL    string         // executed SQL (bound for DB, original for mock)
@@ -28,18 +33,27 @@ type queryRecord struct {
 	Args   []any          // positional arguments (for DB)
 }
 
-// queryRecorder is called when a query is executed.
-type queryRecorder func(record queryRecord)
+// handledQueryRecorder is called when a query is executed.
+type handledQueryRecorder func(record handledQueryRecord)
 
-// handlerOptions contains optional settings for CreateHandler.
+// handlerOptions contains optional settings shared by the handler
+// constructors. Shared on purpose: server.go (NewServeMux) fills it once and
+// hands it to every newQueryHandlerWithOptions / newMutationHandlerWithOptions
+// call.
+//
+//declscope:package
 type handlerOptions struct {
-	Recorder    queryRecorder
+	Recorder    handledQueryRecorder
 	ConfigDir   string              // Directory of config file for resolving relative paths
 	Helpers     *js.CompiledHelpers // Global JavaScript helpers
 	ValueParser *mock.ValueParser   // Global CSV value parser
 }
 
 // createNotFoundHandler creates a 404 handler.
+// Shared on purpose: server.go (NewServeMux) installs it as the router's
+// NotFound handler.
+//
+//declscope:package
 func createNotFoundHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		res := &responder{w: w}
@@ -47,25 +61,25 @@ func createNotFoundHandler() http.Handler {
 	})
 }
 
-// Executor is the interface for query/mutation executors.
-type Executor[R any] interface {
+// HandlerExecutor is the handler-side interface for query/mutation executors.
+type HandlerExecutor[R any] interface {
 	Execute(ctx context.Context, params map[string]any, opts executor.Options) (*R, error)
 }
 
-// ResultProcessor handles result-specific response building.
-type ResultProcessor[R any] interface {
+// HandlerResultProcessor handles result-specific response building.
+type HandlerResultProcessor[R any] interface {
 	// BuildResponse returns (status, output, responseHeader) from the result.
 	BuildResponse(result *R) (status int, output any, headers http.Header)
 }
 
 // baseHandler contains common handler logic.
 type baseHandler[R any] struct {
-	exec          Executor[R]
+	exec          HandlerExecutor[R]
 	method        string
 	pathParams    []string // path parameter names in order
 	parser        *body.Parser
-	recorder      queryRecorder
-	processor     ResultProcessor[R]
+	recorder      handledQueryRecorder
+	processor     HandlerResultProcessor[R]
 	checkNotFound bool          // true for query handlers
 	delay         time.Duration // artificial delay before response
 }
@@ -120,7 +134,7 @@ func (h *baseHandler[R]) parseParams(r *http.Request) (map[string]any, error) {
 
 	switch r.Method {
 	case http.MethodGet, http.MethodHead:
-		params = extractNamedParams(r.URL.Query())
+		params = h.extractNamedParams(r.URL.Query())
 	default:
 		params, err = h.parser.Parse(r)
 		if err != nil {
@@ -144,7 +158,7 @@ func (h *baseHandler[R]) handleError(res *responder, err error) {
 		return
 	}
 	if transformErr, ok := errors.AsType[*js.TransformError](err); ok {
-		status := lo.CoalesceOrEmpty(transformErr.Status, defaultStatusForPhase(err))
+		status := lo.CoalesceOrEmpty(transformErr.Status, h.defaultStatusForPhase(err))
 		res.Respond(status, transformErr.Body)
 		return
 	}
@@ -158,7 +172,7 @@ func (h *baseHandler[R]) buildExecOptions(r *http.Request) executor.Options {
 	}
 	if h.recorder != nil {
 		opts.Recorder = func(rec executor.Record) {
-			h.recorder(queryRecord{
+			h.recorder(handledQueryRecord{
 				Type:   rec.Type,
 				IsMock: rec.IsMock,
 				SQL:    rec.SQL,
@@ -179,14 +193,17 @@ func (h *baseHandler[R]) applyResponseHeaders(w http.ResponseWriter, headers htt
 	}
 }
 
-func defaultStatusForPhase(err error) int {
+// defaultStatusForPhase picks the handler's fallback HTTP status for a
+// transform error that names no status of its own.
+func (h *baseHandler[R]) defaultStatusForPhase(err error) int {
 	if phaseErr, ok := errors.AsType[*executor.PhaseError](err); ok && phaseErr.Phase == "pre" {
 		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError
 }
 
-func extractNamedParams(values url.Values) map[string]any {
+// extractNamedParams flattens query-string values into handler params.
+func (h *baseHandler[R]) extractNamedParams(values url.Values) map[string]any {
 	params := make(map[string]any, len(values))
 	for key, vals := range values {
 		if len(vals) > 0 {
@@ -196,10 +213,10 @@ func extractNamedParams(values url.Values) map[string]any {
 	return params
 }
 
-// extractPathParams extracts path parameter names from a chi path pattern.
+// handlerPathParams extracts path parameter names from a chi path pattern.
 // Example: /users/{id}/posts/{post_id} -> ["id", "post_id"]
 // Example: /users/{id:[0-9]+} -> ["id"]
-func extractPathParams(path string) []string {
+func handlerPathParams(path string) []string {
 	var params []string
 	i := 0
 	for i < len(path) {

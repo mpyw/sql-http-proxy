@@ -1,3 +1,8 @@
+// server.go is the unit this package is named for: it assembles the router
+// from the configuration, and the API is read as server.NewServeMux without a
+// prefix.
+//
+//declscope:core
 package server
 
 import (

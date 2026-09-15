@@ -14,7 +14,7 @@ import (
 
 // TestResponder_Respond_V1Compatible pins the response bytes that
 // encoding/json v1 produced. Responses are this project's public API, so each
-// case here is a v2 default that marshalOptions deliberately opts out of; a
+// case here is a v2 default that responseMarshalOptions deliberately opts out of; a
 // failure means a v2 default leaked into the wire format.
 func TestResponder_Respond_V1Compatible(t *testing.T) {
 	ts := time.Date(2026, 8, 22, 12, 34, 56, 789000000, time.UTC)
@@ -139,6 +139,6 @@ func TestValidateStatus(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		assert.Equal(t, tt.want, validateStatus(tt.in), "validateStatus(%d)", tt.in)
+		assert.Equal(t, tt.want, validateResponseStatus(tt.in), "validateResponseStatus(%d)", tt.in)
 	}
 }

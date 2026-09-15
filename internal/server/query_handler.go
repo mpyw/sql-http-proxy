@@ -1,3 +1,7 @@
+// The query handler is one unit with the base handler in handler.go: it
+// assembles a baseHandler field by field. See the namespace note there.
+//
+//declscope:namespace handler
 package server
 
 import (
@@ -16,10 +20,10 @@ import (
 // QueryHandler handles HTTP requests for queries.
 type QueryHandler = baseHandler[executor.ExecuteResult]
 
-// queryResultProcessor implements ResultProcessor for ExecuteResult.
-type queryResultProcessor struct{}
+// queryHandlerProcessor implements HandlerResultProcessor for ExecuteResult.
+type queryHandlerProcessor struct{}
 
-func (p *queryResultProcessor) BuildResponse(result *executor.ExecuteResult) (int, any, http.Header) {
+func (p *queryHandlerProcessor) BuildResponse(result *executor.ExecuteResult) (int, any, http.Header) {
 	status := lo.CoalesceOrEmpty(result.Status, http.StatusOK)
 	return status, result.Output, result.ResponseHeader
 }
@@ -32,6 +36,9 @@ func NewQueryHandler(db *sqlx.DB, query config.Query) (*QueryHandler, error) {
 
 // newQueryHandlerWithOptions creates a new QueryHandler with options.
 // db can be nil if mock is configured.
+// Shared on purpose: server.go (NewServeMux) builds every query route here.
+//
+//declscope:package
 func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOptions) (*QueryHandler, error) {
 	execOpts := executor.CompileTransformOptions{
 		ConfigDir:   opts.ConfigDir,
@@ -55,10 +62,10 @@ func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOpt
 	return &QueryHandler{
 		exec:          exec,
 		method:        query.GetMethod(),
-		pathParams:    extractPathParams(query.Path),
+		pathParams:    handlerPathParams(query.Path),
 		parser:        body.NewParser(query.GetAccepts()),
 		recorder:      opts.Recorder,
-		processor:     &queryResultProcessor{},
+		processor:     &queryHandlerProcessor{},
 		checkNotFound: true,
 		delay:         delay,
 	}, nil

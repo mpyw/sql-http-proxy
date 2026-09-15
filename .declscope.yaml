@@ -7,3 +7,9 @@ rules:
     # Reach exported declarations too. Inside the package they are read as bare
     # as any other name, so the namespace is wanted at the same call sites.
     exported: true
+    # Inflections the matcher cannot derive on its own:
+    # - handler/handle(d): "handledQueryRecord" names the handler unit's record.
+    # - responder/response: "responseMarshalOptions" names the responder's options.
+    vocabulary:
+      handler: [handle]
+      responder: [response]
