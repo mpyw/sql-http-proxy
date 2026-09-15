@@ -1,0 +1,243 @@
+# declscope baseline
+#
+# Violations recorded here are suppressed; new ones are still reported.
+# Regenerate with:
+#
+#     declscope baseline ./...
+#
+# Do not edit by hand. An entry disappears when its violation is fixed, so the
+# diff of a regeneration is the record of what was cleaned up.
+packages:
+  github.com/mpyw/sql-http-proxy/e2e:
+    boundary:
+      common:
+        - createHandler
+        - createMutationHandler
+        - decodeJSON
+        - loadConfig
+        - setupTestDB
+  github.com/mpyw/sql-http-proxy/internal/cli/commands:
+    qualify:
+      app:
+        - MaxHeaderBytes
+        - MaxHeaderValueCount
+        - ReadHeaderTimeout
+        - ShutdownTimeout
+        - Version
+        - action
+  github.com/mpyw/sql-http-proxy/internal/config:
+    boundary:
+      errors:
+        - formatValidationError
+    qualify:
+      config:
+        - Parse
+        - ParseFile
+        - schemaJSON
+      errors:
+        - arraySources
+        - errorWithPath
+        - findBothSqlMockError
+        - findMissingSqlMockError
+        - findMockSourceError
+        - findTypeValue
+        - formatMockSourceMismatchError
+        - formatPath
+        - formatValidationError
+        - getParentPath
+        - isArraySource
+        - isMockPath
+        - isNumeric
+        - isObjectSource
+        - isQueryOrMutationPath
+        - isSqlMockOneOfError
+        - mockPathRe
+        - objectSources
+        - queryOrMutationPathRe
+      types:
+        - AcceptForm
+        - AcceptJSON
+        - AcceptType
+        - CSVConfig
+        - DatabaseInit
+        - EntityMutation
+        - EntityQuery
+        - EntityType
+        - GlobalHelpers
+        - Mock
+        - Mutation
+        - MutationType
+        - MutationTypeMany
+        - MutationTypeNone
+        - MutationTypeOne
+        - OpType
+        - OpTypeMany
+        - OpTypeNone
+        - OpTypeOne
+        - PostTransform
+        - Query
+        - QueryType
+        - QueryTypeMany
+        - QueryTypeOne
+        - Transform
+  github.com/mpyw/sql-http-proxy/internal/db:
+    qualify:
+      db:
+        - Connect
+        - ConnectTimeout
+        - executeInit
+      statements:
+        - BindParams
+        - Exec
+        - ExecResult
+        - QueryMany
+        - QueryOne
+  github.com/mpyw/sql-http-proxy/internal/executor:
+    qualify:
+      executor:
+        - ErrNotFound
+        - ExecContext
+        - ExecuteResult
+        - Options
+        - PhaseError
+        - Record
+        - Recorder
+        - ResultBuilder
+        - WrapMockError
+        - WrapPostError
+        - WrapPreError
+      transform:
+        - CompileMock
+  github.com/mpyw/sql-http-proxy/internal/js:
+    boundary:
+      error:
+        - parseJSError
+      pool:
+        - runWithTimeout
+      transformer:
+        - Transformer.helpers
+        - Transformer.program
+    qualify:
+      apply:
+        - ErrJSTimeout
+        - JSTimeout
+        - MockResult
+        - NewTransformContext
+        - PostTransformResult
+        - PreTransformResult
+        - TransformContext
+        - readBack
+        - runCallable
+        - setupVM
+        - vmSetupOptions
+      error:
+        - toHTTPStatus
+      globalHelpers:
+        - CompileHelpers
+        - CompiledHelpers
+      pool:
+        - runWithTimeout
+      transformer:
+        - CompileFilter
+        - CompileMockJS
+        - CompilePost
+        - CompilePre
+        - compile
+  github.com/mpyw/sql-http-proxy/internal/mock:
+    boundary:
+      csv:
+        - parseCSVFileWithOptions
+        - parseCSVOptions
+        - parseCSVWithOptions
+      csvValue:
+        - parseValue
+      filter:
+        - newJSFilteredSource
+      js:
+        - compileJS
+      json:
+        - closeQuietly
+        - newJSON
+        - parseJSONFile
+        - parseJSONL
+        - parseJSONLFile
+        - parseJSONString
+    qualify:
+      csvValue:
+        - isNumeric
+        - parseBool
+        - parseValue
+      json:
+        - closeQuietly
+        - deepCopy
+      mock:
+        - Compile
+        - CompileOptions
+        - Source
+        - newNilSource
+        - nilSource
+  github.com/mpyw/sql-http-proxy/internal/server:
+    boundary:
+      handler:
+        - baseHandler
+        - baseHandler.checkNotFound
+        - baseHandler.delay
+        - baseHandler.exec
+        - baseHandler.method
+        - baseHandler.parser
+        - baseHandler.pathParams
+        - baseHandler.processor
+        - baseHandler.recorder
+        - createNotFoundHandler
+        - extractPathParams
+        - handlerOptions
+      mutationHandler:
+        - newMutationHandlerWithOptions
+      queryHandler:
+        - newQueryHandlerWithOptions
+      responder:
+        - responder
+        - responder.w
+    qualify:
+      handler:
+        - Executor
+        - ResultProcessor
+        - defaultStatusForPhase
+        - extractNamedParams
+        - extractPathParams
+        - queryRecord
+        - queryRecorder
+      mutationHandler:
+        - mutationResultProcessor
+      queryHandler:
+        - queryResultProcessor
+      responder:
+        - marshalOptions
+        - validateStatus
+      server:
+        - NewServeMux
+        - corsPreflightHandler
+        - expandPathShorthands
+        - makeCORSMiddleware
+        - regexShorthands
+  github.com/mpyw/sql-http-proxy/internal/server/body:
+    boundary:
+      form:
+        - parseMultipart
+        - parseURLEncoded
+      json:
+        - parseJSON
+        - parseJSONBytes
+      parser:
+        - readBody
+    qualify:
+      form:
+        - parseMultipart
+        - parseURLEncoded
+      parser:
+        - ErrBadRequest
+        - ErrBodyTooLarge
+        - ErrUnsupportedMediaType
+        - MaxBodySize
+        - errorReader
+        - readBody
