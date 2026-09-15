@@ -1,3 +1,7 @@
+// The mutation handler is one unit with the base handler in handler.go: it
+// assembles a baseHandler field by field. See the namespace note there.
+//
+//declscope:namespace handler
 package server
 
 import (
@@ -16,10 +20,10 @@ import (
 // MutationHandler handles HTTP requests for mutations.
 type MutationHandler = baseHandler[executor.MutationResult]
 
-// mutationResultProcessor implements ResultProcessor for MutationResult.
-type mutationResultProcessor struct{}
+// mutationHandlerProcessor implements HandlerResultProcessor for MutationResult.
+type mutationHandlerProcessor struct{}
 
-func (p *mutationResultProcessor) BuildResponse(result *executor.MutationResult) (int, any, http.Header) {
+func (p *mutationHandlerProcessor) BuildResponse(result *executor.MutationResult) (int, any, http.Header) {
 	// For NoContent, always use 204 (original behavior)
 	// result.Status from Response defaults to 200, which should not override 204
 	if result.NoContent {
@@ -37,6 +41,9 @@ func NewMutationHandler(db *sqlx.DB, mutation config.Mutation) (*MutationHandler
 
 // newMutationHandlerWithOptions creates a new MutationHandler with options.
 // db can be nil if mock is configured.
+// Shared on purpose: server.go (NewServeMux) builds every mutation route here.
+//
+//declscope:package
 func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts handlerOptions) (*MutationHandler, error) {
 	execOpts := executor.CompileTransformOptions{
 		ConfigDir:   opts.ConfigDir,
@@ -60,10 +67,10 @@ func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts h
 	return &MutationHandler{
 		exec:          exec,
 		method:        mutation.GetMethod(),
-		pathParams:    extractPathParams(mutation.Path),
+		pathParams:    handlerPathParams(mutation.Path),
 		parser:        body.NewParser(mutation.GetAccepts()),
 		recorder:      opts.Recorder,
-		processor:     &mutationResultProcessor{},
+		processor:     &mutationHandlerProcessor{},
 		checkNotFound: false,
 		delay:         delay,
 	}, nil

@@ -10,7 +10,7 @@ import (
 	"github.com/samber/lo"
 )
 
-// marshalOptions pins encoding/json/v2 to the response bytes v1 produced.
+// responseMarshalOptions pins encoding/json/v2 to the response bytes v1 produced.
 // Responses are this project's public API, so v2's stricter or tidier defaults
 // are opted out of one by one rather than accepted wholesale:
 //
@@ -26,20 +26,24 @@ import (
 //
 // The one difference left is deliberate: v2 does not escape <, > and & , and
 // responses are served as application/json where v1's escaping bought nothing.
-var marshalOptions = json.JoinOptions(
+var responseMarshalOptions = json.JoinOptions(
 	json.Deterministic(true),
 	jsontext.AllowInvalidUTF8(true),
 	json.FormatNilSliceAsNull(true),
 	json.FormatNilMapAsNull(true),
 )
 
+// Shared on purpose: the handler unit (handler.go) writes every response and
+// error through this type.
+//
+//declscope:package
 type responder struct {
 	w http.ResponseWriter
 }
 
-// validateStatus ensures status code is in valid HTTP range (100-599).
+// validateResponseStatus ensures status code is in valid HTTP range (100-599).
 // Returns the validated status or 500 if invalid.
-func validateStatus(status int) int {
+func validateResponseStatus(status int) int {
 	if status < 100 || status > 599 {
 		slog.Warn("Invalid HTTP status code, falling back to 500", "status", status)
 		return http.StatusInternalServerError
@@ -48,7 +52,7 @@ func validateStatus(status int) int {
 }
 
 func (r *responder) Respond(status int, payload any) {
-	status = validateStatus(status)
+	status = validateResponseStatus(status)
 	// For 204 No Content, don't write any body
 	if status == http.StatusNoContent {
 		r.w.WriteHeader(status)
@@ -57,7 +61,7 @@ func (r *responder) Respond(status int, payload any) {
 
 	// Marshal before writing the header so a marshal failure can still be
 	// reported as a 500 instead of truncating an already-committed response.
-	msg, err := json.Marshal(payload, marshalOptions)
+	msg, err := json.Marshal(payload, responseMarshalOptions)
 	if err != nil {
 		r.Error(http.StatusInternalServerError, err)
 		return
@@ -71,14 +75,14 @@ func (r *responder) Respond(status int, payload any) {
 }
 
 func (r *responder) Error(status int, err error) {
-	status = validateStatus(status)
+	status = validateResponseStatus(status)
 	// Log server errors (5xx)
 	if status >= 500 {
 		slog.Error("Internal server error", "status", status, "error", err)
 	}
 	// Marshaling a string with AllowInvalidUTF8 cannot fail, so lo.Must is safe
 	// even for error messages carrying non-UTF-8 bytes from a driver.
-	msg := lo.Must(json.Marshal(err.Error(), marshalOptions))
+	msg := lo.Must(json.Marshal(err.Error(), responseMarshalOptions))
 	r.w.Header().Set("Content-Type", "application/json")
 	r.w.WriteHeader(status)
 	if _, err = fmt.Fprintf(r.w, "{\"error\":%s}", msg); err != nil {

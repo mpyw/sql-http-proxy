@@ -51,7 +51,7 @@ func TestFormatPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := formatPath(tt.input)
+			result := formatErrorPath(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -73,7 +73,7 @@ func TestIsNumeric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := isNumeric(tt.input)
+			result := isErrorPathIndex(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -96,7 +96,7 @@ func TestIsQueryOrMutationPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := isQueryOrMutationPath(tt.input)
+			result := isQueryOrMutationErrorPath(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -117,7 +117,7 @@ func TestIsMockPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := isMockPath(tt.input)
+			result := isMockErrorPath(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -139,7 +139,7 @@ func TestIsObjectSource(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := isObjectSource(tt.input)
+			result := isObjectSourceKey(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -165,7 +165,7 @@ func TestIsArraySource(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := isArraySource(tt.input)
+			result := isArraySourceKey(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -183,7 +183,7 @@ func TestGetParentPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := getParentPath(tt.input)
+			result := parentErrorPath(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

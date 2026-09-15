@@ -30,9 +30,9 @@ func (e *TransformError) Error() string {
 	return "transform error"
 }
 
-// toHTTPStatus converts goja numeric types to an HTTP status code.
+// errorToHTTPStatus converts goja numeric types to an HTTP status code.
 // Returns 0 if the value is not int64 or float64.
-func toHTTPStatus(v any) int {
+func errorToHTTPStatus(v any) int {
 	switch n := v.(type) {
 	case int64:
 		return int(n)
@@ -46,6 +46,9 @@ func toHTTPStatus(v any) int {
 // parseJSError extracts status and body from a thrown JS error.
 // Supports Lambda-style format: throw { status: 400, body: "message" } or throw { status: 400, body: { message: "error" } }
 // Native Error objects (throw new Error("...")) always return 500.
+// It is the one entry point apply.go takes into this unit.
+//
+//declscope:package
 func parseJSError(err error) error {
 	jsErr, ok := errors.AsType[*goja.Exception](err)
 	if !ok {
@@ -67,7 +70,7 @@ func parseJSError(err error) error {
 
 		return &TransformError{
 			// Lambda-style: throw { status: 400, body: ... }
-			Status: toHTTPStatus(status),
+			Status: errorToHTTPStatus(status),
 			Body:   lo.Ternary(hasBody, body, any(jsErr.String())),
 		}
 	}

@@ -11,8 +11,8 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/mock"
 )
 
-// Transforms holds pre-compiled transforms.
-type Transforms struct {
+// CompiledTransforms holds pre-compiled transforms.
+type CompiledTransforms struct {
 	Pre      *js.Transformer
 	PostEach *js.Transformer
 	PostAll  *js.Transformer
@@ -27,12 +27,12 @@ type CompileTransformOptions struct {
 
 // CompileTransforms compiles all transforms from a config.Transform.
 // Note: mock is now compiled separately via CompileMock.
-func CompileTransforms(t *config.Transform, opts CompileTransformOptions) (*Transforms, error) {
+func CompileTransforms(t *config.Transform, opts CompileTransformOptions) (*CompiledTransforms, error) {
 	if t == nil {
-		return &Transforms{}, nil
+		return &CompiledTransforms{}, nil
 	}
 
-	transforms := &Transforms{}
+	transforms := &CompiledTransforms{}
 	var err error
 
 	for _, entry := range []lo.Tuple4[string, func(string) (*js.Transformer, error), string, **js.Transformer]{

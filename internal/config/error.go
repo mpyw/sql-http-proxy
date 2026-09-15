@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -12,19 +11,16 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal"
 )
 
-// Mock source categories
-var (
-	objectSources = []string{"object", "object_json", "object_json_file", "object_js"}
-	arraySources  = []string{"array", "array_json", "array_json_file", "array_js", "csv", "csv_file", "jsonl", "jsonl_file"}
-)
-
 // Compiled regexes for path matching
 var (
-	queryOrMutationPathRe = regexp.MustCompile(`^/(queries|mutations)/\d+$`)
-	mockPathRe            = regexp.MustCompile(`^/(queries|mutations)/\d+/mock$`)
+	queryOrMutationErrorPathRe = regexp.MustCompile(`^/(queries|mutations)/\d+$`)
+	mockErrorPathRe            = regexp.MustCompile(`^/(queries|mutations)/\d+/mock$`)
 )
 
 // formatValidationError converts a jsonschema ValidationError into a user-friendly message.
+// It is the one entry point config.go (Parse) takes into this unit.
+//
+//declscope:package
 func formatValidationError(err *jsonschema.ValidationError) string {
 	// Collect all errors
 	errors := collectErrors(err)
@@ -50,8 +46,8 @@ func formatValidationError(err *jsonschema.ValidationError) string {
 func findBothSqlMockError(errors []errorWithPath) string {
 	for _, e := range errors {
 		if oneOf, ok := e.err.ErrorKind.(*kind.OneOf); ok {
-			if len(oneOf.Subschemas) >= 2 && isQueryOrMutationPath(e.path) {
-				return fmt.Sprintf("at '%s': cannot have both 'sql' and 'mock' - use one or the other", formatPath(e.path))
+			if len(oneOf.Subschemas) >= 2 && isQueryOrMutationErrorPath(e.path) {
+				return fmt.Sprintf("at '%s': cannot have both 'sql' and 'mock' - use one or the other", formatErrorPath(e.path))
 			}
 		}
 	}
@@ -62,9 +58,9 @@ func findBothSqlMockError(errors []errorWithPath) string {
 func findMissingSqlMockError(errors []errorWithPath) string {
 	for _, e := range errors {
 		if oneOf, ok := e.err.ErrorKind.(*kind.OneOf); ok {
-			if len(oneOf.Subschemas) == 0 && isQueryOrMutationPath(e.path) {
+			if len(oneOf.Subschemas) == 0 && isQueryOrMutationErrorPath(e.path) {
 				if isSqlMockOneOfError(e.err) {
-					return fmt.Sprintf("at '%s': must have either 'sql' or 'mock'", formatPath(e.path))
+					return fmt.Sprintf("at '%s': must have either 'sql' or 'mock'", formatErrorPath(e.path))
 				}
 			}
 		}
@@ -76,13 +72,13 @@ func findMissingSqlMockError(errors []errorWithPath) string {
 func findMockSourceError(errors []errorWithPath) string {
 	// Look for mock path errors
 	for _, e := range errors {
-		if !isMockPath(e.path) {
+		if !isMockErrorPath(e.path) {
 			continue
 		}
 
 		// Get parent query/mutation path to understand context
-		parentPath := getParentPath(e.path)
-		typeName := findTypeValue(errors, parentPath)
+		parentPath := parentErrorPath(e.path)
+		typeName := findTypeValueInErrors(errors, parentPath)
 
 		// Check for additional properties error (wrong source type)
 		if addl, ok := e.err.ErrorKind.(*kind.AdditionalProperties); ok {
@@ -100,28 +96,28 @@ func formatMockSourceMismatchError(parentPath string, typeName string, invalidSo
 	// Check if multiple sources
 	if len(invalidSources) > 1 {
 		return fmt.Sprintf("at '%s': mock must have exactly one source, found: %s",
-			formatPath(parentPath), strings.Join(invalidSources, ", "))
+			formatErrorPath(parentPath), strings.Join(invalidSources, ", "))
 	}
 
 	// type: one with array source without filter
-	if typeName == "one" && isArraySource(source) {
+	if typeName == "one" && isArraySourceKey(source) {
 		return fmt.Sprintf("at '%s': type 'one' with '%s' requires 'filter' to select a single row, or use object/object_js for a single object",
-			formatPath(parentPath), source)
+			formatErrorPath(parentPath), source)
 	}
 
 	// type: many with object source
-	if typeName == "many" && isObjectSource(source) {
+	if typeName == "many" && isObjectSourceKey(source) {
 		return fmt.Sprintf("at '%s': type 'many' does not support '%s' - use array, csv, or jsonl sources",
-			formatPath(parentPath), source)
+			formatErrorPath(parentPath), source)
 	}
 
 	// Generic message for other cases
 	return fmt.Sprintf("at '%s': invalid mock source '%s' for type '%s'",
-		formatPath(parentPath), source, typeName)
+		formatErrorPath(parentPath), source, typeName)
 }
 
-// findTypeValue extracts the type value from errors at the given query/mutation path.
-func findTypeValue(errors []errorWithPath, parentPath string) string {
+// findTypeValueInErrors extracts the type value from errors at the given query/mutation path.
+func findTypeValueInErrors(errors []errorWithPath, parentPath string) string {
 	typePath := parentPath + "/type"
 
 	// Look for const errors at the type path to infer what type was expected
@@ -192,30 +188,22 @@ func collectErrorsRecursive(err *jsonschema.ValidationError, result *[]errorWith
 	}
 }
 
-func isQueryOrMutationPath(path string) bool {
-	return queryOrMutationPathRe.MatchString(path)
+func isQueryOrMutationErrorPath(path string) bool {
+	return queryOrMutationErrorPathRe.MatchString(path)
 }
 
-func isMockPath(path string) bool {
-	return mockPathRe.MatchString(path)
+func isMockErrorPath(path string) bool {
+	return mockErrorPathRe.MatchString(path)
 }
 
-func getParentPath(path string) string {
+func parentErrorPath(path string) string {
 	if parent, _, found := strings.CutLast(path, "/"); found && parent != "" {
 		return parent
 	}
 	return path
 }
 
-func isObjectSource(source string) bool {
-	return slices.Contains(objectSources, source)
-}
-
-func isArraySource(source string) bool {
-	return slices.Contains(arraySources, source)
-}
-
-func formatPath(path string) string {
+func formatErrorPath(path string) string {
 	if path == "" || path == "/" {
 		return "(root)"
 	}
@@ -225,7 +213,7 @@ func formatPath(path string) string {
 	var result strings.Builder
 
 	for i, part := range parts {
-		if isNumeric(part) {
+		if isErrorPathIndex(part) {
 			result.WriteString("[")
 			result.WriteString(part)
 			result.WriteString("]")
@@ -240,7 +228,7 @@ func formatPath(path string) string {
 	return result.String()
 }
 
-func isNumeric(s string) bool {
+func isErrorPathIndex(s string) bool {
 	for _, c := range s {
 		if c < '0' || c > '9' {
 			return false

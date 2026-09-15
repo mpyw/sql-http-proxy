@@ -1,4 +1,3 @@
-// Package mock provides mock data sources for testing and development.
 package mock
 
 import (
@@ -6,25 +5,30 @@ import (
 	"strings"
 )
 
-// parseValue converts a string value to an appropriate Go type.
+// parseCSVValue converts a string value to an appropriate Go type.
 // Conversion rules (similar to PHP):
 //   - Numeric strings → float64 (PHP is_numeric style)
 //   - Boolean strings → bool (PHP filter_var FILTER_VALIDATE_BOOLEAN style)
 //   - "null" (case-insensitive) → nil
 //   - Everything else → string
-func parseValue(s string) any {
+//
+// Shared on purpose: csv.go applies it to every cell when no custom
+// value_parser is configured.
+//
+//declscope:package
+func parseCSVValue(s string) any {
 	// Check for null
 	if strings.EqualFold(s, "null") {
 		return nil
 	}
 
 	// Check for boolean (PHP filter_var FILTER_VALIDATE_BOOLEAN style)
-	if b, ok := parseBool(s); ok {
+	if b, ok := boolFromCSVValue(s); ok {
 		return b
 	}
 
 	// Check for numeric (PHP is_numeric style)
-	if isNumeric(s) {
+	if isNumericCSVValue(s) {
 		if f, err := strconv.ParseFloat(s, 64); err == nil {
 			return f
 		}
@@ -34,10 +38,10 @@ func parseValue(s string) any {
 	return s
 }
 
-// isNumeric checks if a string is numeric (PHP is_numeric style).
+// isNumericCSVValue checks if a string is numeric (PHP is_numeric style).
 // Accepts: integers, floats, exponential notation, leading +/-
 // Examples: "1", "1.5", "-1", "+1.5", "1e10", "1E-5", ".5", "-.5"
-func isNumeric(s string) bool {
+func isNumericCSVValue(s string) bool {
 	if s == "" {
 		return false
 	}
@@ -56,13 +60,13 @@ func isNumeric(s string) bool {
 	return err == nil
 }
 
-// parseBool attempts to parse a string as a boolean.
+// boolFromCSVValue attempts to parse a string as a boolean.
 // PHP filter_var FILTER_VALIDATE_BOOLEAN style:
 //   - true: "true", "1", "yes", "on" (case-insensitive)
 //   - false: "false", "0", "no", "off", "" (case-insensitive)
 //
 // Returns (value, ok) where ok is false if not a recognized boolean string.
-func parseBool(s string) (bool, bool) {
+func boolFromCSVValue(s string) (bool, bool) {
 	lower := strings.ToLower(s)
 	switch lower {
 	case "true", "1", "yes", "on":

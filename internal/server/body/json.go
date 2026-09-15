@@ -8,6 +8,9 @@ import (
 
 // parseJSON parses JSON body with optional charset conversion.
 // Returns empty map if body is empty (common for DELETE requests).
+// Shared on purpose: parser.go (Parse) dispatches the media type here.
+//
+//declscope:package
 func parseJSON(body io.Reader, charsetName string) (map[string]any, error) {
 	data, err := readBody(body, charsetName)
 	if err != nil {
@@ -25,6 +28,11 @@ func parseJSON(body io.Reader, charsetName string) (map[string]any, error) {
 // used directly as SQL bind parameters - under v1, `{"id":1,"id":2}` would
 // silently bind the last occurrence, letting a later member override an
 // earlier one that a caller (or an intermediary) believed it had set.
+//
+// Shared on purpose: parser.go also parses a missing-Content-Type body as
+// JSON once it proves non-empty.
+//
+//declscope:package
 func parseJSONBytes(data []byte) (map[string]any, error) {
 	// Empty body is valid - return empty map (common for DELETE/GET requests)
 	if len(data) == 0 {

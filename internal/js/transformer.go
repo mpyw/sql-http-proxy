@@ -1,3 +1,10 @@
+// Transformer is the unit this package is named for. Compiling (this file)
+// and running (apply.go) are two halves of the one type, so both files share
+// the core, and the API is read as js.CompilePre / js.CompiledHelpers-free
+// names without a prefix.
+//
+//declscope:core
+
 // Package js provides JavaScript-based data transformation using goja runtime.
 package js
 
