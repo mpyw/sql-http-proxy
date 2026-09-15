@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/mpyw/sql-http-proxy/internal"
 	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
@@ -19,6 +20,9 @@ type csvSource struct {
 }
 
 // parseCSVOptions contains options for CSV parsing.
+// Shared on purpose: mock.go (Compile) builds it for the csv/csv_file sources.
+//
+//declscope:package
 type parseCSVOptions struct {
 	ValueParser *ValueParser
 }
@@ -29,6 +33,8 @@ func parseCSV(data string) (*csvSource, error) {
 }
 
 // parseCSVWithOptions parses inline CSV data with custom options.
+//
+//declscope:package
 func parseCSVWithOptions(data string, opts parseCSVOptions) (*csvSource, error) {
 	return parseCSVReaderWithOptions(strings.NewReader(data), opts)
 }
@@ -39,12 +45,14 @@ func parseCSVFile(path string) (*csvSource, error) {
 }
 
 // parseCSVFileWithOptions parses a CSV file with custom options.
+//
+//declscope:package
 func parseCSVFileWithOptions(path string, opts parseCSVOptions) (*csvSource, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer closeQuietly(f)
+	defer internal.CloseQuietly(f)
 	return parseCSVReaderWithOptions(f, opts)
 }
 
@@ -110,7 +118,7 @@ func parseCSVReaderWithOptions(r io.Reader, opts parseCSVOptions) (*csvSource, e
 						return nil, fmt.Errorf("line %d, column %q: %w", lineNum, header, err)
 					}
 				} else {
-					val = parseValue(record[i])
+					val = parseCSVValue(record[i])
 				}
 				row[header] = val
 			} else {

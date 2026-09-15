@@ -1,3 +1,10 @@
+// mock.go is the unit this package is named for: Compile dispatches a
+// config.Mock to the per-format sources around it, and the API is read as
+// mock.Compile / mock.Source without a prefix.
+//
+//declscope:core
+
+// Package mock provides mock data sources for testing and development.
 package mock
 
 import (

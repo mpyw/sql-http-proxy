@@ -62,7 +62,7 @@ func TestParseValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseValue(tt.input)
+			result := parseCSVValue(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -102,7 +102,7 @@ func TestIsNumeric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := isNumeric(tt.input)
+			result := isNumericCSVValue(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -148,7 +148,7 @@ func TestParseBool(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			value, ok := parseBool(tt.input)
+			value, ok := boolFromCSVValue(tt.input)
 			assert.Equal(t, tt.ok, ok)
 			if ok {
 				assert.Equal(t, tt.value, value)
