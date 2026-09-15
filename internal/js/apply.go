@@ -1,20 +1,17 @@
+// apply.go is the running half of Transformer and shares the core with
+// transformer.go; see the note there.
+//
+//declscope:core
 package js
 
 import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/dop251/goja"
 	"github.com/samber/lo"
 )
-
-// JSTimeout is the maximum execution time for JavaScript transforms.
-const JSTimeout = 5 * time.Second
-
-// ErrJSTimeout is returned when JS execution exceeds JSTimeout.
-var ErrJSTimeout = errors.New("JavaScript execution timeout")
 
 // PreTransformResult holds the result of a pre-transform execution.
 type PreTransformResult struct {
