@@ -1,7 +1,13 @@
+// types.go carries the exported configuration vocabulary, read as
+// config.Query / config.Mock and so on from every other package. It shares
+// the core with config.go: prefixed names would stutter at each use.
+//
+//declscope:core
 package config
 
 import (
 	"errors"
+	"slices"
 
 	"github.com/samber/lo"
 	"gopkg.in/yaml.v3"
@@ -189,6 +195,27 @@ type Mock struct {
 	// Filter for array sources (JS code: receives row, input params, ctx free var; returns boolean)
 	// Required for type: one with array sources, optional for type: many
 	Filter string `yaml:"filter,omitempty"`
+}
+
+// Mock source YAML keys by shape. These mirror the exclusive source fields of
+// Mock above.
+var (
+	objectSourceKeys = []string{"object", "object_json", "object_json_file", "object_js"}
+	arraySourceKeys  = []string{"array", "array_json", "array_json_file", "array_js", "csv", "csv_file", "jsonl", "jsonl_file"}
+)
+
+// isObjectSourceKey reports whether a mock source YAML key is object-shaped.
+//
+//declscope:package
+func isObjectSourceKey(source string) bool {
+	return slices.Contains(objectSourceKeys, source)
+}
+
+// isArraySourceKey reports whether a mock source YAML key is array-shaped.
+//
+//declscope:package
+func isArraySourceKey(source string) bool {
+	return slices.Contains(arraySourceKeys, source)
 }
 
 // UnmarshalYAML implements custom YAML unmarshaling for Mock.

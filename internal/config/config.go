@@ -1,3 +1,9 @@
+// config.go is the unit this package is named for: the Config document and
+// its parsing. Its API is read as config.Parse / config.Config, so its names
+// stay unprefixed.
+//
+//declscope:core
+
 // Package config provides configuration parsing for sql-http-proxy.
 package config
 
