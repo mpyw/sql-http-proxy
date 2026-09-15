@@ -1,3 +1,8 @@
+// app.go is the unit this package is named for: the CLI app definition and
+// its run loop. Its exported names are read as commands.App / commands.Version
+// (Version is set through goreleaser ldflags), so they stay unprefixed.
+//declscope:core
+
 // Package commands provides the command-line interface for sql-http-proxy.
 package commands
 
