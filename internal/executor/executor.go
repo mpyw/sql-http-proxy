@@ -1,3 +1,9 @@
+// executor.go is the unit this package is named for: the generic execution
+// pipeline (BaseExecutor) with its records, options, phase errors and result
+// contract, read as executor.Options / executor.ErrNotFound without a prefix.
+//
+//declscope:core
+
 // Package executor provides query and mutation execution logic.
 package executor
 
@@ -97,7 +103,7 @@ type BaseExecutor[R any] struct {
 	SQL        string
 	OpType     config.OpType
 	Entity     config.EntityType
-	Transforms *Transforms
+	Transforms *CompiledTransforms
 	MockSource mock.Source
 	Builder    ResultBuilder[R]
 }
