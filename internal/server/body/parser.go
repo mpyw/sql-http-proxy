@@ -1,3 +1,9 @@
+// parser.go is the unit this package is named for: Parser reads the
+// Content-Type and dispatches to the format files beside it, and the API is
+// read as body.NewParser / body.MaxBodySize without a prefix.
+//
+//declscope:core
+
 // Package body provides HTTP request body parsing with Content-Type handling.
 package body
 
@@ -77,7 +83,7 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 		if !slices.Contains(p.accepts, config.AcceptForm) {
 			return nil, fmt.Errorf("%w: application/x-www-form-urlencoded not accepted", ErrUnsupportedMediaType)
 		}
-		return parseURLEncoded(body, charsetName)
+		return parseFormURLEncoded(body, charsetName)
 
 	case "multipart/form-data":
 		if !slices.Contains(p.accepts, config.AcceptForm) {
@@ -87,7 +93,7 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 		if boundary == "" {
 			return nil, fmt.Errorf("%w: missing boundary in multipart/form-data", ErrBadRequest)
 		}
-		return parseMultipart(body, boundary, charsetName)
+		return parseMultipartForm(body, boundary, charsetName)
 
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedMediaType, mediaType)
@@ -96,6 +102,10 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 
 // readBody reads the body and applies charset conversion.
 // Returns ErrBodyTooLarge if body exceeds MaxBodySize.
+// Shared on purpose: every format parser (form.go, json.go) drains the body
+// through this one size- and charset-checked reader.
+//
+//declscope:package
 func readBody(body io.Reader, charsetName string) ([]byte, error) {
 	data, err := io.ReadAll(body)
 	if err != nil {
