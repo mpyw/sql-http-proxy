@@ -8,9 +8,6 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 </div>
 
-> [!NOTE]
-> This project was written by AI (Claude Code).
-
 A YAML-driven HTTP server that maps endpoints to SQL queries against <a href="https://www.postgresql.org/"><img src="https://cdn.simpleicons.org/postgresql" height="16" alt=""></a> PostgreSQL, <a href="https://www.mysql.com/"><img src="https://cdn.simpleicons.org/mysql" height="16" alt=""></a> MySQL, <a href="https://www.sqlite.org/"><img src="https://cdn.simpleicons.org/sqlite" height="16" alt=""></a> SQLite, and <a href="https://www.microsoft.com/sql-server">SQL Server</a>. Define your API in YAML, run the server, and get a working REST API — with **named parameters**, **path parameters**, a **JavaScript transform pipeline**, and a **mock mode** that needs no database at all.
 
 ## Installation
