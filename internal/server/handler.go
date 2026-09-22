@@ -43,10 +43,11 @@ type handledQueryRecorder func(record handledQueryRecord)
 //
 //declscope:package
 type handlerOptions struct {
-	Recorder    handledQueryRecorder
 	ConfigDir   string              // Directory of config file for resolving relative paths
 	Helpers     *js.CompiledHelpers // Global JavaScript helpers
 	ValueParser *mock.ValueParser   // Global CSV value parser
+	//declscope:private
+	Recorder handledQueryRecorder
 }
 
 // createNotFoundHandler creates a 404 handler.
