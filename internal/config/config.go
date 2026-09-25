@@ -1,5 +1,5 @@
 // config.go is the unit this package is named for: the Config document and
-// its parsing. Its API is read as config.Parse / config.Config, so its names
+// its parsing. Its API is read as config.Config, so its names
 // stay unprefixed.
 //
 //declscope:core
@@ -236,8 +236,8 @@ func (cfg *Config) ValidateTransforms() error {
 	return err
 }
 
-// Parse parses configuration from YAML bytes.
-func Parse(data []byte) (Config, error) {
+// parse parses configuration from YAML bytes.
+func parse(data []byte) (Config, error) {
 	// Parse YAML to generic interface for schema validation
 	var raw any
 	if err := yaml.Unmarshal(data, &raw); err != nil {
@@ -280,5 +280,5 @@ func ParseFile(filename string) (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to open file: %w", err)
 	}
-	return Parse(data)
+	return parse(data)
 }

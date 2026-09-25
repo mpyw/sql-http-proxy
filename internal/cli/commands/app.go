@@ -25,30 +25,32 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/server"
 )
 
-// ShutdownTimeout is the maximum time to wait for graceful shutdown.
-const ShutdownTimeout = 30 * time.Second
+// shutdownTimeout is the maximum time to wait for graceful shutdown.
+const shutdownTimeout = 30 * time.Second
 
 // Request header limits. These are stricter than the net/http defaults
 // (1MiB / 500 values) because every endpoint here is a SQL query keyed off a
 // small set of parameters - no legitimate client needs a large header block.
 const (
-	// MaxHeaderBytes caps the total size of the request header block.
-	MaxHeaderBytes = 64 * 1024
-	// MaxHeaderValueCount caps the number of header values in a request,
+	// maxHeaderBytes caps the total size of the request header block.
+	maxHeaderBytes = 64 * 1024
+	// maxHeaderValueCount caps the number of header values in a request,
 	// bounding the per-connection allocation a client can force.
-	MaxHeaderValueCount = 100
+	maxHeaderValueCount = 100
 )
 
-// ReadHeaderTimeout is the maximum time allowed to read request headers.
+// readHeaderTimeout is the maximum time allowed to read request headers.
 // Only the header phase is bounded: bodies and responses are left untimed so
 // that large uploads and slow queries are not cut off mid-flight.
-const ReadHeaderTimeout = 10 * time.Second
+const readHeaderTimeout = 10 * time.Second
 
 // Version is set by goreleaser via ldflags.
+//
+//declscope:ignore overexported // .goreleaser.yaml sets it with -X, which names it by its exported path
 var Version = "dev"
 
-// MakeApp creates a new CLI application instance.
-func MakeApp() *cli.Command {
+// makeApp creates a new CLI application instance.
+func makeApp() *cli.Command {
 	return &cli.Command{
 		Name:    "sql-http-proxy",
 		Usage:   "YAML configuration-based HTTP to SQL proxy server",
@@ -122,9 +124,9 @@ func action(ctx context.Context, cmd *cli.Command) error {
 	srv := &http.Server{
 		Addr:                listen,
 		Handler:             mux,
-		ReadHeaderTimeout:   ReadHeaderTimeout,
-		MaxHeaderBytes:      MaxHeaderBytes,
-		MaxHeaderValueCount: MaxHeaderValueCount,
+		ReadHeaderTimeout:   readHeaderTimeout,
+		MaxHeaderBytes:      maxHeaderBytes,
+		MaxHeaderValueCount: maxHeaderValueCount,
 	}
 
 	// Channel to receive server errors
@@ -151,7 +153,7 @@ func action(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	// Graceful shutdown with timeout
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), ShutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
 	slog.Info("Shutting down server...")
@@ -164,4 +166,4 @@ func action(ctx context.Context, cmd *cli.Command) error {
 }
 
 // App is the main CLI application.
-var App = MakeApp()
+var App = makeApp()

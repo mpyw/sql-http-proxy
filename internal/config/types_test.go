@@ -261,7 +261,7 @@ func TestQuery_GetMethod(t *testing.T) {
 func TestQuery_GetAccepts(t *testing.T) {
 	t.Run("default accepts when nil", func(t *testing.T) {
 		q := Query{}
-		assert.Equal(t, DefaultAcceptTypes, q.GetAccepts())
+		assert.Equal(t, defaultAcceptTypes, q.GetAccepts())
 	})
 
 	t.Run("custom accepts", func(t *testing.T) {
@@ -315,7 +315,7 @@ func TestMutation_GetMethod(t *testing.T) {
 func TestMutation_GetAccepts(t *testing.T) {
 	t.Run("default accepts when nil", func(t *testing.T) {
 		m := Mutation{}
-		assert.Equal(t, DefaultAcceptTypes, m.GetAccepts())
+		assert.Equal(t, defaultAcceptTypes, m.GetAccepts())
 	})
 
 	t.Run("custom accepts", func(t *testing.T) {

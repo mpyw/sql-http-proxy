@@ -69,8 +69,8 @@ const (
 // Can be unmarshaled from either a string or array of strings.
 type AcceptTypes []AcceptType
 
-// DefaultAcceptTypes is the default list when accepts is not specified.
-var DefaultAcceptTypes = AcceptTypes{AcceptJSON, AcceptForm}
+// defaultAcceptTypes is the default list when accepts is not specified.
+var defaultAcceptTypes = AcceptTypes{AcceptJSON, AcceptForm}
 
 // UnmarshalYAML implements custom YAML unmarshaling for AcceptTypes.
 // Accepts either a string or an array of strings.
@@ -117,7 +117,7 @@ func (q Query) GetMethod() string {
 // Returns default [json, form] if not specified, or empty slice if explicitly set to [].
 func (q Query) GetAccepts() AcceptTypes {
 	if q.Accepts == nil {
-		return DefaultAcceptTypes
+		return defaultAcceptTypes
 	}
 	return *q.Accepts
 }
@@ -151,7 +151,7 @@ func (m Mutation) GetMethod() string {
 // Returns default [json, form] if not specified, or empty slice if explicitly set to [].
 func (m Mutation) GetAccepts() AcceptTypes {
 	if m.Accepts == nil {
-		return DefaultAcceptTypes
+		return defaultAcceptTypes
 	}
 	return *m.Accepts
 }

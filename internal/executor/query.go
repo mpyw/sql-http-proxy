@@ -44,12 +44,12 @@ type QueryExecutor struct {
 
 // NewQueryExecutor creates a new QueryExecutor with pre-compiled transforms.
 func NewQueryExecutor(db *sqlx.DB, query config.Query, opts CompileTransformOptions) (*QueryExecutor, error) {
-	transforms, err := CompileTransforms(query.Transform, opts)
+	transforms, err := compileTransforms(query.Transform, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	mockSource, err := CompileMock(query.Mock, opts)
+	mockSource, err := compileMock(query.Mock, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -111,9 +111,9 @@ func (e *QueryExecutor) ExecuteDB(reqCtx context.Context, ec *ExecContext[Execut
 		return ec.Base.ProcessManyResult(ec.Ctx, ec.OriginalParams, results, ec.TC)
 
 	default:
-		return nil, ErrUnsupportedQueryType
+		return nil, errUnsupportedQueryType
 	}
 }
 
-// ErrUnsupportedQueryType is returned when query type is not supported.
-var ErrUnsupportedQueryType = errors.New("unsupported query type")
+// errUnsupportedQueryType is returned when query type is not supported.
+var errUnsupportedQueryType = errors.New("unsupported query type")

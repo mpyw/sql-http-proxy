@@ -1,6 +1,6 @@
 // parser.go is the unit this package is named for: Parser reads the
 // Content-Type and dispatches to the format files beside it, and the API is
-// read as body.NewParser / body.MaxBodySize without a prefix.
+// read as body.NewParser without a prefix.
 //
 //declscope:core
 
@@ -19,14 +19,18 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/config"
 )
 
-// MaxBodySize is the maximum allowed request body size (10MB).
-const MaxBodySize = 10 * 1024 * 1024
+// maxBodySize is the maximum allowed request body size (10MB).
+const maxBodySize = 10 * 1024 * 1024
 
 // Error types
 var (
 	ErrUnsupportedMediaType = errors.New("unsupported media type")
-	ErrBadRequest           = errors.New("bad request")
-	ErrBodyTooLarge         = errors.New("request body too large")
+	// errBadRequest is shared on purpose: form.go and json.go wrap their
+	// parse errors with it.
+	//
+	//declscope:package
+	errBadRequest   = errors.New("bad request")
+	ErrBodyTooLarge = errors.New("request body too large")
 )
 
 // Parser parses HTTP request bodies based on Content-Type.
@@ -41,11 +45,11 @@ func NewParser(accepts []config.AcceptType) *Parser {
 
 // Parse parses the request body based on Content-Type.
 // Returns ErrUnsupportedMediaType if Content-Type is not in accepts.
-// Returns ErrBadRequest if body parsing fails.
-// Returns ErrBodyTooLarge if body exceeds MaxBodySize.
+// Returns errBadRequest if body parsing fails.
+// Returns ErrBodyTooLarge if body exceeds maxBodySize.
 func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 	// Limit body size to prevent DoS
-	body := io.LimitReader(r.Body, MaxBodySize+1)
+	body := io.LimitReader(r.Body, maxBodySize+1)
 
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
@@ -67,7 +71,7 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 
 	mediaType, params, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		return nil, fmt.Errorf("%w: invalid Content-Type: %v", ErrBadRequest, err)
+		return nil, fmt.Errorf("%w: invalid Content-Type: %v", errBadRequest, err)
 	}
 
 	charsetName := params["charset"]
@@ -91,7 +95,7 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 		}
 		boundary := params["boundary"]
 		if boundary == "" {
-			return nil, fmt.Errorf("%w: missing boundary in multipart/form-data", ErrBadRequest)
+			return nil, fmt.Errorf("%w: missing boundary in multipart/form-data", errBadRequest)
 		}
 		return parseMultipartForm(body, boundary, charsetName)
 
@@ -101,7 +105,7 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 }
 
 // readBody reads the body and applies charset conversion.
-// Returns ErrBodyTooLarge if body exceeds MaxBodySize.
+// Returns ErrBodyTooLarge if body exceeds maxBodySize.
 // Shared on purpose: every format parser (form.go, json.go) drains the body
 // through this one size- and charset-checked reader.
 //
@@ -109,16 +113,16 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 func readBody(body io.Reader, charsetName string) ([]byte, error) {
 	data, err := io.ReadAll(body)
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to read body: %v", ErrBadRequest, err)
+		return nil, fmt.Errorf("%w: failed to read body: %v", errBadRequest, err)
 	}
-	if len(data) > MaxBodySize {
+	if len(data) > maxBodySize {
 		return nil, ErrBodyTooLarge
 	}
 
 	if charsetName != "" {
 		data, err = charset.ToUTF8(data, charsetName)
 		if err != nil {
-			return nil, fmt.Errorf("%w: charset conversion failed: %v", ErrBadRequest, err)
+			return nil, fmt.Errorf("%w: charset conversion failed: %v", errBadRequest, err)
 		}
 	}
 

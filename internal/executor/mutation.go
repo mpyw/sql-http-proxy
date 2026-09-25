@@ -55,12 +55,12 @@ type MutationExecutor struct {
 
 // NewMutationExecutor creates a new MutationExecutor with pre-compiled transforms.
 func NewMutationExecutor(db *sqlx.DB, mutation config.Mutation, opts CompileTransformOptions) (*MutationExecutor, error) {
-	transforms, err := CompileTransforms(mutation.Transform, opts)
+	transforms, err := compileTransforms(mutation.Transform, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	mockSource, err := CompileMock(mutation.Mock, opts)
+	mockSource, err := compileMock(mutation.Mock, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (e *MutationExecutor) ExecuteDB(reqCtx context.Context, ec *ExecContext[Mut
 		return ec.Base.ProcessManyResult(ec.Ctx, ec.OriginalParams, results, ec.TC)
 
 	default:
-		return nil, ErrUnsupportedMutationType
+		return nil, errUnsupportedMutationType
 	}
 }
 
@@ -166,5 +166,5 @@ func (e *MutationExecutor) execMySQLMany(reqCtx context.Context, ec *ExecContext
 	return ec.Base.ProcessManyResult(ec.Ctx, ec.OriginalParams, nil, ec.TC)
 }
 
-// ErrUnsupportedMutationType is returned when mutation type is not supported.
-var ErrUnsupportedMutationType = errors.New("unsupported mutation type")
+// errUnsupportedMutationType is returned when mutation type is not supported.
+var errUnsupportedMutationType = errors.New("unsupported mutation type")

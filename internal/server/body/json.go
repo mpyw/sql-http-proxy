@@ -41,7 +41,7 @@ func parseJSONBytes(data []byte) (map[string]any, error) {
 
 	var result map[string]any
 	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("%w: invalid JSON: %v", ErrBadRequest, err)
+		return nil, fmt.Errorf("%w: invalid JSON: %v", errBadRequest, err)
 	}
 
 	return result, nil

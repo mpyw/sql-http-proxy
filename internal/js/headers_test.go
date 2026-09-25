@@ -11,30 +11,30 @@ import (
 
 func TestNewHeaders(t *testing.T) {
 	t.Run("nil header", func(t *testing.T) {
-		h := NewHeaders(nil, false)
+		h := newHeaders(nil, false)
 		assert.NotNil(t, h)
 		assert.NotNil(t, h.headers)
 	})
 
 	t.Run("with header", func(t *testing.T) {
 		header := http.Header{"Content-Type": []string{"application/json"}}
-		h := NewHeaders(header, false)
+		h := newHeaders(header, false)
 		assert.Equal(t, "application/json", h.Get("Content-Type"))
 	})
 
 	t.Run("readonly", func(t *testing.T) {
-		h := NewReadonlyHeaders(nil)
+		h := newReadonlyHeaders(nil)
 		assert.True(t, h.readonly)
 	})
 
 	t.Run("writable", func(t *testing.T) {
-		h := NewWritableHeaders(nil)
+		h := newWritableHeaders(nil)
 		assert.False(t, h.readonly)
 	})
 }
 
 func TestHeaders_Get(t *testing.T) {
-	h := NewHeaders(http.Header{
+	h := newHeaders(http.Header{
 		"Content-Type": []string{"application/json"},
 	}, false)
 
@@ -55,7 +55,7 @@ func TestHeaders_Get(t *testing.T) {
 }
 
 func TestHeaders_Has(t *testing.T) {
-	h := NewHeaders(http.Header{
+	h := newHeaders(http.Header{
 		"Content-Type": []string{"application/json"},
 	}, false)
 
@@ -74,19 +74,19 @@ func TestHeaders_Has(t *testing.T) {
 
 func TestHeaders_Set(t *testing.T) {
 	t.Run("writable", func(t *testing.T) {
-		h := NewWritableHeaders(nil)
+		h := newWritableHeaders(nil)
 		h.Set("Content-Type", "text/plain")
 		assert.Equal(t, "text/plain", h.Get("Content-Type"))
 	})
 
 	t.Run("replaces existing", func(t *testing.T) {
-		h := NewWritableHeaders(http.Header{"Content-Type": []string{"application/json"}})
+		h := newWritableHeaders(http.Header{"Content-Type": []string{"application/json"}})
 		h.Set("Content-Type", "text/plain")
 		assert.Equal(t, "text/plain", h.Get("Content-Type"))
 	})
 
 	t.Run("readonly ignored", func(t *testing.T) {
-		h := NewReadonlyHeaders(nil)
+		h := newReadonlyHeaders(nil)
 		h.Set("Content-Type", "text/plain")
 		assert.Nil(t, h.Get("Content-Type"))
 	})
@@ -94,7 +94,7 @@ func TestHeaders_Set(t *testing.T) {
 
 func TestHeaders_Append(t *testing.T) {
 	t.Run("writable", func(t *testing.T) {
-		h := NewWritableHeaders(nil)
+		h := newWritableHeaders(nil)
 		h.Append("Accept", "text/plain")
 		h.Append("Accept", "application/json")
 		values := h.headers["Accept"]
@@ -104,7 +104,7 @@ func TestHeaders_Append(t *testing.T) {
 	})
 
 	t.Run("readonly ignored", func(t *testing.T) {
-		h := NewReadonlyHeaders(nil)
+		h := newReadonlyHeaders(nil)
 		h.Append("Accept", "text/plain")
 		assert.Nil(t, h.Get("Accept"))
 	})
@@ -112,20 +112,20 @@ func TestHeaders_Append(t *testing.T) {
 
 func TestHeaders_Delete(t *testing.T) {
 	t.Run("writable", func(t *testing.T) {
-		h := NewWritableHeaders(http.Header{"Content-Type": []string{"application/json"}})
+		h := newWritableHeaders(http.Header{"Content-Type": []string{"application/json"}})
 		h.Delete("Content-Type")
 		assert.Nil(t, h.Get("Content-Type"))
 	})
 
 	t.Run("readonly ignored", func(t *testing.T) {
-		h := NewReadonlyHeaders(http.Header{"Content-Type": []string{"application/json"}})
+		h := newReadonlyHeaders(http.Header{"Content-Type": []string{"application/json"}})
 		h.Delete("Content-Type")
 		assert.Equal(t, "application/json", h.Get("Content-Type"))
 	})
 }
 
 func TestHeaders_Entries(t *testing.T) {
-	h := NewHeaders(http.Header{
+	h := newHeaders(http.Header{
 		"Content-Type": []string{"application/json"},
 		"Accept":       []string{"text/plain", "text/html"},
 	}, false)
@@ -139,7 +139,7 @@ func TestHeaders_Entries(t *testing.T) {
 }
 
 func TestHeaders_Keys(t *testing.T) {
-	h := NewHeaders(http.Header{
+	h := newHeaders(http.Header{
 		"Content-Type": []string{"application/json"},
 		"Accept":       []string{"text/plain"},
 	}, false)
@@ -152,7 +152,7 @@ func TestHeaders_Keys(t *testing.T) {
 }
 
 func TestHeaders_Values(t *testing.T) {
-	h := NewHeaders(http.Header{
+	h := newHeaders(http.Header{
 		"Accept": []string{"text/plain", "application/json"},
 	}, false)
 
@@ -163,7 +163,7 @@ func TestHeaders_Values(t *testing.T) {
 }
 
 func TestHeaders_ForEach(t *testing.T) {
-	h := NewHeaders(http.Header{
+	h := newHeaders(http.Header{
 		"Content-Type": []string{"application/json"},
 		"Accept":       []string{"text/plain"},
 	}, false)
@@ -189,14 +189,14 @@ func TestHeaders_ForEach(t *testing.T) {
 
 func TestHeaders_ToHTTPHeader(t *testing.T) {
 	original := http.Header{"Content-Type": []string{"application/json"}}
-	h := NewHeaders(original, false)
+	h := newHeaders(original, false)
 	result := h.ToHTTPHeader()
 	assert.Equal(t, original, result)
 }
 
 func TestHeaders_ToJSObject(t *testing.T) {
 	vm := goja.New()
-	h := NewWritableHeaders(http.Header{
+	h := newWritableHeaders(http.Header{
 		"Content-Type": []string{"application/json"},
 	})
 

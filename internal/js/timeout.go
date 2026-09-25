@@ -8,14 +8,18 @@ import (
 	"github.com/dop251/goja"
 )
 
-// JSTimeout is the maximum execution time for JavaScript transforms.
-const JSTimeout = 5 * time.Second
+// jsTimeout is the maximum execution time for JavaScript transforms.
+const jsTimeout = 5 * time.Second
 
-// ErrJSTimeout is returned when JS execution exceeds JSTimeout.
-var ErrJSTimeout = errors.New("JavaScript execution timeout")
+// errJSTimeout is returned when JS execution exceeds jsTimeout.
+// Shared on purpose: apply.go (runCallable) and pool.go (PooledVM.Call)
+// recognize a timed-out run by it.
+//
+//declscope:package
+var errJSTimeout = errors.New("JavaScript execution timeout")
 
-// runWithTimeout runs fn with a watchdog that interrupts vm after JSTimeout,
-// translating the interrupt into ErrJSTimeout.
+// runWithTimeout runs fn with a watchdog that interrupts vm after jsTimeout,
+// translating the interrupt into errJSTimeout.
 //
 // The watchdog is disarmed under a mutex and the interrupt flag is cleared
 // before returning. Both matter for reuse: goja.Runtime.Interrupt sets a flag
@@ -32,13 +36,13 @@ func runWithTimeout(vm *goja.Runtime, fn func() (goja.Value, error)) (goja.Value
 	var mu sync.Mutex
 	done := false
 
-	timer := time.AfterFunc(JSTimeout, func() {
+	timer := time.AfterFunc(jsTimeout, func() {
 		mu.Lock()
 		defer mu.Unlock()
 		if done {
 			return
 		}
-		vm.Interrupt(ErrJSTimeout)
+		vm.Interrupt(errJSTimeout)
 	})
 
 	// Deferred so the runtime is left usable even if fn panics.
@@ -53,8 +57,8 @@ func runWithTimeout(vm *goja.Runtime, fn func() (goja.Value, error)) (goja.Value
 	result, err := fn()
 	if err != nil {
 		if interrupted, ok := errors.AsType[*goja.InterruptedError](err); ok {
-			if timeoutErr, ok := interrupted.Value().(error); ok && errors.Is(timeoutErr, ErrJSTimeout) {
-				return nil, ErrJSTimeout
+			if timeoutErr, ok := interrupted.Value().(error); ok && errors.Is(timeoutErr, errJSTimeout) {
+				return nil, errJSTimeout
 			}
 		}
 		return nil, err

@@ -17,8 +17,8 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/server/body"
 )
 
-// QueryHandler handles HTTP requests for queries.
-type QueryHandler = baseHandler[executor.ExecuteResult]
+// queryHandler handles HTTP requests for queries.
+type queryHandler = baseHandler[executor.ExecuteResult]
 
 // queryHandlerProcessor implements HandlerResultProcessor for ExecuteResult.
 type queryHandlerProcessor struct{}
@@ -28,22 +28,22 @@ func (p *queryHandlerProcessor) BuildResponse(result *executor.ExecuteResult) (i
 	return status, result.Output, result.ResponseHeader
 }
 
-// NewQueryHandler creates a new QueryHandler.
+// NewQueryHandler creates a new queryHandler.
 // db can be nil if mock is configured.
-func NewQueryHandler(db *sqlx.DB, query config.Query) (*QueryHandler, error) {
+func NewQueryHandler(db *sqlx.DB, query config.Query) (*queryHandler, error) {
 	return newQueryHandlerWithOptions(db, query, handlerOptions{})
 }
 
-// newQueryHandlerWithOptions creates a new QueryHandler with options.
+// newQueryHandlerWithOptions creates a new queryHandler with options.
 // db can be nil if mock is configured.
 // Shared on purpose: server.go (NewServeMux) builds every query route here.
 //
 //declscope:package
-func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOptions) (*QueryHandler, error) {
+func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOptions) (*queryHandler, error) {
 	execOpts := executor.CompileTransformOptions{
-		ConfigDir:   opts.ConfigDir,
-		Helpers:     opts.Helpers,
-		ValueParser: opts.ValueParser,
+		ConfigDir:   opts.configDir,
+		Helpers:     opts.helpers,
+		ValueParser: opts.valueParser,
 	}
 	exec, err := executor.NewQueryExecutor(db, query, execOpts)
 	if err != nil {
@@ -59,12 +59,12 @@ func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOpt
 		}
 	}
 
-	return &QueryHandler{
+	return &queryHandler{
 		exec:          exec,
 		method:        query.GetMethod(),
 		pathParams:    handlerPathParams(query.Path),
 		parser:        body.NewParser(query.GetAccepts()),
-		recorder:      opts.Recorder,
+		recorder:      opts.recorder,
 		processor:     &queryHandlerProcessor{},
 		checkNotFound: true,
 		delay:         delay,

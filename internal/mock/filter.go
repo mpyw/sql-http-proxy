@@ -87,7 +87,7 @@ func (f *jsFilteredSource) filterArray(arr []any, input map[string]any, ctx map[
 }
 
 // evaluateFilter evaluates the filter function for a single row.
-// Execution is limited to js.JSTimeout to prevent infinite loops.
+// Execution is limited to the js package's timeout to prevent infinite loops.
 func (f *jsFilteredSource) evaluateFilter(row any, input map[string]any, ctx map[string]any) (bool, error) {
 	// ctx is a free variable, refreshed per call because the pooled runtime may
 	// still hold the previous caller's value.

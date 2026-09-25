@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewResponse(t *testing.T) {
-	r := NewResponse()
+	r := newResponse()
 
 	assert.Equal(t, http.StatusOK, r.Status())
 	assert.Equal(t, "OK", r.StatusText())
@@ -19,7 +19,7 @@ func TestNewResponse(t *testing.T) {
 }
 
 func TestResponse_Status(t *testing.T) {
-	r := NewResponse()
+	r := newResponse()
 
 	t.Run("default status is 200", func(t *testing.T) {
 		assert.Equal(t, 200, r.Status())
@@ -57,7 +57,7 @@ func TestResponse_Status(t *testing.T) {
 }
 
 func TestResponse_StatusText(t *testing.T) {
-	r := NewResponse()
+	r := newResponse()
 
 	t.Run("default statusText is OK", func(t *testing.T) {
 		assert.Equal(t, "OK", r.StatusText())
@@ -70,7 +70,7 @@ func TestResponse_StatusText(t *testing.T) {
 }
 
 func TestResponse_Ok(t *testing.T) {
-	r := NewResponse()
+	r := newResponse()
 
 	t.Run("Ok returns true for 2xx", func(t *testing.T) {
 		r.SetStatus(200)
@@ -99,7 +99,7 @@ func TestResponse_Ok(t *testing.T) {
 }
 
 func TestResponse_Headers(t *testing.T) {
-	r := NewResponse()
+	r := newResponse()
 
 	t.Run("Headers returns writable headers", func(t *testing.T) {
 		h := r.Headers()
@@ -111,7 +111,7 @@ func TestResponse_Headers(t *testing.T) {
 }
 
 func TestResponse_ToHTTPHeader(t *testing.T) {
-	r := NewResponse()
+	r := newResponse()
 	r.Headers().Set("X-Test", "test-value")
 
 	httpHeader := r.ToHTTPHeader()
@@ -119,7 +119,7 @@ func TestResponse_ToHTTPHeader(t *testing.T) {
 }
 
 func TestResponse_ToJSObject(t *testing.T) {
-	r := NewResponse()
+	r := newResponse()
 	vm := goja.New()
 	obj := r.ToJSObject(vm)
 

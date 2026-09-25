@@ -29,8 +29,11 @@ func CompileValueParser(jsCode string, helpers *js.CompiledHelpers) (*ValueParse
 	return &ValueParser{vms: js.NewPooledVM("value_parser", program, helpers)}, nil
 }
 
-// Parse parses a single cell value using the custom JS.
-// Execution is limited to js.JSTimeout to prevent infinite loops.
-func (p *ValueParser) Parse(value string) (any, error) {
+// parse parses a single cell value using the custom JS.
+// Execution is limited to the js package's timeout to prevent infinite loops.
+// Shared on purpose: csv.go (parseCSVReaderWithOptions) parses each cell with it.
+//
+//declscope:package
+func (p *ValueParser) parse(value string) (any, error) {
 	return p.vms.Call(nil, goja.Value.Export, value)
 }

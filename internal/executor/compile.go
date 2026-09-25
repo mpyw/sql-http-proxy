@@ -25,9 +25,13 @@ type CompileTransformOptions struct {
 	ValueParser *mock.ValueParser
 }
 
-// CompileTransforms compiles all transforms from a config.Transform.
-// Note: mock is now compiled separately via CompileMock.
-func CompileTransforms(t *config.Transform, opts CompileTransformOptions) (*CompiledTransforms, error) {
+// compileTransforms compiles all transforms from a config.Transform.
+// Note: mock is now compiled separately via compileMock.
+// Shared on purpose: mutation.go (NewMutationExecutor) and query.go
+// (NewQueryExecutor) compile their transforms here.
+//
+//declscope:package
+func compileTransforms(t *config.Transform, opts CompileTransformOptions) (*CompiledTransforms, error) {
 	if t == nil {
 		return &CompiledTransforms{}, nil
 	}
@@ -59,8 +63,12 @@ func CompileTransforms(t *config.Transform, opts CompileTransformOptions) (*Comp
 	return transforms, nil
 }
 
-// CompileMock compiles a mock source from config.Mock.
-func CompileMock(m *config.Mock, opts CompileTransformOptions) (mock.Source, error) {
+// compileMock compiles a mock source from config.Mock.
+// Shared on purpose: mutation.go (NewMutationExecutor) and query.go
+// (NewQueryExecutor) compile their mock source here.
+//
+//declscope:package
+func compileMock(m *config.Mock, opts CompileTransformOptions) (mock.Source, error) {
 	if m == nil || m.IsEmpty() {
 		return nil, nil
 	}

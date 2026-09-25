@@ -24,7 +24,7 @@ type csvSource struct {
 //
 //declscope:package
 type parseCSVOptions struct {
-	ValueParser *ValueParser
+	valueParser *ValueParser
 }
 
 // parseCSV parses inline CSV data into a csvSource.
@@ -112,8 +112,8 @@ func parseCSVReaderWithOptions(r io.Reader, opts parseCSVOptions) (*csvSource, e
 			if i < actualCols {
 				var val any
 				var err error
-				if opts.ValueParser != nil {
-					val, err = opts.ValueParser.Parse(record[i])
+				if opts.valueParser != nil {
+					val, err = opts.valueParser.parse(record[i])
 					if err != nil {
 						return nil, fmt.Errorf("line %d, column %q: %w", lineNum, header, err)
 					}

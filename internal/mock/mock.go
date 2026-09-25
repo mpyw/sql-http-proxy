@@ -55,7 +55,7 @@ func Compile(m *config.Mock, opts CompileOptions) (Source, error) {
 	}
 
 	// CSV parsing options
-	csvOpts := parseCSVOptions{ValueParser: opts.ValueParser}
+	csvOpts := parseCSVOptions{valueParser: opts.ValueParser}
 
 	var source Source
 	var err error

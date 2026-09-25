@@ -71,7 +71,7 @@ func TestRunWithTimeout_ClearsLateInterrupt(t *testing.T) {
 	// otherwise a single near-timeout call would poison a pooled runtime for
 	// every request that followed.
 	vm := goja.New()
-	vm.Interrupt(ErrJSTimeout)
+	vm.Interrupt(errJSTimeout)
 
 	_, err := runWithTimeout(vm, func() (goja.Value, error) {
 		return goja.Undefined(), nil
@@ -84,13 +84,13 @@ func TestRunWithTimeout_ClearsLateInterrupt(t *testing.T) {
 }
 
 func TestPooledVM_Call_Timeout(t *testing.T) {
-	t.Parallel() // JSTimeout is 5s; overlap with the other slow timeout test.
+	t.Parallel() // jsTimeout is 5s; overlap with the other slow timeout test.
 
 	p := newTestPool(t, "maybeSpin", `(function(spin) { if (spin) { while (true) {} } return 42 })`)
 
 	_, err := p.Call(nil, goja.Value.ToInteger, true)
 	require.Error(t, err)
-	assert.True(t, errors.Is(err, ErrJSTimeout), "expected timeout error, got: %v", err)
+	assert.True(t, errors.Is(err, errJSTimeout), "expected timeout error, got: %v", err)
 
 	// The timed-out runtime is discarded rather than pooled, so later calls
 	// must still succeed instead of inheriting the interrupt.
