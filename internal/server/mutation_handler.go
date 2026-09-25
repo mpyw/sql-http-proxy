@@ -17,8 +17,8 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/server/body"
 )
 
-// mutationHandler handles HTTP requests for mutations.
-type mutationHandler = baseHandler[executor.MutationResult]
+// MutationHandler handles HTTP requests for mutations.
+type MutationHandler = baseHandler[executor.MutationResult]
 
 // mutationHandlerProcessor implements HandlerResultProcessor for MutationResult.
 type mutationHandlerProcessor struct{}
@@ -33,18 +33,18 @@ func (p *mutationHandlerProcessor) BuildResponse(result *executor.MutationResult
 	return status, result.Data, result.ResponseHeader
 }
 
-// NewMutationHandler creates a new mutationHandler.
+// NewMutationHandler creates a new MutationHandler.
 // db can be nil if mock is configured.
-func NewMutationHandler(db *sqlx.DB, mutation config.Mutation) (*mutationHandler, error) {
+func NewMutationHandler(db *sqlx.DB, mutation config.Mutation) (*MutationHandler, error) {
 	return newMutationHandlerWithOptions(db, mutation, handlerOptions{})
 }
 
-// newMutationHandlerWithOptions creates a new mutationHandler with options.
+// newMutationHandlerWithOptions creates a new MutationHandler with options.
 // db can be nil if mock is configured.
 // Shared on purpose: server.go (NewServeMux) builds every mutation route here.
 //
 //declscope:package
-func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts handlerOptions) (*mutationHandler, error) {
+func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts handlerOptions) (*MutationHandler, error) {
 	execOpts := executor.CompileTransformOptions{
 		ConfigDir:   opts.configDir,
 		Helpers:     opts.helpers,
@@ -64,7 +64,7 @@ func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts h
 		}
 	}
 
-	return &mutationHandler{
+	return &MutationHandler{
 		exec:          exec,
 		method:        mutation.GetMethod(),
 		pathParams:    handlerPathParams(mutation.Path),
