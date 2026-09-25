@@ -59,6 +59,12 @@ jobs:
       - name: Set up mise
         uses: jdx/mise-action@v4
 
+      # Before the analyzer: a declaration shrink unexports becomes private to
+      # its file's namespace, so a use from another file is then a boundary
+      # crossing the analyzer reports.
+      - name: Run declscope shrink
+        run: declscope shrink ./...
+
       - name: Run declscope
         run: declscope ./...
 
