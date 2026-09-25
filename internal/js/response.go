@@ -15,12 +15,15 @@ type Response struct {
 	headers    *Headers
 }
 
-// NewResponse creates a new Response object with default values.
-func NewResponse() *Response {
+// newResponse creates a new Response object with default values.
+// Shared on purpose: apply.go (NewTransformContext) builds the JS response here.
+//
+//declscope:package
+func newResponse() *Response {
 	return &Response{
 		status:     http.StatusOK,
 		statusText: "OK",
-		headers:    NewWritableHeaders(nil),
+		headers:    newWritableHeaders(nil),
 	}
 }
 

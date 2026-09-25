@@ -9,13 +9,13 @@ import (
 
 func TestWrapPreError(t *testing.T) {
 	t.Run("nil error returns nil", func(t *testing.T) {
-		result := WrapPreError(nil)
+		result := wrapPreError(nil)
 		require.Nil(t, result)
 	})
 
 	t.Run("non-nil error wraps with phase", func(t *testing.T) {
 		err := errors.New("test error")
-		result := WrapPreError(err)
+		result := wrapPreError(err)
 		require.NotNil(t, result)
 
 		var phaseErr *PhaseError
@@ -28,13 +28,13 @@ func TestWrapPreError(t *testing.T) {
 
 func TestWrapMockError(t *testing.T) {
 	t.Run("nil error returns nil", func(t *testing.T) {
-		result := WrapMockError(nil)
+		result := wrapMockError(nil)
 		require.Nil(t, result)
 	})
 
 	t.Run("non-nil error wraps with phase", func(t *testing.T) {
 		err := errors.New("test error")
-		result := WrapMockError(err)
+		result := wrapMockError(err)
 		require.NotNil(t, result)
 
 		var phaseErr *PhaseError
@@ -45,13 +45,13 @@ func TestWrapMockError(t *testing.T) {
 
 func TestWrapPostError(t *testing.T) {
 	t.Run("nil error returns nil", func(t *testing.T) {
-		result := WrapPostError(nil)
+		result := wrapPostError(nil)
 		require.Nil(t, result)
 	})
 
 	t.Run("non-nil error wraps with phase", func(t *testing.T) {
 		err := errors.New("test error")
-		result := WrapPostError(err)
+		result := wrapPostError(err)
 		require.NotNil(t, result)
 
 		var phaseErr *PhaseError

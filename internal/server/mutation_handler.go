@@ -46,9 +46,9 @@ func NewMutationHandler(db *sqlx.DB, mutation config.Mutation) (*MutationHandler
 //declscope:package
 func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts handlerOptions) (*MutationHandler, error) {
 	execOpts := executor.CompileTransformOptions{
-		ConfigDir:   opts.ConfigDir,
-		Helpers:     opts.Helpers,
-		ValueParser: opts.ValueParser,
+		ConfigDir:   opts.configDir,
+		Helpers:     opts.helpers,
+		ValueParser: opts.valueParser,
 	}
 	exec, err := executor.NewMutationExecutor(db, mutation, execOpts)
 	if err != nil {
@@ -69,7 +69,7 @@ func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts h
 		method:        mutation.GetMethod(),
 		pathParams:    handlerPathParams(mutation.Path),
 		parser:        body.NewParser(mutation.GetAccepts()),
-		recorder:      opts.Recorder,
+		recorder:      opts.recorder,
 		processor:     &mutationHandlerProcessor{},
 		checkNotFound: false,
 		delay:         delay,

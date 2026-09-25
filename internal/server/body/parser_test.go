@@ -67,7 +67,7 @@ func TestParser_Parse_JSON(t *testing.T) {
 
 		_, err := p.Parse(req)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrBadRequest)
+		assert.ErrorIs(t, err, errBadRequest)
 	})
 }
 
@@ -96,7 +96,7 @@ func TestParser_Parse_JSON_RejectsIllFormed(t *testing.T) {
 
 			_, err := p.Parse(req)
 			require.Error(t, err)
-			assert.ErrorIs(t, err, ErrBadRequest)
+			assert.ErrorIs(t, err, errBadRequest)
 			assert.Contains(t, err.Error(), "invalid JSON")
 		})
 	}
@@ -109,7 +109,7 @@ func TestParser_Parse_JSON_RejectsTrailingContent(t *testing.T) {
 
 	_, err := p.Parse(req)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrBadRequest)
+	assert.ErrorIs(t, err, errBadRequest)
 }
 
 func TestParser_Parse_FormURLEncoded(t *testing.T) {
@@ -189,7 +189,7 @@ func TestParser_Parse_Multipart(t *testing.T) {
 
 		_, err := p.Parse(req)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrBadRequest)
+		assert.ErrorIs(t, err, errBadRequest)
 	})
 
 	t.Run("skips file uploads", func(t *testing.T) {
@@ -289,7 +289,7 @@ func TestParser_Parse_InvalidContentType(t *testing.T) {
 
 	_, err := p.Parse(req)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrBadRequest)
+	assert.ErrorIs(t, err, errBadRequest)
 }
 
 func TestReadBody(t *testing.T) {
@@ -300,7 +300,7 @@ func TestReadBody(t *testing.T) {
 	})
 
 	t.Run("body too large", func(t *testing.T) {
-		largeData := make([]byte, MaxBodySize+1)
+		largeData := make([]byte, maxBodySize+1)
 		_, err := readBody(bytes.NewReader(largeData), "")
 		require.Error(t, err)
 		assert.ErrorIs(t, err, ErrBodyTooLarge)
@@ -309,7 +309,7 @@ func TestReadBody(t *testing.T) {
 	t.Run("read error", func(t *testing.T) {
 		_, err := readBody(&errorReader{}, "")
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrBadRequest)
+		assert.ErrorIs(t, err, errBadRequest)
 	})
 
 	t.Run("charset conversion", func(t *testing.T) {
@@ -322,7 +322,7 @@ func TestReadBody(t *testing.T) {
 	t.Run("invalid charset", func(t *testing.T) {
 		_, err := readBody(strings.NewReader("hello"), "invalid-charset-xyz")
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrBadRequest)
+		assert.ErrorIs(t, err, errBadRequest)
 	})
 }
 

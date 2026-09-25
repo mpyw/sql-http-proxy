@@ -18,8 +18,8 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/config"
 )
 
-// ConnectTimeout is the timeout for validating database connection.
-const ConnectTimeout = 10 * time.Second
+// connectTimeout is the timeout for validating database connection.
+const connectTimeout = 10 * time.Second
 
 // Connect establishes a database connection based on the configuration.
 // Returns nil if the configuration doesn't require a database connection.
@@ -42,7 +42,7 @@ func Connect(cfg config.Config, configDir string) (*sqlx.DB, error) {
 	}
 
 	// Validate connection with a ping
-	ctx, cancel := context.WithTimeout(context.Background(), ConnectTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {

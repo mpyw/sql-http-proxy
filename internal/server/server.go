@@ -62,9 +62,9 @@ func NewServeMux(db *sqlx.DB, cfg config.Config, configDir string) (http.Handler
 	}
 
 	opts := handlerOptions{
-		ConfigDir:   configDir,
-		Helpers:     helpers,
-		ValueParser: valueParser,
+		configDir:   configDir,
+		helpers:     helpers,
+		valueParser: valueParser,
 	}
 
 	for _, query := range cfg.Queries {

@@ -76,7 +76,7 @@ func (p *PooledVM) newCallable() (*pooledCallable, error) {
 // goja.Value.ToBoolean or goja.Value.Export pins the conversion to the right
 // scope. globals are set on the runtime before the call; pass nil for none.
 //
-// Execution is bounded by JSTimeout; exceeding it returns ErrJSTimeout.
+// Execution is bounded by jsTimeout; exceeding it returns errJSTimeout.
 func (p *PooledVM) Call[T any](globals map[string]any, convert func(goja.Value) T, args ...any) (T, error) {
 	var zero T
 
@@ -114,7 +114,7 @@ func (p *PooledVM) Call[T any](globals map[string]any, convert func(goja.Value) 
 		return pc.callable(goja.Undefined(), jsArgs...)
 	})
 	if err != nil {
-		reusable = !errors.Is(err, ErrJSTimeout)
+		reusable = !errors.Is(err, errJSTimeout)
 		return zero, err
 	}
 

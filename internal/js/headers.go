@@ -16,22 +16,28 @@ type Headers struct {
 	readonly bool
 }
 
-// NewHeaders creates a new Headers object from http.Header.
-func NewHeaders(h http.Header, readonly bool) *Headers {
+// newHeaders creates a new Headers object from http.Header.
+func newHeaders(h http.Header, readonly bool) *Headers {
 	if h == nil {
 		h = make(http.Header)
 	}
 	return &Headers{headers: h, readonly: readonly}
 }
 
-// NewReadonlyHeaders creates a read-only Headers object.
-func NewReadonlyHeaders(h http.Header) *Headers {
-	return NewHeaders(h, true)
+// newReadonlyHeaders creates a read-only Headers object.
+// Shared on purpose: request.go (newRequest) wraps the request headers with it.
+//
+//declscope:package
+func newReadonlyHeaders(h http.Header) *Headers {
+	return newHeaders(h, true)
 }
 
-// NewWritableHeaders creates a writable Headers object.
-func NewWritableHeaders(h http.Header) *Headers {
-	return NewHeaders(h, false)
+// newWritableHeaders creates a writable Headers object.
+// Shared on purpose: response.go (newResponse) wraps the response headers with it.
+//
+//declscope:package
+func newWritableHeaders(h http.Header) *Headers {
+	return newHeaders(h, false)
 }
 
 // Get returns the value for a header name, or null if not found.

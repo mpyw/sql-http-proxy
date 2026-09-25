@@ -15,7 +15,7 @@ func TestRequest(t *testing.T) {
 	req.Header.Set("X-Custom", "value")
 	req.Header.Set("Content-Type", "application/json")
 
-	r := NewRequest(req)
+	r := newRequest(req)
 
 	t.Run("Method", func(t *testing.T) {
 		assert.Equal(t, "POST", r.Method())
@@ -37,7 +37,7 @@ func TestRequest_ToJSObject(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/users?id=123", nil)
 	req.Header.Set("Authorization", "Bearer token")
 
-	r := NewRequest(req)
+	r := newRequest(req)
 	vm := goja.New()
 	obj := r.ToJSObject(vm)
 

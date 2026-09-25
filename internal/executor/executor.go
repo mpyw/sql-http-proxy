@@ -39,24 +39,24 @@ func (e *PhaseError) Unwrap() error {
 	return e.Err
 }
 
-// WrapPreError wraps an error as a pre-transform error.
-func WrapPreError(err error) error {
+// wrapPreError wraps an error as a pre-transform error.
+func wrapPreError(err error) error {
 	if err == nil {
 		return nil
 	}
 	return &PhaseError{Phase: "pre", Err: err}
 }
 
-// WrapMockError wraps an error as a mock-transform error.
-func WrapMockError(err error) error {
+// wrapMockError wraps an error as a mock-transform error.
+func wrapMockError(err error) error {
 	if err == nil {
 		return nil
 	}
 	return &PhaseError{Phase: "mock", Err: err}
 }
 
-// WrapPostError wraps an error as a post-transform error.
-func WrapPostError(err error) error {
+// wrapPostError wraps an error as a post-transform error.
+func wrapPostError(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -140,7 +140,7 @@ func (e *BaseExecutor[R]) ExecuteBase(reqCtx context.Context, params map[string]
 	if e.Transforms.Pre != nil {
 		result, err := e.Transforms.Pre.ApplyPre(ec.Ctx, ec.SQL, ec.Params, ec.TC)
 		if err != nil {
-			return nil, WrapPreError(err)
+			return nil, wrapPreError(err)
 		}
 		ec.Params = result.Output
 		ec.SQL = result.SQL
@@ -168,7 +168,7 @@ func (e *BaseExecutor[R]) executeMock(ec *ExecContext[R]) (*R, error) {
 
 	mockOutput, newCtx, err := e.MockSource.Data(ec.Ctx, ec.SQL, ec.Params, ec.TC)
 	if err != nil {
-		return nil, WrapMockError(err)
+		return nil, wrapMockError(err)
 	}
 	if newCtx != nil {
 		ec.Ctx = newCtx
@@ -232,7 +232,7 @@ func (e *BaseExecutor[R]) ProcessNoneResult(ctx, originalParams map[string]any, 
 	if e.Transforms.PostAll != nil {
 		_, err := e.Transforms.PostAll.ApplyPost(ctx, originalParams, nil, tc)
 		if err != nil {
-			return nil, WrapPostError(err)
+			return nil, wrapPostError(err)
 		}
 	}
 	// Return nil to trigger NoContent response
@@ -248,7 +248,7 @@ func (e *BaseExecutor[R]) applyPostOne(ctx, params map[string]any, entry map[str
 	}
 	postResult, err := e.Transforms.PostAll.ApplyPost(ctx, params, entry, tc)
 	if err != nil {
-		return nil, WrapPostError(err)
+		return nil, wrapPostError(err)
 	}
 	return postResult.Output, nil
 }
@@ -261,7 +261,7 @@ func (e *BaseExecutor[R]) applyPostMany(ctx, params map[string]any, entries []ma
 	if e.Transforms.PostEach != nil {
 		eachResult, newCtx, err := e.Transforms.PostEach.ApplyPostToEachRow(currentCtx, params, currentEntries, tc)
 		if err != nil {
-			return nil, WrapPostError(err)
+			return nil, wrapPostError(err)
 		}
 		result = eachResult
 		currentCtx = newCtx
@@ -270,7 +270,7 @@ func (e *BaseExecutor[R]) applyPostMany(ctx, params map[string]any, entries []ma
 		for i, r := range eachResult {
 			m, ok := r.(map[string]any)
 			if !ok {
-				return nil, WrapPostError(errors.New("post.each transform must return object"))
+				return nil, wrapPostError(errors.New("post.each transform must return object"))
 			}
 			currentEntries[i] = m
 		}
@@ -279,7 +279,7 @@ func (e *BaseExecutor[R]) applyPostMany(ctx, params map[string]any, entries []ma
 	if e.Transforms.PostAll != nil {
 		postResult, err := e.Transforms.PostAll.ApplyPostToAllRows(currentCtx, params, currentEntries, tc)
 		if err != nil {
-			return nil, WrapPostError(err)
+			return nil, wrapPostError(err)
 		}
 		result = postResult.Output
 	}

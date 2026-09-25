@@ -24,7 +24,7 @@ func parseFormURLEncoded(body io.Reader, charsetName string) (map[string]any, er
 
 	values, err := url.ParseQuery(string(data))
 	if err != nil {
-		return nil, fmt.Errorf("%w: invalid form data: %v", ErrBadRequest, err)
+		return nil, fmt.Errorf("%w: invalid form data: %v", errBadRequest, err)
 	}
 
 	return formValuesToMap(values), nil
@@ -44,7 +44,7 @@ func parseMultipartForm(body io.Reader, boundary, charsetName string) (map[strin
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("%w: failed to read multipart: %v", ErrBadRequest, err)
+			return nil, fmt.Errorf("%w: failed to read multipart: %v", errBadRequest, err)
 		}
 
 		// Skip file uploads (only process form fields)
@@ -68,14 +68,14 @@ func parseMultipartForm(body io.Reader, boundary, charsetName string) (map[strin
 			slog.Warn("Failed to close multipart part", "error", closeErr)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("%w: failed to read multipart field: %v", ErrBadRequest, err)
+			return nil, fmt.Errorf("%w: failed to read multipart field: %v", errBadRequest, err)
 		}
 
 		// Apply charset conversion if specified
 		if charsetName != "" {
 			data, err = charset.ToUTF8(data, charsetName)
 			if err != nil {
-				return nil, fmt.Errorf("%w: charset conversion failed: %v", ErrBadRequest, err)
+				return nil, fmt.Errorf("%w: charset conversion failed: %v", errBadRequest, err)
 			}
 		}
 

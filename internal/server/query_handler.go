@@ -41,9 +41,9 @@ func NewQueryHandler(db *sqlx.DB, query config.Query) (*QueryHandler, error) {
 //declscope:package
 func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOptions) (*QueryHandler, error) {
 	execOpts := executor.CompileTransformOptions{
-		ConfigDir:   opts.ConfigDir,
-		Helpers:     opts.Helpers,
-		ValueParser: opts.ValueParser,
+		ConfigDir:   opts.configDir,
+		Helpers:     opts.helpers,
+		ValueParser: opts.valueParser,
 	}
 	exec, err := executor.NewQueryExecutor(db, query, execOpts)
 	if err != nil {
@@ -64,7 +64,7 @@ func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOpt
 		method:        query.GetMethod(),
 		pathParams:    handlerPathParams(query.Path),
 		parser:        body.NewParser(query.GetAccepts()),
-		recorder:      opts.Recorder,
+		recorder:      opts.recorder,
 		processor:     &queryHandlerProcessor{},
 		checkNotFound: true,
 		delay:         delay,

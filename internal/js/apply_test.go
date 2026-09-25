@@ -290,11 +290,11 @@ func TestApplyPostToAllRows(t *testing.T) {
 }
 
 func TestJSTimeout(t *testing.T) {
-	t.Parallel() // JSTimeout is 5s; overlap with the other slow timeout test.
+	t.Parallel() // jsTimeout is 5s; overlap with the other slow timeout test.
 
 	t.Run("infinite loop times out", func(t *testing.T) {
 		// This test verifies that infinite loops are interrupted
-		// Note: JSTimeout is 5 seconds by default
+		// Note: jsTimeout is 5 seconds by default
 		transformer, err := CompilePre(`while(true) {} return input`)
 		require.NoError(t, err)
 
@@ -305,6 +305,6 @@ func TestJSTimeout(t *testing.T) {
 			nil,
 		)
 		require.Error(t, err)
-		assert.True(t, errors.Is(err, ErrJSTimeout), "expected timeout error, got: %v", err)
+		assert.True(t, errors.Is(err, errJSTimeout), "expected timeout error, got: %v", err)
 	})
 }

@@ -243,7 +243,7 @@ queries:
     path: /user
     sql: SELECT * FROM users WHERE id = :id
 `
-		cfg, err := Parse([]byte(yaml))
+		cfg, err := parse([]byte(yaml))
 		require.NoError(t, err)
 		assert.Equal(t, "postgres://localhost:5432/db", cfg.DSN())
 		assert.Len(t, cfg.Queries, 1)
@@ -260,7 +260,7 @@ queries:
         id: 1
         name: Alice
 `
-		cfg, err := Parse([]byte(yaml))
+		cfg, err := parse([]byte(yaml))
 		require.NoError(t, err)
 		assert.Len(t, cfg.Queries, 1)
 		assert.NotNil(t, cfg.Queries[0].Mock)
@@ -268,7 +268,7 @@ queries:
 
 	t.Run("invalid yaml", func(t *testing.T) {
 		yaml := `invalid: yaml: syntax`
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 	})
 
@@ -278,7 +278,7 @@ queries:
   - path: /user
     sql: SELECT * FROM users
 `
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "type")
 	})
@@ -290,7 +290,7 @@ queries:
     path: /user
     sql: SELECT * FROM users
 `
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 	})
 
@@ -304,7 +304,7 @@ queries:
       object:
         id: 1
 `
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "sql")
 		assert.Contains(t, err.Error(), "mock")
@@ -318,7 +318,7 @@ queries:
   - type: one
     path: /user
 `
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 	})
 
@@ -333,7 +333,7 @@ queries:
     path: /user
     sql: SELECT 1
 `
-		cfg, err := Parse([]byte(yaml))
+		cfg, err := parse([]byte(yaml))
 		require.NoError(t, err)
 		assert.Equal(t, "postgres://myhost:5433/db", cfg.DSN())
 	})
@@ -347,7 +347,7 @@ queries:
     path: /user
     sql: SELECT 1
 `
-		cfg, err := Parse([]byte(yaml))
+		cfg, err := parse([]byte(yaml))
 		require.NoError(t, err)
 		assert.Equal(t, "postgres://localhost:5432/db", cfg.DSN())
 	})
@@ -365,7 +365,7 @@ queries:
         - id: 1
         - id: 2
 `
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "filter")
 		assert.Contains(t, err.Error(), "array")
@@ -380,7 +380,7 @@ queries:
       object:
         id: 1
 `
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "object")
 		assert.Contains(t, err.Error(), "many")
@@ -393,7 +393,7 @@ mutations:
     path: /delete
     mock: true
 `
-		cfg, err := Parse([]byte(yaml))
+		cfg, err := parse([]byte(yaml))
 		require.NoError(t, err)
 		require.Len(t, cfg.Mutations, 1)
 		require.NotNil(t, cfg.Mutations[0].Mock)
@@ -409,7 +409,7 @@ mutations:
       object:
         id: 1
 `
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 		// type: none only allows mock: true, not mock: {object: ...}
 		assert.Contains(t, err.Error(), "validation")
@@ -425,7 +425,7 @@ queries:
         - id: 1
       array_js: "return [{id: 1}]"
 `
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "one source")
 	})
@@ -441,7 +441,7 @@ queries:
         1,Alice
         2,Bob
 `
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "filter")
 		assert.Contains(t, err.Error(), "csv")
@@ -487,7 +487,7 @@ queries:
     path: /user
     sql: SELECT * FROM users WHERE id = :id
 `
-		_, err := Parse([]byte(yaml))
+		_, err := parse([]byte(yaml))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "database.dsn")
 	})
@@ -501,7 +501,7 @@ queries:
       object:
         id: 1
 `
-		cfg, err := Parse([]byte(yaml))
+		cfg, err := parse([]byte(yaml))
 		require.NoError(t, err)
 		assert.Empty(t, cfg.DSN())
 	})

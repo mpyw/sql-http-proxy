@@ -30,11 +30,11 @@ type TransformContext struct {
 func NewTransformContext(r *http.Request) *TransformContext {
 	var req *Request
 	if r != nil {
-		req = NewRequest(r)
+		req = newRequest(r)
 	}
 	return &TransformContext{
 		Request:  req,
-		Response: NewResponse(),
+		Response: newResponse(),
 	}
 }
 
@@ -81,7 +81,7 @@ func (t *Transformer) setupVM(ctx map[string]any, tc *TransformContext, opts vmS
 }
 
 // runCallable runs the compiled program and calls it with the given arguments.
-// Execution is limited to JSTimeout to prevent infinite loops.
+// Execution is limited to jsTimeout to prevent infinite loops.
 func (t *Transformer) runCallable(vm *goja.Runtime, fnName string, args ...goja.Value) (goja.Value, error) {
 	fn, err := vm.RunProgram(t.program)
 	if err != nil {
@@ -97,7 +97,7 @@ func (t *Transformer) runCallable(vm *goja.Runtime, fnName string, args ...goja.
 		return callable(goja.Undefined(), args...)
 	})
 	if err != nil {
-		if errors.Is(err, ErrJSTimeout) {
+		if errors.Is(err, errJSTimeout) {
 			return nil, err
 		}
 		return nil, parseJSError(err)
