@@ -27,7 +27,7 @@ func newHeaders(h http.Header, readonly bool) *Headers {
 // newReadonlyHeaders creates a read-only Headers object.
 // Shared on purpose: request.go (newRequest) wraps the request headers with it.
 //
-//declscope:package
+//declscope:shared
 func newReadonlyHeaders(h http.Header) *Headers {
 	return newHeaders(h, true)
 }
@@ -35,7 +35,7 @@ func newReadonlyHeaders(h http.Header) *Headers {
 // newWritableHeaders creates a writable Headers object.
 // Shared on purpose: response.go (newResponse) wraps the response headers with it.
 //
-//declscope:package
+//declscope:shared
 func newWritableHeaders(h http.Header) *Headers {
 	return newHeaders(h, false)
 }

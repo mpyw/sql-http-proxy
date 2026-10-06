@@ -17,7 +17,7 @@ type jsFilteredSource struct {
 // The filter JS receives: row (param), input (param), ctx (free var).
 // It should return a boolean (true to include the row).
 //
-//declscope:package
+//declscope:shared
 func newJSFilteredSource(source Source, filterJS string, helpers *js.CompiledHelpers) (*jsFilteredSource, error) {
 	// Compile filter as a function that takes row and input as parameters
 	wrapped := "(function(row, input) { " + filterJS + " })"

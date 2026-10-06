@@ -28,7 +28,7 @@ var (
 	// errBadRequest is shared on purpose: form.go and json.go wrap their
 	// parse errors with it.
 	//
-	//declscope:package
+	//declscope:shared
 	errBadRequest   = errors.New("bad request")
 	ErrBodyTooLarge = errors.New("request body too large")
 )
@@ -109,7 +109,7 @@ func (p *Parser) Parse(r *http.Request) (map[string]any, error) {
 // Shared on purpose: every format parser (form.go, json.go) drains the body
 // through this one size- and charset-checked reader.
 //
-//declscope:package
+//declscope:shared
 func readBody(body io.Reader, charsetName string) ([]byte, error) {
 	data, err := io.ReadAll(body)
 	if err != nil {

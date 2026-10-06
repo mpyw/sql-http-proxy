@@ -15,7 +15,7 @@ import (
 // parseFormURLEncoded parses URL-encoded form body with optional charset conversion.
 // Shared on purpose: parser.go (Parse) dispatches the media type here.
 //
-//declscope:package
+//declscope:shared
 func parseFormURLEncoded(body io.Reader, charsetName string) (map[string]any, error) {
 	data, err := readBody(body, charsetName)
 	if err != nil {
@@ -33,7 +33,7 @@ func parseFormURLEncoded(body io.Reader, charsetName string) (map[string]any, er
 // parseMultipartForm parses multipart form body with optional charset conversion.
 // Shared on purpose: parser.go (Parse) dispatches the media type here.
 //
-//declscope:package
+//declscope:shared
 func parseMultipartForm(body io.Reader, boundary, charsetName string) (map[string]any, error) {
 	reader := multipart.NewReader(body, boundary)
 	result := make(map[string]any)

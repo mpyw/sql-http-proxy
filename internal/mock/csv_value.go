@@ -15,7 +15,7 @@ import (
 // Shared on purpose: csv.go applies it to every cell when no custom
 // value_parser is configured.
 //
-//declscope:package
+//declscope:shared
 func parseCSVValue(s string) any {
 	// Check for null
 	if strings.EqualFold(s, "null") {

@@ -20,7 +20,7 @@ var (
 // formatValidationError converts a jsonschema ValidationError into a user-friendly message.
 // It is the one entry point config.go (parse) takes into this unit.
 //
-//declscope:package
+//declscope:shared
 func formatValidationError(err *jsonschema.ValidationError) string {
 	// Collect all errors
 	errors := collectErrors(err)

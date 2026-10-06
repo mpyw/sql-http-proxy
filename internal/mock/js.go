@@ -19,7 +19,7 @@ func (s *jsSource) SetHelpers(h *js.CompiledHelpers) {
 // compileJS compiles JavaScript code into a jsSource.
 // Shared on purpose: mock.go (Compile) builds it for the *_js sources.
 //
-//declscope:package
+//declscope:shared
 func compileJS(code string) (*jsSource, error) {
 	t, err := js.CompileMockJS(code)
 	if err != nil {

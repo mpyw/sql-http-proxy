@@ -36,7 +36,7 @@ var responseMarshalOptions = json.JoinOptions(
 // Shared on purpose: the handler unit (handler.go) writes every response and
 // error through this type.
 //
-//declscope:package
+//declscope:shared
 type responder struct {
 	w http.ResponseWriter
 }

@@ -21,7 +21,7 @@ type Request struct {
 // later rewriting of r.URL by middleware or the router.
 // Shared on purpose: apply.go (NewTransformContext) builds the JS request here.
 //
-//declscope:package
+//declscope:shared
 func newRequest(r *http.Request) *Request {
 	return &Request{
 		method:  r.Method,

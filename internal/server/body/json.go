@@ -10,7 +10,7 @@ import (
 // Returns empty map if body is empty (common for DELETE requests).
 // Shared on purpose: parser.go (Parse) dispatches the media type here.
 //
-//declscope:package
+//declscope:shared
 func parseJSON(body io.Reader, charsetName string) (map[string]any, error) {
 	data, err := readBody(body, charsetName)
 	if err != nil {
@@ -32,7 +32,7 @@ func parseJSON(body io.Reader, charsetName string) (map[string]any, error) {
 // Shared on purpose: parser.go also parses a missing-Content-Type body as
 // JSON once it proves non-empty.
 //
-//declscope:package
+//declscope:shared
 func parseJSONBytes(data []byte) (map[string]any, error) {
 	// Empty body is valid - return empty map (common for DELETE/GET requests)
 	if len(data) == 0 {

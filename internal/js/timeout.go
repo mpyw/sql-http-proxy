@@ -15,7 +15,7 @@ const jsTimeout = 5 * time.Second
 // Shared on purpose: apply.go (runCallable) and pool.go (PooledVM.Call)
 // recognize a timed-out run by it.
 //
-//declscope:package
+//declscope:shared
 var errJSTimeout = errors.New("JavaScript execution timeout")
 
 // runWithTimeout runs fn with a watchdog that interrupts vm after jsTimeout,
@@ -31,7 +31,7 @@ var errJSTimeout = errors.New("JavaScript execution timeout")
 // Shared on purpose: both the pooled hot path (pool.go) and one-shot
 // transformer runs (apply.go) bound their scripts with the same watchdog.
 //
-//declscope:package
+//declscope:shared
 func runWithTimeout(vm *goja.Runtime, fn func() (goja.Value, error)) (goja.Value, error) {
 	var mu sync.Mutex
 	done := false

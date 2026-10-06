@@ -18,7 +18,7 @@ type Response struct {
 // newResponse creates a new Response object with default values.
 // Shared on purpose: apply.go (NewTransformContext) builds the JS response here.
 //
-//declscope:package
+//declscope:shared
 func newResponse() *Response {
 	return &Response{
 		status:     http.StatusOK,

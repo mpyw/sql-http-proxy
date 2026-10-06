@@ -30,7 +30,7 @@ type CompileTransformOptions struct {
 // Shared on purpose: mutation.go (NewMutationExecutor) and query.go
 // (NewQueryExecutor) compile their transforms here.
 //
-//declscope:package
+//declscope:shared
 func compileTransforms(t *config.Transform, opts CompileTransformOptions) (*CompiledTransforms, error) {
 	if t == nil {
 		return &CompiledTransforms{}, nil
@@ -67,7 +67,7 @@ func compileTransforms(t *config.Transform, opts CompileTransformOptions) (*Comp
 // Shared on purpose: mutation.go (NewMutationExecutor) and query.go
 // (NewQueryExecutor) compile their mock source here.
 //
-//declscope:package
+//declscope:shared
 func compileMock(m *config.Mock, opts CompileTransformOptions) (mock.Source, error) {
 	if m == nil || m.IsEmpty() {
 		return nil, nil

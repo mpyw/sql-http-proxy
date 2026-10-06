@@ -1,7 +1,7 @@
 // Helpers shared by every e2e test file: each test stands up its own config,
 // DB and handler through these, so they are package-wide on purpose.
 //
-//declscope:package
+//declscope:shared
 package e2e
 
 import (

@@ -206,14 +206,14 @@ var (
 
 // isObjectSourceKey reports whether a mock source YAML key is object-shaped.
 //
-//declscope:package
+//declscope:shared
 func isObjectSourceKey(source string) bool {
 	return slices.Contains(objectSourceKeys, source)
 }
 
 // isArraySourceKey reports whether a mock source YAML key is array-shaped.
 //
-//declscope:package
+//declscope:shared
 func isArraySourceKey(source string) bool {
 	return slices.Contains(arraySourceKeys, source)
 }
