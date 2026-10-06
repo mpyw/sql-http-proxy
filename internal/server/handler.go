@@ -41,7 +41,7 @@ type handledQueryRecorder func(record handledQueryRecord)
 // hands it to every newQueryHandlerWithOptions / newMutationHandlerWithOptions
 // call.
 //
-//declscope:package
+//declscope:shared
 type handlerOptions struct {
 	configDir   string              // Directory of config file for resolving relative paths
 	helpers     *js.CompiledHelpers // Global JavaScript helpers
@@ -54,7 +54,7 @@ type handlerOptions struct {
 // Shared on purpose: server.go (NewServeMux) installs it as the router's
 // NotFound handler.
 //
-//declscope:package
+//declscope:shared
 func createNotFoundHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		res := &responder{w: w}

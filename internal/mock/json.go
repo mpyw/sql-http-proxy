@@ -21,7 +21,7 @@ type jsonSource struct {
 // If data is a string, it is parsed as JSON.
 // Otherwise, it is used as-is (already parsed by YAML unmarshaler).
 //
-//declscope:package
+//declscope:shared
 func newJSON(data any) (*jsonSource, error) {
 	// If data is a string, parse it as JSON
 	if s, ok := data.(string); ok {
@@ -32,7 +32,7 @@ func newJSON(data any) (*jsonSource, error) {
 
 // parseJSONString parses a JSON string into a jsonSource.
 //
-//declscope:package
+//declscope:shared
 func parseJSONString(jsonStr string) (*jsonSource, error) {
 	var parsed any
 	if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
@@ -43,7 +43,7 @@ func parseJSONString(jsonStr string) (*jsonSource, error) {
 
 // parseJSONFile parses a JSON file into a jsonSource.
 //
-//declscope:package
+//declscope:shared
 func parseJSONFile(path string) (*jsonSource, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -62,14 +62,14 @@ func parseJSONFile(path string) (*jsonSource, error) {
 // parseJSONL parses inline JSONL (JSON Lines) data.
 // Each line is a separate JSON object.
 //
-//declscope:package
+//declscope:shared
 func parseJSONL(data string) (*jsonSource, error) {
 	return parseJSONLReader(strings.NewReader(data))
 }
 
 // parseJSONLFile parses a JSONL file into a jsonSource.
 //
-//declscope:package
+//declscope:shared
 func parseJSONLFile(path string) (*jsonSource, error) {
 	f, err := os.Open(path)
 	if err != nil {

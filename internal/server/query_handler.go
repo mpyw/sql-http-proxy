@@ -38,7 +38,7 @@ func NewQueryHandler(db *sqlx.DB, query config.Query) (*QueryHandler, error) {
 // db can be nil if mock is configured.
 // Shared on purpose: server.go (NewServeMux) builds every query route here.
 //
-//declscope:package
+//declscope:shared
 func newQueryHandlerWithOptions(db *sqlx.DB, query config.Query, opts handlerOptions) (*QueryHandler, error) {
 	execOpts := executor.CompileTransformOptions{
 		ConfigDir:   opts.configDir,

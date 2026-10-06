@@ -22,7 +22,7 @@ type csvSource struct {
 // parseCSVOptions contains options for CSV parsing.
 // Shared on purpose: mock.go (Compile) builds it for the csv/csv_file sources.
 //
-//declscope:package
+//declscope:shared
 type parseCSVOptions struct {
 	valueParser *ValueParser
 }
@@ -34,7 +34,7 @@ func parseCSV(data string) (*csvSource, error) {
 
 // parseCSVWithOptions parses inline CSV data with custom options.
 //
-//declscope:package
+//declscope:shared
 func parseCSVWithOptions(data string, opts parseCSVOptions) (*csvSource, error) {
 	return parseCSVReaderWithOptions(strings.NewReader(data), opts)
 }
@@ -46,7 +46,7 @@ func parseCSVFile(path string) (*csvSource, error) {
 
 // parseCSVFileWithOptions parses a CSV file with custom options.
 //
-//declscope:package
+//declscope:shared
 func parseCSVFileWithOptions(path string, opts parseCSVOptions) (*csvSource, error) {
 	f, err := os.Open(path)
 	if err != nil {

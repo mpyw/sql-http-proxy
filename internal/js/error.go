@@ -48,7 +48,7 @@ func errorToHTTPStatus(v any) int {
 // Native Error objects (throw new Error("...")) always return 500.
 // It is the one entry point apply.go takes into this unit.
 //
-//declscope:package
+//declscope:shared
 func parseJSError(err error) error {
 	jsErr, ok := errors.AsType[*goja.Exception](err)
 	if !ok {

@@ -43,7 +43,7 @@ func NewMutationHandler(db *sqlx.DB, mutation config.Mutation) (*MutationHandler
 // db can be nil if mock is configured.
 // Shared on purpose: server.go (NewServeMux) builds every mutation route here.
 //
-//declscope:package
+//declscope:shared
 func newMutationHandlerWithOptions(db *sqlx.DB, mutation config.Mutation, opts handlerOptions) (*MutationHandler, error) {
 	execOpts := executor.CompileTransformOptions{
 		ConfigDir:   opts.configDir,

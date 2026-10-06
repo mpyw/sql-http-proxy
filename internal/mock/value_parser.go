@@ -33,7 +33,7 @@ func CompileValueParser(jsCode string, helpers *js.CompiledHelpers) (*ValueParse
 // Execution is limited to the js package's timeout to prevent infinite loops.
 // Shared on purpose: csv.go (parseCSVReaderWithOptions) parses each cell with it.
 //
-//declscope:package
+//declscope:shared
 func (p *ValueParser) parse(value string) (any, error) {
 	return p.vms.Call(nil, goja.Value.Export, value)
 }
