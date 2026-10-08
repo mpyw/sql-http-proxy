@@ -16,14 +16,6 @@ type Headers struct {
 	readonly bool
 }
 
-// newHeaders creates a new Headers object from http.Header.
-func newHeaders(h http.Header, readonly bool) *Headers {
-	if h == nil {
-		h = make(http.Header)
-	}
-	return &Headers{headers: h, readonly: readonly}
-}
-
 // newReadonlyHeaders creates a read-only Headers object.
 // Shared on purpose: request.go (newRequest) wraps the request headers with it.
 //
@@ -38,6 +30,14 @@ func newReadonlyHeaders(h http.Header) *Headers {
 //declscope:shared
 func newWritableHeaders(h http.Header) *Headers {
 	return newHeaders(h, false)
+}
+
+// newHeaders creates a new Headers object from http.Header.
+func newHeaders(h http.Header, readonly bool) *Headers {
+	if h == nil {
+		h = make(http.Header)
+	}
+	return &Headers{headers: h, readonly: readonly}
 }
 
 // Get returns the value for a header name, or null if not found.

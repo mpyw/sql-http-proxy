@@ -259,22 +259,6 @@ func (m *Mock) IsObjectSource() bool {
 	return lo.Contains(m.objectSourceFlags(), true)
 }
 
-func (m *Mock) objectSourceFlags() []bool {
-	return []bool{m.Object != nil, m.ObjectJSON != "", m.ObjectJSONFile != "", m.ObjectJS != ""}
-}
-
-func (m *Mock) arraySourceFlags() []bool {
-	return []bool{
-		m.Array != nil, m.ArrayJSON != "", m.ArrayJSONFile != "", m.ArrayJS != "",
-		m.CSV != "", m.CSVFile != "",
-		m.JSONL != "", m.JSONLFile != "",
-	}
-}
-
-func (m *Mock) sourceFlags() []bool {
-	return append(m.objectSourceFlags(), m.arraySourceFlags()...)
-}
-
 // GetJS returns the JavaScript code if present.
 func (m *Mock) GetJS() string {
 	if m.ObjectJS != "" {
@@ -320,6 +304,22 @@ func (m *Mock) ValidateForTypeMany() error {
 	}
 
 	return nil
+}
+
+func (m *Mock) objectSourceFlags() []bool {
+	return []bool{m.Object != nil, m.ObjectJSON != "", m.ObjectJSONFile != "", m.ObjectJS != ""}
+}
+
+func (m *Mock) arraySourceFlags() []bool {
+	return []bool{
+		m.Array != nil, m.ArrayJSON != "", m.ArrayJSONFile != "", m.ArrayJS != "",
+		m.CSV != "", m.CSVFile != "",
+		m.JSONL != "", m.JSONLFile != "",
+	}
+}
+
+func (m *Mock) sourceFlags() []bool {
+	return append(m.objectSourceFlags(), m.arraySourceFlags()...)
 }
 
 // PostTransform represents post-transform configuration.

@@ -24,18 +24,6 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/server/body"
 )
 
-// handledQueryRecord represents an executed query record.
-type handledQueryRecord struct {
-	Type   config.OpType  // OpTypeOne, OpTypeMany, or OpTypeNone
-	IsMock bool           // true if mock query
-	SQL    string         // executed SQL (bound for DB, original for mock)
-	Params map[string]any // named parameters (for mock)
-	Args   []any          // positional arguments (for DB)
-}
-
-// handledQueryRecorder is called when a query is executed.
-type handledQueryRecorder func(record handledQueryRecord)
-
 // handlerOptions contains optional settings shared by the handler
 // constructors. Shared on purpose: server.go (NewServeMux) fills it once and
 // hands it to every newQueryHandlerWithOptions / newMutationHandlerWithOptions
@@ -49,6 +37,18 @@ type handlerOptions struct {
 	//declscope:private
 	recorder handledQueryRecorder
 }
+
+// handledQueryRecord represents an executed query record.
+type handledQueryRecord struct {
+	Type   config.OpType  // OpTypeOne, OpTypeMany, or OpTypeNone
+	IsMock bool           // true if mock query
+	SQL    string         // executed SQL (bound for DB, original for mock)
+	Params map[string]any // named parameters (for mock)
+	Args   []any          // positional arguments (for DB)
+}
+
+// handledQueryRecorder is called when a query is executed.
+type handledQueryRecorder func(record handledQueryRecord)
 
 // createNotFoundHandler creates a 404 handler.
 // Shared on purpose: server.go (NewServeMux) installs it as the router's

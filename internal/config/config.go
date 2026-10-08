@@ -236,6 +236,15 @@ func (cfg *Config) ValidateTransforms() error {
 	return err
 }
 
+// ParseFile parses configuration from a YAML file.
+func ParseFile(filename string) (Config, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to open file: %w", err)
+	}
+	return parse(data)
+}
+
 // parse parses configuration from YAML bytes.
 func parse(data []byte) (Config, error) {
 	// Parse YAML to generic interface for schema validation
@@ -272,13 +281,4 @@ func parse(data []byte) (Config, error) {
 		return Config{}, errors.New("missing database.dsn: required when endpoints use SQL (supports ${VAR} and ${VAR:-default} env expansion)")
 	}
 	return cfg, nil
-}
-
-// ParseFile parses configuration from a YAML file.
-func ParseFile(filename string) (Config, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return Config{}, fmt.Errorf("failed to open file: %w", err)
-	}
-	return parse(data)
 }
