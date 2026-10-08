@@ -21,32 +21,6 @@ type MutationResult struct {
 	ResponseHeader http.Header
 }
 
-// mutationResultBuilder implements ResultBuilder for MutationResult.
-type mutationResultBuilder struct{}
-
-func (b *mutationResultBuilder) BuildResult(output any, tc *js.TransformContext) *MutationResult {
-	if output == nil {
-		return &MutationResult{
-			NoContent:      true,
-			Status:         tc.Response.Status(),
-			ResponseHeader: tc.Response.ToHTTPHeader(),
-		}
-	}
-	return &MutationResult{
-		Data:           output,
-		Status:         tc.Response.Status(),
-		ResponseHeader: tc.Response.ToHTTPHeader(),
-	}
-}
-
-func (b *mutationResultBuilder) OnEmptyOne(tc *js.TransformContext) (*MutationResult, error) {
-	return &MutationResult{
-		NoContent:      true,
-		Status:         tc.Response.Status(),
-		ResponseHeader: tc.Response.ToHTTPHeader(),
-	}, nil
-}
-
 // MutationExecutor executes mutations (mock or DB).
 type MutationExecutor struct {
 	base     *BaseExecutor[MutationResult]
@@ -164,6 +138,32 @@ func (e *MutationExecutor) execMySQLMany(reqCtx context.Context, ec *ExecContext
 		ec.Ctx["lastInsertId"] = *execResult.LastInsertId
 	}
 	return ec.Base.ProcessManyResult(ec.Ctx, ec.OriginalParams, nil, ec.TC)
+}
+
+// mutationResultBuilder implements ResultBuilder for MutationResult.
+type mutationResultBuilder struct{}
+
+func (b *mutationResultBuilder) BuildResult(output any, tc *js.TransformContext) *MutationResult {
+	if output == nil {
+		return &MutationResult{
+			NoContent:      true,
+			Status:         tc.Response.Status(),
+			ResponseHeader: tc.Response.ToHTTPHeader(),
+		}
+	}
+	return &MutationResult{
+		Data:           output,
+		Status:         tc.Response.Status(),
+		ResponseHeader: tc.Response.ToHTTPHeader(),
+	}
+}
+
+func (b *mutationResultBuilder) OnEmptyOne(tc *js.TransformContext) (*MutationResult, error) {
+	return &MutationResult{
+		NoContent:      true,
+		Status:         tc.Response.Status(),
+		ResponseHeader: tc.Response.ToHTTPHeader(),
+	}, nil
 }
 
 // errUnsupportedMutationType is returned when mutation type is not supported.
