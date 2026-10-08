@@ -25,21 +25,6 @@ func (t *Transformer) SetHelpers(h *CompiledHelpers) {
 	t.helpers = h
 }
 
-// compile is an internal helper that compiles JavaScript code into a Transformer.
-// wrapper is the function wrapper format, sourceName is for goja.Compile,
-// errorName is for error wrapping (empty string means no wrapping).
-func compile(code, wrapper, sourceName, errorName string) (*Transformer, error) {
-	wrapped := fmt.Sprintf(wrapper, code)
-	program, err := goja.Compile(sourceName, wrapped, true)
-	if err != nil {
-		if errorName != "" {
-			return nil, fmt.Errorf("failed to compile %s: %w", errorName, err)
-		}
-		return nil, err
-	}
-	return &Transformer{program: program}, nil
-}
-
 // CompilePre creates a pre-transform with free variables (ctx, sql) and parameter (input).
 // Free variables ctx and sql can be read/modified in the function body.
 func CompilePre(code string) (*Transformer, error) {
@@ -62,4 +47,19 @@ func CompileFilter(code string) (*Transformer, error) {
 // Same signature as CompilePre but returns raw error (no wrapping).
 func CompileMockJS(code string) (*Transformer, error) {
 	return compile(code, `(function(input) { %s })`, "mock", "")
+}
+
+// compile is an internal helper that compiles JavaScript code into a Transformer.
+// wrapper is the function wrapper format, sourceName is for goja.Compile,
+// errorName is for error wrapping (empty string means no wrapping).
+func compile(code, wrapper, sourceName, errorName string) (*Transformer, error) {
+	wrapped := fmt.Sprintf(wrapper, code)
+	program, err := goja.Compile(sourceName, wrapped, true)
+	if err != nil {
+		if errorName != "" {
+			return nil, fmt.Errorf("failed to compile %s: %w", errorName, err)
+		}
+		return nil, err
+	}
+	return &Transformer{program: program}, nil
 }

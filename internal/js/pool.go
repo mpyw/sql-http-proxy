@@ -43,30 +43,6 @@ func NewPooledVM(name string, program *goja.Program, helpers *CompiledHelpers) *
 	return p
 }
 
-// newCallable creates a runtime with helpers injected and the program's
-// function resolved.
-func (p *PooledVM) newCallable() (*pooledCallable, error) {
-	vm := goja.New()
-
-	if p.helpers != nil {
-		if err := p.helpers.InjectInto(vm); err != nil {
-			return nil, fmt.Errorf("failed to inject helpers into %s: %w", p.name, err)
-		}
-	}
-
-	fn, err := vm.RunProgram(p.program)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load %s: %w", p.name, err)
-	}
-
-	callable, ok := goja.AssertFunction(fn)
-	if !ok {
-		return nil, fmt.Errorf("%s is not a function", p.name)
-	}
-
-	return &pooledCallable{vm: vm, callable: callable}, nil
-}
-
 // Call invokes the pooled function and converts its result with convert.
 //
 // convert runs while the runtime is still checked out, because a goja.Value
@@ -120,4 +96,28 @@ func (p *PooledVM) Call[T any](globals map[string]any, convert func(goja.Value) 
 
 	reusable = true
 	return convert(result), nil
+}
+
+// newCallable creates a runtime with helpers injected and the program's
+// function resolved.
+func (p *PooledVM) newCallable() (*pooledCallable, error) {
+	vm := goja.New()
+
+	if p.helpers != nil {
+		if err := p.helpers.InjectInto(vm); err != nil {
+			return nil, fmt.Errorf("failed to inject helpers into %s: %w", p.name, err)
+		}
+	}
+
+	fn, err := vm.RunProgram(p.program)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load %s: %w", p.name, err)
+	}
+
+	callable, ok := goja.AssertFunction(fn)
+	if !ok {
+		return nil, fmt.Errorf("%s is not a function", p.name)
+	}
+
+	return &pooledCallable{vm: vm, callable: callable}, nil
 }

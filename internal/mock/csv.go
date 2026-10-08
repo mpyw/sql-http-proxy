@@ -14,11 +14,6 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
-// csvSource holds pre-parsed CSV data.
-type csvSource struct {
-	rows []map[string]any
-}
-
 // parseCSVOptions contains options for CSV parsing.
 // Shared on purpose: mock.go (Compile) builds it for the csv/csv_file sources.
 //
@@ -27,9 +22,9 @@ type parseCSVOptions struct {
 	valueParser *ValueParser
 }
 
-// parseCSV parses inline CSV data into a csvSource.
-func parseCSV(data string) (*csvSource, error) {
-	return parseCSVWithOptions(data, parseCSVOptions{})
+// csvSource holds pre-parsed CSV data.
+type csvSource struct {
+	rows []map[string]any
 }
 
 // parseCSVWithOptions parses inline CSV data with custom options.
@@ -37,11 +32,6 @@ func parseCSV(data string) (*csvSource, error) {
 //declscope:shared
 func parseCSVWithOptions(data string, opts parseCSVOptions) (*csvSource, error) {
 	return parseCSVReaderWithOptions(strings.NewReader(data), opts)
-}
-
-// parseCSVFile parses a CSV file into a csvSource.
-func parseCSVFile(path string) (*csvSource, error) {
-	return parseCSVFileWithOptions(path, parseCSVOptions{})
 }
 
 // parseCSVFileWithOptions parses a CSV file with custom options.
@@ -54,6 +44,16 @@ func parseCSVFileWithOptions(path string, opts parseCSVOptions) (*csvSource, err
 	}
 	defer internal.CloseQuietly(f)
 	return parseCSVReaderWithOptions(f, opts)
+}
+
+// parseCSV parses inline CSV data into a csvSource.
+func parseCSV(data string) (*csvSource, error) {
+	return parseCSVWithOptions(data, parseCSVOptions{})
+}
+
+// parseCSVFile parses a CSV file into a csvSource.
+func parseCSVFile(path string) (*csvSource, error) {
+	return parseCSVFileWithOptions(path, parseCSVOptions{})
 }
 
 func parseCSVReaderWithOptions(r io.Reader, opts parseCSVOptions) (*csvSource, error) {

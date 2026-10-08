@@ -25,12 +25,12 @@ const maxBodySize = 10 * 1024 * 1024
 // Error types
 var (
 	ErrUnsupportedMediaType = errors.New("unsupported media type")
+	ErrBodyTooLarge         = errors.New("request body too large")
 	// errBadRequest is shared on purpose: form.go and json.go wrap their
 	// parse errors with it.
 	//
 	//declscope:shared
-	errBadRequest   = errors.New("bad request")
-	ErrBodyTooLarge = errors.New("request body too large")
+	errBadRequest = errors.New("bad request")
 )
 
 // Parser parses HTTP request bodies based on Content-Type.
