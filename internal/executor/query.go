@@ -12,30 +12,6 @@ import (
 	"github.com/mpyw/sql-http-proxy/internal/js"
 )
 
-// queryResultBuilder implements ResultBuilder for ExecuteResult.
-type queryResultBuilder struct {
-	handleNotFound bool
-}
-
-func (b *queryResultBuilder) BuildResult(output any, tc *js.TransformContext) *ExecuteResult {
-	return &ExecuteResult{
-		Output:         output,
-		Status:         tc.Response.Status(),
-		ResponseHeader: tc.Response.ToHTTPHeader(),
-	}
-}
-
-func (b *queryResultBuilder) OnEmptyOne(tc *js.TransformContext) (*ExecuteResult, error) {
-	if !b.handleNotFound {
-		return nil, ErrNotFound
-	}
-	return &ExecuteResult{
-		Output:         nil,
-		Status:         tc.Response.Status(),
-		ResponseHeader: tc.Response.ToHTTPHeader(),
-	}, nil
-}
-
 // QueryExecutor executes queries (mock or DB).
 type QueryExecutor struct {
 	base  *BaseExecutor[ExecuteResult]
@@ -113,6 +89,30 @@ func (e *QueryExecutor) ExecuteDB(reqCtx context.Context, ec *ExecContext[Execut
 	default:
 		return nil, errUnsupportedQueryType
 	}
+}
+
+// queryResultBuilder implements ResultBuilder for ExecuteResult.
+type queryResultBuilder struct {
+	handleNotFound bool
+}
+
+func (b *queryResultBuilder) BuildResult(output any, tc *js.TransformContext) *ExecuteResult {
+	return &ExecuteResult{
+		Output:         output,
+		Status:         tc.Response.Status(),
+		ResponseHeader: tc.Response.ToHTTPHeader(),
+	}
+}
+
+func (b *queryResultBuilder) OnEmptyOne(tc *js.TransformContext) (*ExecuteResult, error) {
+	if !b.handleNotFound {
+		return nil, ErrNotFound
+	}
+	return &ExecuteResult{
+		Output:         nil,
+		Status:         tc.Response.Status(),
+		ResponseHeader: tc.Response.ToHTTPHeader(),
+	}, nil
 }
 
 // errUnsupportedQueryType is returned when query type is not supported.
